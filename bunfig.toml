@@ -1,0 +1,30 @@
+[install]
+# Configure package manager behavior
+cache = true
+production = false
+optional = true
+dev = true
+peer = true
+
+# Registry configuration
+registry = "https://registry.npmjs.org"
+scopes = {}
+
+[install.lockfile]
+# Save lockfile
+save = true
+print = "yarn"
+
+[test]
+# Test configuration
+preload = ["./test/setup.ts"]
+
+[run]
+# Runtime configuration
+shell = "bun"
+
+[build]
+# Build configuration
+outdir = "./dist"
+target = "node"
+format = "esm"
