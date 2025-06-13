@@ -22,7 +22,7 @@ program
 program
   .command('commit')
   .description('Generate a commit message using Ollama')
-  .option('-d, --directory <dir>', 'Git repository directory')
+  .requiredOption('-d, --directory <dir>', 'Git repository directory')
   .option('-m, --model <model>', 'Ollama model to use')
   .option('-H, --host <host>', 'Ollama server URL')
   .option('-v, --verbose', 'Show detailed output')

@@ -330,7 +330,39 @@ export class ConfigManager {
       modelPull: string;
     };
   }> {
-    const sources: Record<string, unknown> = {};
+    const sources: {
+      model: string;
+      host: string;
+      verbose: string;
+      interactive: string;
+      debug: string;
+      autoStage: string;
+      autoModel: string;
+      promptFile: string;
+      promptTemplate: string;
+      useEmojis: string;
+      timeouts: {
+        connection: string;
+        generation: string;
+        modelPull: string;
+      };
+    } = {
+      model: 'default',
+      host: 'default',
+      verbose: 'default',
+      interactive: 'default',
+      debug: 'default',
+      autoStage: 'default',
+      autoModel: 'default',
+      promptFile: 'default',
+      promptTemplate: 'default',
+      useEmojis: 'default',
+      timeouts: {
+        connection: 'default',
+        generation: 'default',
+        modelPull: 'default',
+      },
+    };
 
     // Load config files and their paths
     const projectConfigPath = this.localConfigFile;
@@ -381,10 +413,44 @@ export class ConfigManager {
     sources.useEmojis = await getSource('useEmojis', config.useEmojis);
 
     // Handle nested timeouts
+    const getNestedSource = async (path: string, value: unknown): Promise<string> => {
+      // Check environment variables first
+      const envKey = `OLLAMA_COMMIT_${path.toUpperCase().replace('.', '_')}`;
+      if (process.env[envKey] !== undefined) {
+        return 'environment variable';
+      }
+
+      // Helper to check if a config has the nested value
+      const hasNestedValue = (config: Record<string, unknown>, parent: string, child: string, val: unknown): boolean => {
+        return config[parent] !== undefined &&
+               typeof config[parent] === 'object' &&
+               config[parent] !== null &&
+               (config[parent] as Record<string, unknown>)[child] === val;
+      };
+
+      const childKey = path.split('.')[1];
+      if (!childKey) {
+        return 'default';
+      }
+
+      // Check project config
+      if (projectConfig && hasNestedValue(projectConfig, 'timeouts', childKey, value)) {
+        return projectConfigPath;
+      }
+
+      // Check user config
+      if (userConfig && hasNestedValue(userConfig, 'timeouts', childKey, value)) {
+        return userConfigPath;
+      }
+
+      // Default
+      return 'default';
+    };
+
     sources.timeouts = {
-      connection: await getSource('timeouts.connection', config.timeouts.connection),
-      generation: await getSource('timeouts.generation', config.timeouts.generation),
-      modelPull: await getSource('timeouts.modelPull', config.timeouts.modelPull),
+      connection: await getNestedSource('timeouts.connection', config.timeouts.connection),
+      generation: await getNestedSource('timeouts.generation', config.timeouts.generation),
+      modelPull: await getNestedSource('timeouts.modelPull', config.timeouts.modelPull),
     };
 
     return sources;
