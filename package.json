@@ -1,6 +1,6 @@
 {
   "name": "@ondrovic/ollama-git-commit",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Enhanced Ollama Git Commit Message Generator - A CLI tool that generates meaningful commit messages using Ollama AI",
   "main": "dist/index.js",
   "type": "module",
@@ -26,7 +26,9 @@
     "clean": "rm -rf dist",
     "prepublishOnly": "bun run clean && bun run build && bun run test",
     "release": "changeset publish",
-    "version": "changeset version"
+    "version": "changeset version",
+    "update-version": "bun scripts/update-version.ts",
+    "prepare": "husky"
   },
   "keywords": [
     "git",
@@ -58,7 +60,9 @@
     "bun": "1.2.16",
     "bun-types": "1.2.16",
     "eslint": "^9.28.0",
+    "husky": "^9.1.7",
     "jiti": "^2.4.2",
+    "lint-staged": "^16.1.0",
     "prettier": "^3.5.3",
     "ts-node": "^10.9.2",
     "typescript": "^5.8.3",

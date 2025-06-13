@@ -15,14 +15,12 @@ export class TestCommand {
       const config = await getConfig();
       const serverHost = normalizeHost(host || config.host);
 
-      if (verbose) {
-        Logger.info(`Testing connection to Ollama server at ${serverHost}...`);
-      }
-
       const success = await this.ollamaService.testConnection(serverHost, verbose);
       if (!success) {
         throw new Error('Connection test failed');
       }
+      
+      Logger.success(`Successfully connected to Ollama server at ${serverHost}`);
       return true;
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';

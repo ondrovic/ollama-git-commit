@@ -16,7 +16,7 @@ const program = new Command();
 program
   .name('ollama-commit')
   .description('Enhanced Ollama Git Commit Message Generator - A CLI tool that generates meaningful commit messages using Ollama AI')
-  .version('1.0.0');
+  .version('1.0.1');
 
 // Main commit command
 program
