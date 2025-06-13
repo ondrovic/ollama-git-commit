@@ -5,16 +5,16 @@ import { getConfig } from '../core/config';
 
 export class TestCommand {
   private ollamaService: OllamaService;
-  
+
   constructor() {
     this.ollamaService = new OllamaService();
   }
 
-  async testConnection(host?: string, verbose: boolean = false): Promise<boolean> {
+  async testConnection(host?: string, verbose = false): Promise<boolean> {
     const config = getConfig();
     const ollamaHost = host || config.host; // Use config default instead of hardcoded
     const timeouts = config.timeouts;
-    
+
     if (verbose) {
       Logger.info(`Testing Ollama connection to ${ollamaHost}`);
       Logger.debug(`Connection timeout: ${timeouts.connection}ms`);
@@ -34,33 +34,33 @@ export class TestCommand {
       if (verbose) {
         Logger.success('Ollama connection successful');
         console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-        
+
         if (data.models && Array.isArray(data.models)) {
           console.log(`📦 Available models (${data.models.length}):`);
-          
+
           let totalSize = 0;
           const modelFamilies: Record<string, number> = {};
-          
-          data.models.forEach((model: any) => {
+
+          data.models.forEach((model: { name: string; size?: number; details?: { family?: string } }) => {
             const size = model.size ? formatFileSize(model.size) : 'unknown size';
             const family = model.details?.family ? ` [${model.details.family}]` : '';
             const currentModel = model.name === config.model ? ' ⭐ (current)' : '';
-            
+
             console.log(`   📄 ${model.name} ${size}${family}${currentModel}`);
-            
+
             // Collect stats
             if (model.size) totalSize += model.size;
             if (model.details?.family) {
               modelFamilies[model.details.family] = (modelFamilies[model.details.family] || 0) + 1;
             }
           });
-          
+
           console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-          console.log(`📊 Summary:`);
+          console.log('📊 Summary:');
           console.log(`   Total models: ${data.models.length}`);
           console.log(`   Total size: ${formatFileSize(totalSize)}`);
           console.log(`   Current configured model: ${config.model}`);
-          
+
           if (Object.keys(modelFamilies).length > 0) {
             console.log(`   Model families: ${Object.entries(modelFamilies)
               .map(([family, count]) => `${family} (${count})`)
@@ -74,18 +74,22 @@ export class TestCommand {
           console.log('   ollama pull codellama');
           console.log('   ollama pull mistral');
         }
-        
+
         console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
       } else {
         Logger.success(`Connection OK - ${ollamaHost}`);
       }
-      
+
       return true;
-    } catch (error: any) {
+    } catch (error: unknown) {
       Logger.error(`Cannot connect to Ollama at ${ollamaHost}`);
-      
+
       if (verbose) {
-        Logger.error(`Detailed error: ${error.message}`);
+        if (typeof error === 'object' && error && 'message' in error) {
+          Logger.error(`Detailed error: ${(error as { message: string }).message}`);
+        } else {
+          Logger.error(`Detailed error: ${String(error)}`);
+        }
         console.log('');
         console.log('🔧 Troubleshooting steps:');
         console.log('   1. Check if Ollama is running:');
@@ -101,13 +105,13 @@ export class TestCommand {
         console.log('');
         console.log('   4. Check firewall and network:');
         console.log('      curl http://localhost:11434/api/tags');
-        
-        if (error.name === 'TimeoutError') {
+
+        if (typeof error === 'object' && error && 'name' in error && (error as { name: string }).name === 'TimeoutError') {
           console.log('');
           console.log('   5. Increase connection timeout in config file:');
           console.log('      "timeouts": { "connection": 30000 }');
         }
-        
+
         console.log('');
         console.log('   6. Verify Ollama installation:');
         console.log('      ollama --version');
@@ -115,12 +119,12 @@ export class TestCommand {
         Logger.error('Make sure Ollama is running and accessible');
         Logger.info('Use --verbose for detailed troubleshooting information');
       }
-      
+
       return false;
     }
   }
 
-  async testSimplePrompt(host?: string, model?: string, verbose: boolean = false): Promise<boolean> {
+  async testSimplePrompt(host?: string, model?: string, verbose = false): Promise<boolean> {
     const config = getConfig();
     const ollamaHost = host || config.host; // Use config default
     const testModel = model || config.model; // Use config default model
@@ -168,30 +172,30 @@ export class TestCommand {
       // Test JSON validity
       try {
         const data = JSON.parse(responseText);
-        
+
         if (verbose) {
           Logger.success('✅ Valid JSON response');
           Logger.info('Response field exists:', 'response' in data);
-          
+
           if (data.response) {
-            Logger.info('Response preview:', data.response.substring(0, 100) + '...');
+            Logger.info('Response preview:', `${data.response.substring(0, 100)  }...`);
           }
-          
+
           if (data.model) {
             Logger.info('Model used:', data.model);
           }
-          
+
           if (data.total_duration) {
             Logger.info('Generation time:', `${(data.total_duration / 1000000).toFixed(0)}ms`);
           }
         } else {
           Logger.success('✅ Simple prompt test passed');
         }
-        
+
         // Check for error in response
         if (data.error) {
           Logger.error('Model returned error:', data.error);
-          
+
           if (data.error.toString().toLowerCase().includes('not found')) {
             console.log('');
             console.log('🔧 Model not found. Try:');
@@ -199,40 +203,44 @@ export class TestCommand {
             console.log('   ollama-commit --list-models');
             console.log('   ollama-commit --auto-model -d /path/to/repo');
           }
-          
+
           return false;
         }
-        
+
         // Check if we got a reasonable response
         if (!data.response || data.response.trim().length === 0) {
           Logger.warn('⚠️  Model returned empty response');
           return false;
         }
-        
+
         return true;
-      } catch (parseError: any) {
-        Logger.error('❌ JSON parsing failed:', parseError.message);
-        
+      } catch (parseError: unknown) {
+        if (typeof parseError === 'object' && parseError && 'message' in parseError) {
+          Logger.error('❌ JSON parsing failed:', (parseError as { message: string }).message);
+        } else {
+          Logger.error('❌ JSON parsing failed:', String(parseError));
+        }
+
         if (verbose) {
           Logger.debug('Raw response that failed to parse:');
           console.log(responseText);
         }
-        
+
         // Try to extract useful information from malformed response
         if (responseText.includes('error')) {
           Logger.error('Response contains error information');
-          
+
           if (responseText.toLowerCase().includes('not found')) {
             console.log('');
             console.log('🔧 Possible model not found. Try:');
             console.log(`   ollama pull ${testModel}`);
           }
         }
-        
+
         return false;
       }
-    } catch (error: any) {
-      if (error.name === 'TimeoutError') {
+    } catch (error: unknown) {
+      if (typeof error === 'object' && error && 'name' in error && (error as { name: string }).name === 'TimeoutError') {
         Logger.error('❌ Request timed out');
         if (verbose) {
           console.log('');
@@ -243,8 +251,8 @@ export class TestCommand {
           console.log('     "timeouts": { "generation": 300000 }');
           console.log('   • Check system resources (CPU/Memory/GPU)');
         }
-      } else if (error.message.includes('fetch')) {
-        Logger.error('❌ Network request failed:', error.message);
+      } else if (typeof error === 'object' && error && 'message' in error && (error as { message: string }).message.includes('fetch')) {
+        Logger.error('❌ Network request failed:', (error as { message: string }).message);
         if (verbose) {
           console.log('');
           console.log('🔧 Network troubleshooting:');
@@ -253,9 +261,13 @@ export class TestCommand {
           console.log('   • Test basic connection: ollama-commit --test');
         }
       } else {
-        Logger.error('❌ Request failed:', error.message);
+        if (typeof error === 'object' && error && 'message' in error) {
+          Logger.error('❌ Request failed:', (error as { message: string }).message);
+        } else {
+          Logger.error('❌ Request failed:', String(error));
+        }
       }
-      
+
       return false;
     }
   }
@@ -263,10 +275,10 @@ export class TestCommand {
   async testModelAvailability(model: string, host?: string): Promise<boolean> {
     const config = getConfig();
     const ollamaHost = host || config.host;
-    
+
     try {
       const available = await this.ollamaService.isModelAvailable(ollamaHost, model);
-      
+
       if (available) {
         Logger.success(`✅ Model '${model}' is available`);
       } else {
@@ -275,22 +287,26 @@ export class TestCommand {
         console.log('🔧 To install this model:');
         console.log(`   ollama pull ${model}`);
       }
-      
+
       return available;
-    } catch (error: any) {
-      Logger.error(`Failed to check model availability: ${error.message}`);
+    } catch (error: unknown) {
+      if (typeof error === 'object' && error && 'message' in error) {
+        Logger.error(`Failed to check model availability: ${(error as { message: string }).message}`);
+      } else {
+        Logger.error(`Failed to check model availability: ${String(error)}`);
+      }
       return false;
     }
   }
 
-  async testFullWorkflow(host?: string, model?: string, verbose: boolean = false): Promise<boolean> {
+  async testFullWorkflow(host?: string, model?: string, verbose = false): Promise<boolean> {
     const config = getConfig();
     const ollamaHost = host || config.host;
     const testModel = model || config.model;
-    
+
     console.log('🧪 Running full workflow test...');
     console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-    
+
     // Test 1: Connection
     console.log('1️⃣  Testing connection...');
     const connectionOk = await this.testConnection(ollamaHost, verbose);
@@ -298,7 +314,7 @@ export class TestCommand {
       Logger.error('❌ Connection test failed');
       return false;
     }
-    
+
     // Test 2: Model availability
     console.log('\n2️⃣  Testing model availability...');
     const modelOk = await this.testModelAvailability(testModel, ollamaHost);
@@ -306,7 +322,7 @@ export class TestCommand {
       Logger.error('❌ Model availability test failed');
       return false;
     }
-    
+
     // Test 3: Simple prompt
     console.log('\n3️⃣  Testing simple prompt generation...');
     const promptOk = await this.testSimplePrompt(ollamaHost, testModel, verbose);
@@ -314,67 +330,66 @@ export class TestCommand {
       Logger.error('❌ Simple prompt test failed');
       return false;
     }
-    
+
     console.log('\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
     Logger.success('🎉 All tests passed! Your setup is working correctly.');
-    
+
     console.log('');
     console.log('📋 Test summary:');
     console.log(`   ✅ Connection to ${ollamaHost}`);
     console.log(`   ✅ Model '${testModel}' available`);
-    console.log(`   ✅ Simple prompt generation working`);
-    
+    console.log('   ✅ Simple prompt generation working');
+
     console.log('');
     console.log('🚀 Ready to generate commit messages!');
     console.log('   Try: ollama-commit -d /path/to/your/repo');
-    
+
     return true;
   }
 
-  async benchmarkModel(model?: string, host?: string, iterations: number = 3): Promise<void> {
+  async benchmarkModel(model?: string, host?: string, iterations = 3): Promise<void> {
     const config = getConfig();
     const ollamaHost = host || config.host;
     const testModel = model || config.model;
-    
+
     console.log(`⏱️  Benchmarking model: ${testModel}`);
     console.log(`🎯 Running ${iterations} iterations...`);
     console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-    
+
     const results: number[] = [];
-    const testPrompt = 'Write a short commit message for adding a new feature to handle user authentication.';
-    
+
     for (let i = 0; i < iterations; i++) {
       console.log(`\n📊 Run ${i + 1}/${iterations}:`);
-      
+
       const startTime = Date.now();
-      
+
       try {
         const success = await this.testSimplePrompt(ollamaHost, testModel, false);
         const duration = Date.now() - startTime;
-        
+
         if (success) {
           results.push(duration);
           console.log(`   ✅ Completed in ${duration}ms`);
         } else {
-          console.log(`   ❌ Failed`);
+          console.log('   ❌ Failed');
         }
       } catch (error) {
         console.log(`   ❌ Error: ${error}`);
       }
     }
-    
+
     if (results.length > 0) {
       const avgTime = Math.round(results.reduce((a, b) => a + b, 0) / results.length);
       const minTime = Math.min(...results);
       const maxTime = Math.max(...results);
-      
+
       console.log('\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
       console.log('📈 Benchmark Results:');
       console.log(`   Average time: ${avgTime}ms`);
       console.log(`   Fastest time: ${minTime}ms`);
       console.log(`   Slowest time: ${maxTime}ms`);
       console.log(`   Success rate: ${results.length}/${iterations} (${Math.round(results.length / iterations * 100)}%)`);
-      
+
       // Performance rating
       if (avgTime < 2000) {
         console.log('   🚀 Performance: Excellent (< 2s)');
@@ -405,7 +420,7 @@ export class TestCommand {
 //     const config = getConfig();
 //     const ollamaHost = host || config.host;
 //     const timeouts = getConfigValue('timeouts');
-    
+
 //     if (verbose) {
 //       Logger.info(`Testing Ollama connection to ${ollamaHost}`);
 //     }

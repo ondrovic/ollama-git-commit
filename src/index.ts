@@ -1,6 +1,6 @@
 // /**
 //  * Ollama Commit - Enhanced Git Commit Message Generator
-//  * 
+//  *
 //  * A powerful CLI tool that generates meaningful, contextual commit messages using Ollama AI.
 //  * This is the main export file for programmatic usage.
 //  */
@@ -79,7 +79,7 @@
 // export const VERSION = '1.0.0';
 /**
  * Ollama Commit - Enhanced Git Commit Message Generator
- * 
+ *
  * A powerful CLI tool that generates meaningful, contextual commit messages using Ollama AI.
  * This is the main export file for programmatic usage.
  */

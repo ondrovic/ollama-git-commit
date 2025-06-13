@@ -8,25 +8,25 @@ export interface OllamaCommitConfig {
   // Core settings
   model: string;
   host: string;
-  
+
   // Behavior settings
   verbose: boolean;
   interactive: boolean;
   debug: boolean;
   autoStage: boolean;
   autoModel: boolean;
-  
+
   // File paths
   promptFile: string;
   configFile: string;
-  
+
   // Network settings
   timeouts: {
     connection: number;
     generation: number;
     modelPull: number;
   };
-  
+
   // UI settings
   useEmojis: boolean;
   promptTemplate: 'default' | 'conventional' | 'simple' | 'detailed';
@@ -62,7 +62,7 @@ export class ConfigManager {
     this.defaultConfigFile = join(homedir(), '.config', 'ollama-git-commit', 'config.json');
     this.globalConfigFile = join(homedir(), '.ollama-git-commit.json');
     this.localConfigFile = join(process.cwd(), '.ollama-git-commit.json');
-    
+
     // Load configuration with hierarchy
     this.config = this.loadConfig();
   }
@@ -79,25 +79,25 @@ export class ConfigManager {
       // Core settings - these should be the most commonly working defaults
       model: 'llama3.2:latest', // More widely available than mistral
       host: process.env.OLLAMA_HOST || 'http://localhost:11434', // Standard Ollama default
-      
+
       // Behavior settings
       verbose: false,
       interactive: true,
       debug: false,
       autoStage: false,
       autoModel: false,
-      
+
       // File paths
       promptFile: join(homedir(), '.config', 'ollama-git-commit', 'prompt.txt'),
       configFile: this.defaultConfigFile,
-      
+
       // Network settings (in milliseconds)
       timeouts: {
         connection: 10000,   // 10 seconds
         generation: 120000,  // 2 minutes
         modelPull: 300000,   // 5 minutes
       },
-      
+
       // UI settings
       useEmojis: true,
       promptTemplate: 'default',
@@ -106,7 +106,7 @@ export class ConfigManager {
 
   private loadConfig(): OllamaCommitConfig {
     const defaults = this.getDefaults();
-    
+
     // Configuration hierarchy (highest priority first):
     // 1. Environment variables
     // 2. Local config file (.ollama-git-commit.json in current directory)
@@ -148,18 +148,22 @@ export class ConfigManager {
     try {
       const content = readFileSync(filePath, 'utf8');
       const parsed: ConfigFileSchema = JSON.parse(content);
-      
+
       // Validate and transform the config
       return this.validateAndTransformConfig(parsed, filePath);
-    } catch (error: any) {
-      Logger.warn(`Failed to load config file ${filePath}: ${error.message}`);
+    } catch (error: unknown) {
+      if (typeof error === 'object' && error && 'message' in error) {
+        Logger.warn(`Failed to load config file ${filePath}: ${(error as { message: string }).message}`);
+      } else {
+        Logger.warn(`Failed to load config file ${filePath}: ${String(error)}`);
+      }
       return null;
     }
   }
 
   private validateAndTransformConfig(
-    config: ConfigFileSchema, 
-    filePath: string
+    config: ConfigFileSchema,
+    filePath: string,
   ): Partial<OllamaCommitConfig> | null {
     try {
       const result: Partial<OllamaCommitConfig> = {};
@@ -202,14 +206,18 @@ export class ConfigManager {
       }
 
       // Prompt template
-      if (config.promptTemplate && 
+      if (config.promptTemplate &&
           ['default', 'conventional', 'simple', 'detailed'].includes(config.promptTemplate)) {
         result.promptTemplate = config.promptTemplate;
       }
 
       return result;
-    } catch (error: any) {
-      Logger.warn(`Invalid config format in ${filePath}: ${error.message}`);
+    } catch (error: unknown) {
+      if (typeof error === 'object' && error && 'message' in error) {
+        Logger.warn(`Invalid config format in ${filePath}: ${(error as { message: string }).message}`);
+      } else {
+        Logger.warn(`Invalid config format in ${filePath}: ${String(error)}`);
+      }
       return null;
     }
   }
@@ -219,7 +227,7 @@ export class ConfigManager {
     if (process.env.OLLAMA_HOST) {
       config.host = process.env.OLLAMA_HOST;
     }
-    
+
     if (process.env.OLLAMA_COMMIT_MODEL) {
       config.model = process.env.OLLAMA_COMMIT_MODEL;
     }
@@ -281,7 +289,7 @@ export class ConfigManager {
   // Create default config file
   async createDefaultConfig(): Promise<void> {
     const configDir = dirname(this.defaultConfigFile);
-    
+
     if (!existsSync(configDir)) {
       mkdirSync(configDir, { recursive: true });
     }
@@ -305,13 +313,17 @@ export class ConfigManager {
 
     try {
       writeFileSync(
-        this.defaultConfigFile, 
-        JSON.stringify(defaultConfig, null, 2), 
-        'utf8'
+        this.defaultConfigFile,
+        JSON.stringify(defaultConfig, null, 2),
+        'utf8',
       );
       Logger.success(`Created default config file: ${this.defaultConfigFile}`);
-    } catch (error: any) {
-      throw new Error(`Failed to create config file: ${error.message}`);
+    } catch (error: unknown) {
+      if (typeof error === 'object' && error && 'message' in error) {
+        throw new Error(`Failed to create config file: ${(error as { message: string }).message}`);
+      } else {
+        throw new Error(`Failed to create config file: ${String(error)}`);
+      }
     }
   }
 
@@ -321,9 +333,9 @@ export class ConfigManager {
     global: string;
     local: string;
     active: string[];
-  } {
+    } {
     const active: string[] = [];
-    
+
     if (existsSync(this.defaultConfigFile)) active.push(this.defaultConfigFile);
     if (existsSync(this.globalConfigFile)) active.push(this.globalConfigFile);
     if (existsSync(this.localConfigFile)) active.push(this.localConfigFile);
@@ -342,9 +354,9 @@ export class ConfigManager {
   }
 
   // Debug info
-  getDebugInfo(): Record<string, any> {
+  getDebugInfo(): Record<string, unknown> {
     const files = this.getConfigFiles();
-    
+
     return {
       configFiles: files,
       currentConfig: this.config,
@@ -366,7 +378,7 @@ export function getConfig(): Readonly<OllamaCommitConfig> {
 
 // Convenience function for getting a specific config value
 export function getConfigValue<K extends keyof OllamaCommitConfig>(
-  key: K
+  key: K,
 ): OllamaCommitConfig[K] {
   return ConfigManager.getInstance().get(key);
 }

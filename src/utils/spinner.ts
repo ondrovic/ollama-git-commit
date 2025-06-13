@@ -5,7 +5,7 @@ export class Spinner {
   private currentFrame = 0;
   private message = '';
 
-  start(message: string = 'Loading'): void {
+  start(message = 'Loading'): void {
     if (this.isSpinning) {
       this.stop();
     }
@@ -88,7 +88,7 @@ export class MultiSpinner {
     const spinner = new Spinner();
     this.spinners.set(id, { spinner, status: 'spinning' });
     this.total++;
-    
+
     spinner.start(message);
   }
 

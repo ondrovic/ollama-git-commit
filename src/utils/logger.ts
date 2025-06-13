@@ -1,4 +1,5 @@
 type LogLevel = 'info' | 'warn' | 'error' | 'success' | 'debug';
+type LogArgs = unknown[];
 
 export class Logger {
   private static verbose = false;
@@ -23,31 +24,31 @@ export class Logger {
     return this.debugMode;
   }
 
-  static info(message: string, ...args: any[]): void {
+  static info(message: string, ...args: LogArgs): void {
     if (this.verbose) {
       console.log(`🔍 ${message}`, ...args);
     }
   }
 
-  static success(message: string, ...args: any[]): void {
+  static success(message: string, ...args: LogArgs): void {
     console.log(`✅ ${message}`, ...args);
   }
 
-  static warn(message: string, ...args: any[]): void {
+  static warn(message: string, ...args: LogArgs): void {
     console.log(`⚠️  ${message}`, ...args);
   }
 
-  static error(message: string, ...args: any[]): void {
+  static error(message: string, ...args: LogArgs): void {
     console.error(`❌ ${message}`, ...args);
   }
 
-  static debug(message: string, ...args: any[]): void {
+  static debug(message: string, ...args: LogArgs): void {
     if (this.debugMode) {
       console.log(`🐛 ${message}`, ...args);
     }
   }
 
-  static log(level: LogLevel, message: string, ...args: any[]): void {
+  static log(level: LogLevel, message: string, ...args: LogArgs): void {
     switch (level) {
       case 'info':
         this.info(message, ...args);
@@ -86,18 +87,18 @@ export class Logger {
     if (ms < 1000) {
       return `${ms}ms`;
     }
-    
+
     const seconds = Math.floor(ms / 1000);
     const minutes = Math.floor(seconds / 60);
-    
+
     if (minutes > 0) {
       return `${minutes}m ${seconds % 60}s`;
     }
-    
+
     return `${seconds}s`;
   }
 
-  static table(data: Record<string, any>[]): void {
+  static table(data: Record<string, unknown>[]): void {
     if (this.verbose) {
       console.table(data);
     }

@@ -123,8 +123,12 @@ export function validateEnvironment(directory: string = process.cwd()): { valid:
   // Check Node.js version
   try {
     validateNodeVersion();
-  } catch (error: any) {
-    errors.push(error.message);
+  } catch (error: unknown) {
+    if (typeof error === 'object' && error && 'message' in error) {
+      errors.push((error as { message: string }).message);
+    } else {
+      errors.push(String(error));
+    }
   }
 
   // Check Git availability
@@ -137,8 +141,12 @@ export function validateEnvironment(directory: string = process.cwd()): { valid:
   // Check if in git repository
   try {
     validateGitRepository(directory);
-  } catch (error: any) {
-    errors.push(error.message);
+  } catch (error: unknown) {
+    if (typeof error === 'object' && error && 'message' in error) {
+      errors.push((error as { message: string }).message);
+    } else {
+      errors.push(String(error));
+    }
   }
 
   // Check Git configuration
@@ -162,13 +170,13 @@ export function validateEnvironment(directory: string = process.cwd()): { valid:
   };
 }
 
-export function sanitizeInput(input: string, maxLength: number = 1000): string {
+export function sanitizeInput(input: string, maxLength = 1000): string {
   // Remove null bytes and control characters except newlines and tabs
-  let sanitized = input.replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, '');
-  
+  let sanitized = input.replace(/[^\x20-\x7E\n\t]/g, '');
+
   // Limit length
   if (sanitized.length > maxLength) {
-    sanitized = sanitized.substring(0, maxLength) + '...';
+    sanitized = `${sanitized.substring(0, maxLength)}...`;
   }
 
   return sanitized;

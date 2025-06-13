@@ -36,8 +36,12 @@ What you write will be passed directly to git commit -m "[message]"`;
 
       try {
         writeFileSync(promptFile, this.defaultPrompt, 'utf8');
-      } catch (error: any) {
-        throw new Error(`❌ Failed to create prompt file at ${promptFile}: ${error.message}`);
+      } catch (error: unknown) {
+        if (typeof error === 'object' && error && 'message' in error) {
+          throw new Error(`❌ Failed to create prompt file at ${promptFile}: ${(error as { message: string }).message}`);
+        } else {
+          throw new Error(`❌ Failed to create prompt file at ${promptFile}: ${String(error)}`);
+        }
       }
     }
 
@@ -52,8 +56,12 @@ What you write will be passed directly to git commit -m "[message]"`;
 
     try {
       return readFileSync(promptFile, 'utf8');
-    } catch (error: any) {
-      throw new Error(`❌ Failed to read prompt file: ${error.message}`);
+    } catch (error: unknown) {
+      if (typeof error === 'object' && error && 'message' in error) {
+        throw new Error(`❌ Failed to read prompt file: ${(error as { message: string }).message}`);
+      } else {
+        throw new Error(`❌ Failed to read prompt file: ${String(error)}`);
+      }
     }
   }
 
@@ -61,15 +69,14 @@ What you write will be passed directly to git commit -m "[message]"`;
     // Truncate diff if too large to avoid API limits
     let truncatedDiff = diff;
     const maxDiffLength = 4000;
-    
+
     if (diff.length > maxDiffLength) {
       const lines = diff.split('\n');
       const truncatedLines = lines.slice(0, 100);
       truncatedDiff = truncatedLines.join('\n');
-      
-      const remaining = lines.length - 100;
+
       truncatedDiff += `\n\n[... diff truncated - showing first 100 lines of ${lines.length} total lines ...]`;
-      
+
       const fileCount = (diff.match(/^diff --git/gm) || []).length;
       truncatedDiff += `\n[Total files changed: ${fileCount}]`;
     }
@@ -117,7 +124,7 @@ Please analyze these changes and create a meaningful commit message following th
   getPromptTemplates(): Record<string, string> {
     return {
       default: this.defaultPrompt,
-      
+
       conventional: `Generate conventional commit messages following the format: type(scope): description
 
 Types: feat, fix, docs, style, refactor, test, chore, perf, ci, build, revert
@@ -175,7 +182,7 @@ Impact:
 
   createPromptFromTemplate(templateName: string): string {
     const templates = this.getPromptTemplates();
-    
+
     if (!templates[templateName]) {
       throw new Error(`Template '${templateName}' not found. Available templates: ${Object.keys(templates).join(', ')}`);
     }

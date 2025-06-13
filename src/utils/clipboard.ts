@@ -9,26 +9,26 @@ interface ClipboardTool {
 }
 
 const clipboardTools: ClipboardTool[] = [
-  { 
-    cmd: 'pbcopy', 
+  {
+    cmd: 'pbcopy',
     name: 'macOS',
-    test: async () => process.platform === 'darwin'
+    test: async () => process.platform === 'darwin',
   },
-  { 
-    cmd: 'xclip', 
-    args: ['-selection', 'clipboard'], 
+  {
+    cmd: 'xclip',
+    args: ['-selection', 'clipboard'],
     name: 'Linux (X11)',
-    test: async () => process.platform === 'linux' && process.env.DISPLAY !== undefined
+    test: async () => process.platform === 'linux' && process.env.DISPLAY !== undefined,
   },
-  { 
-    cmd: 'wl-copy', 
+  {
+    cmd: 'wl-copy',
     name: 'Linux (Wayland)',
-    test: async () => process.platform === 'linux' && process.env.WAYLAND_DISPLAY !== undefined
+    test: async () => process.platform === 'linux' && process.env.WAYLAND_DISPLAY !== undefined,
   },
-  { 
-    cmd: 'clip', 
+  {
+    cmd: 'clip',
     name: 'Windows',
-    test: async () => process.platform === 'win32'
+    test: async () => process.platform === 'win32',
   },
 ];
 
@@ -63,8 +63,8 @@ export async function copyToClipboard(text: string): Promise<void> {
 async function tryClipboardTool(tool: ClipboardTool, text: string): Promise<boolean> {
   return new Promise((resolve) => {
     try {
-      const proc = spawn(tool.cmd, tool.args || [], { 
-        stdio: ['pipe', 'pipe', 'pipe'] 
+      const proc = spawn(tool.cmd, tool.args || [], {
+        stdio: ['pipe', 'pipe', 'pipe'],
       });
 
       let errorOutput = '';
