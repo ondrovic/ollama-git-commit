@@ -1,5 +1,4 @@
-// src/core/config.ts
-import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'fs';
+import * as fs from 'fs-extra';
 import { join, dirname } from 'path';
 import { homedir } from 'os';
 import { Logger } from '../utils/logger';
@@ -32,30 +31,13 @@ export interface OllamaCommitConfig {
   promptTemplate: 'default' | 'conventional' | 'simple' | 'detailed';
 }
 
-interface ConfigFileSchema {
-  model?: string;
-  host?: string;
-  verbose?: boolean;
-  interactive?: boolean;
-  debug?: boolean;
-  autoStage?: boolean;
-  autoModel?: boolean;
-  promptFile?: string;
-  timeouts?: {
-    connection?: number;
-    generation?: number;
-    modelPull?: number;
-  };
-  useEmojis?: boolean;
-  promptTemplate?: 'default' | 'conventional' | 'simple' | 'detailed';
-}
-
 export class ConfigManager {
   private static instance: ConfigManager;
   private config: OllamaCommitConfig;
   private readonly defaultConfigFile: string;
   private readonly globalConfigFile: string;
   private readonly localConfigFile: string;
+  private initialized = false;
 
   private constructor() {
     // Define config file locations
@@ -63,8 +45,8 @@ export class ConfigManager {
     this.globalConfigFile = join(homedir(), '.ollama-git-commit.json');
     this.localConfigFile = join(process.cwd(), '.ollama-git-commit.json');
 
-    // Load configuration with hierarchy
-    this.config = this.loadConfig();
+    // Initialize with defaults
+    this.config = this.getDefaults();
   }
 
   static getInstance(): ConfigManager {
@@ -72,6 +54,13 @@ export class ConfigManager {
       ConfigManager.instance = new ConfigManager();
     }
     return ConfigManager.instance;
+  }
+
+  async initialize(): Promise<void> {
+    if (!this.initialized) {
+      this.config = await this.loadConfig();
+      this.initialized = true;
+    }
   }
 
   private getDefaults(): OllamaCommitConfig {
@@ -104,7 +93,20 @@ export class ConfigManager {
     };
   }
 
-  private loadConfig(): OllamaCommitConfig {
+  private async loadConfigFile(filePath: string): Promise<Record<string, unknown>> {
+    try {
+      const content = await fs.readFile(filePath, 'utf-8');
+      const config = JSON.parse(content) as Record<string, unknown>;
+      return this.validateAndTransformConfig(config, filePath);
+    } catch (err: unknown) {
+      if (err instanceof Error && 'code' in err && err.code === 'ENOENT') {
+        return {};
+      }
+      throw err;
+    }
+  }
+
+  private async loadConfig(): Promise<OllamaCommitConfig> {
     const defaults = this.getDefaults();
 
     // Configuration hierarchy (highest priority first):
@@ -117,19 +119,19 @@ export class ConfigManager {
     let config = { ...defaults };
 
     // Load default config file
-    const defaultConfig = this.loadConfigFile(this.defaultConfigFile);
+    const defaultConfig = await this.loadConfigFile(this.defaultConfigFile);
     if (defaultConfig) {
       config = { ...config, ...defaultConfig };
     }
 
     // Load global config file
-    const globalConfig = this.loadConfigFile(this.globalConfigFile);
+    const globalConfig = await this.loadConfigFile(this.globalConfigFile);
     if (globalConfig) {
       config = { ...config, ...globalConfig };
     }
 
     // Load local config file (highest priority)
-    const localConfig = this.loadConfigFile(this.localConfigFile);
+    const localConfig = await this.loadConfigFile(this.localConfigFile);
     if (localConfig) {
       config = { ...config, ...localConfig };
     }
@@ -140,86 +142,31 @@ export class ConfigManager {
     return config;
   }
 
-  private loadConfigFile(filePath: string): Partial<OllamaCommitConfig> | null {
-    if (!existsSync(filePath)) {
-      return null;
-    }
+  private validateAndTransformConfig(config: Record<string, unknown>, source: string): Record<string, unknown> {
+    const validated: Record<string, unknown> = { ...config };
 
-    try {
-      const content = readFileSync(filePath, 'utf8');
-      const parsed: ConfigFileSchema = JSON.parse(content);
-
-      // Validate and transform the config
-      return this.validateAndTransformConfig(parsed, filePath);
-    } catch (error: unknown) {
-      if (typeof error === 'object' && error && 'message' in error) {
-        Logger.warn(`Failed to load config file ${filePath}: ${(error as { message: string }).message}`);
-      } else {
-        Logger.warn(`Failed to load config file ${filePath}: ${String(error)}`);
-      }
-      return null;
-    }
-  }
-
-  private validateAndTransformConfig(
-    config: ConfigFileSchema,
-    filePath: string,
-  ): Partial<OllamaCommitConfig> | null {
-    try {
-      const result: Partial<OllamaCommitConfig> = {};
-
-      // Validate and copy each field
-      if (config.model && typeof config.model === 'string') {
-        result.model = config.model;
-      }
-
-      if (config.host && typeof config.host === 'string') {
-        // Validate URL format
+    // Validate host URL
+    if (validated.host) {
+      try {
+        // Try parsing as URL first
+        new URL(validated.host as string);
+      } catch {
         try {
-          new URL(config.host);
-          result.host = config.host;
+          // If not a URL, try parsing as host:port
+          const [host, port] = (validated.host as string).split(':');
+          if (!host || !port || isNaN(parseInt(port))) {
+            throw new Error('Invalid host:port format');
+          }
+          // Convert to URL format
+          validated.host = `http://${validated.host}`;
         } catch {
-          Logger.warn(`Invalid host URL in ${filePath}: ${config.host}`);
+          Logger.warn(`Invalid host URL in ${source}: ${validated.host}`);
+          Logger.warn('Expected format: http://host:port or host:port');
         }
       }
-
-      // Boolean fields
-      if (typeof config.verbose === 'boolean') result.verbose = config.verbose;
-      if (typeof config.interactive === 'boolean') result.interactive = config.interactive;
-      if (typeof config.debug === 'boolean') result.debug = config.debug;
-      if (typeof config.autoStage === 'boolean') result.autoStage = config.autoStage;
-      if (typeof config.autoModel === 'boolean') result.autoModel = config.autoModel;
-      if (typeof config.useEmojis === 'boolean') result.useEmojis = config.useEmojis;
-
-      // File paths
-      if (config.promptFile && typeof config.promptFile === 'string') {
-        result.promptFile = config.promptFile.replace('~', homedir());
-      }
-
-      // Timeouts
-      if (config.timeouts && typeof config.timeouts === 'object') {
-        result.timeouts = {
-          connection: typeof config.timeouts.connection === 'number' ? config.timeouts.connection : this.getDefaults().timeouts.connection,
-          generation: typeof config.timeouts.generation === 'number' ? config.timeouts.generation : this.getDefaults().timeouts.generation,
-          modelPull: typeof config.timeouts.modelPull === 'number' ? config.timeouts.modelPull : this.getDefaults().timeouts.modelPull,
-        };
-      }
-
-      // Prompt template
-      if (config.promptTemplate &&
-          ['default', 'conventional', 'simple', 'detailed'].includes(config.promptTemplate)) {
-        result.promptTemplate = config.promptTemplate;
-      }
-
-      return result;
-    } catch (error: unknown) {
-      if (typeof error === 'object' && error && 'message' in error) {
-        Logger.warn(`Invalid config format in ${filePath}: ${(error as { message: string }).message}`);
-      } else {
-        Logger.warn(`Invalid config format in ${filePath}: ${String(error)}`);
-      }
-      return null;
     }
+
+    return validated;
   }
 
   private applyEnvironmentVariables(config: OllamaCommitConfig): void {
@@ -273,11 +220,17 @@ export class ConfigManager {
   }
 
   // Public API
-  getConfig(): Readonly<OllamaCommitConfig> {
+  async getConfig(): Promise<Readonly<OllamaCommitConfig>> {
+    if (!this.initialized) {
+      await this.initialize();
+    }
     return { ...this.config };
   }
 
   get<K extends keyof OllamaCommitConfig>(key: K): OllamaCommitConfig[K] {
+    if (!this.initialized) {
+      throw new Error('ConfigManager not initialized. Call initialize() first.');
+    }
     return this.config[key];
   }
 
@@ -288,57 +241,35 @@ export class ConfigManager {
 
   // Create default config file
   async createDefaultConfig(): Promise<void> {
-    const configDir = dirname(this.defaultConfigFile);
-
-    if (!existsSync(configDir)) {
-      mkdirSync(configDir, { recursive: true });
-    }
-
-    const defaultConfig: ConfigFileSchema = {
-      model: 'llama3.2:latest',
-      host: 'http://localhost:11434',
-      verbose: false,
-      interactive: true,
-      debug: false,
-      autoStage: false,
-      autoModel: false,
-      useEmojis: true,
-      promptTemplate: 'default',
-      timeouts: {
-        connection: 10000,
-        generation: 120000,
-        modelPull: 300000,
-      },
-    };
-
     try {
-      writeFileSync(
-        this.defaultConfigFile,
-        JSON.stringify(defaultConfig, null, 2),
-        'utf8',
-      );
-      Logger.success(`Created default config file: ${this.defaultConfigFile}`);
+      const configDir = dirname(this.defaultConfigFile);
+      await fs.ensureDir(configDir);
+
+      const defaultConfig = this.getDefaults();
+      await fs.writeJson(this.defaultConfigFile, defaultConfig, { spaces: 2 });
+
+      Logger.success(`Configuration file created at: ${this.defaultConfigFile}`);
     } catch (error: unknown) {
       if (typeof error === 'object' && error && 'message' in error) {
-        throw new Error(`Failed to create config file: ${(error as { message: string }).message}`);
+        throw new Error(`Failed to create default config: ${(error as { message: string }).message}`);
       } else {
-        throw new Error(`Failed to create config file: ${String(error)}`);
+        throw new Error(`Failed to create default config: ${String(error)}`);
       }
     }
   }
 
   // Get config file locations for CLI info
-  getConfigFiles(): {
+  async getConfigFiles(): Promise<{
     default: string;
     global: string;
     local: string;
     active: string[];
-    } {
+  }> {
     const active: string[] = [];
 
-    if (existsSync(this.defaultConfigFile)) active.push(this.defaultConfigFile);
-    if (existsSync(this.globalConfigFile)) active.push(this.globalConfigFile);
-    if (existsSync(this.localConfigFile)) active.push(this.localConfigFile);
+    if (await fs.pathExists(this.defaultConfigFile)) active.push(this.defaultConfigFile);
+    if (await fs.pathExists(this.globalConfigFile)) active.push(this.globalConfigFile);
+    if (await fs.pathExists(this.localConfigFile)) active.push(this.localConfigFile);
 
     return {
       default: this.defaultConfigFile,
@@ -349,36 +280,128 @@ export class ConfigManager {
   }
 
   // Reload configuration
-  reload(): void {
-    this.config = this.loadConfig();
+  async reload(): Promise<void> {
+    this.config = await this.loadConfig();
   }
 
   // Debug info
-  getDebugInfo(): Record<string, unknown> {
-    const files = this.getConfigFiles();
+  async getDebugInfo(): Promise<Record<string, unknown>> {
+    const config = await this.getConfig();
+    const files = await this.getConfigFiles();
 
     return {
-      configFiles: files,
-      currentConfig: this.config,
-      environmentVariables: {
-        OLLAMA_HOST: process.env.OLLAMA_HOST,
-        OLLAMA_COMMIT_MODEL: process.env.OLLAMA_COMMIT_MODEL,
-        OLLAMA_COMMIT_HOST: process.env.OLLAMA_COMMIT_HOST,
-        OLLAMA_COMMIT_VERBOSE: process.env.OLLAMA_COMMIT_VERBOSE,
-        OLLAMA_COMMIT_DEBUG: process.env.OLLAMA_COMMIT_DEBUG,
+      config,
+      files,
+      environment: {
+        platform: process.platform,
+        arch: process.arch,
+        nodeVersion: process.version,
+        cwd: process.cwd(),
+        env: {
+          OLLAMA_HOST: process.env.OLLAMA_HOST,
+          OLLAMA_COMMIT_MODEL: process.env.OLLAMA_COMMIT_MODEL,
+          OLLAMA_COMMIT_HOST: process.env.OLLAMA_COMMIT_HOST,
+          OLLAMA_COMMIT_VERBOSE: process.env.OLLAMA_COMMIT_VERBOSE,
+          OLLAMA_COMMIT_DEBUG: process.env.OLLAMA_COMMIT_DEBUG,
+          OLLAMA_COMMIT_AUTO_STAGE: process.env.OLLAMA_COMMIT_AUTO_STAGE,
+          OLLAMA_COMMIT_AUTO_MODEL: process.env.OLLAMA_COMMIT_AUTO_MODEL,
+          OLLAMA_COMMIT_PROMPT_FILE: process.env.OLLAMA_COMMIT_PROMPT_FILE,
+          OLLAMA_COMMIT_TIMEOUT_CONNECTION: process.env.OLLAMA_COMMIT_TIMEOUT_CONNECTION,
+          OLLAMA_COMMIT_TIMEOUT_GENERATION: process.env.OLLAMA_COMMIT_TIMEOUT_GENERATION,
+        },
       },
     };
+  }
+
+  async getConfigSources(): Promise<{
+    model: string;
+    host: string;
+    verbose: string;
+    interactive: string;
+    debug: string;
+    autoStage: string;
+    autoModel: string;
+    promptFile: string;
+    promptTemplate: string;
+    useEmojis: string;
+    timeouts: {
+      connection: string;
+      generation: string;
+      modelPull: string;
+    };
+  }> {
+    const sources: Record<string, unknown> = {};
+
+    // Load config files and their paths
+    const projectConfigPath = this.localConfigFile;
+    const userConfigPath = this.globalConfigFile;
+    let projectConfig: Record<string, unknown> = {};
+    let userConfig: Record<string, unknown> = {};
+    try {
+      projectConfig = await this.loadConfigFile(projectConfigPath);
+    } catch {
+      // Ignore missing project config
+    }
+    try {
+      userConfig = await this.loadConfigFile(userConfigPath);
+    } catch {
+      // Ignore missing user config
+    }
+
+    // Helper to determine source
+    const getSource = async (key: string, value: unknown): Promise<string> => {
+      // Check environment variables first
+      const envKey = `OLLAMA_${key.toUpperCase()}`;
+      if (process.env[envKey] !== undefined) {
+        return 'environment variable';
+      }
+      // Check project config
+      if (projectConfig && projectConfig[key] !== undefined && projectConfig[key] === value) {
+        return projectConfigPath;
+      }
+      // Check user config
+      if (userConfig && userConfig[key] !== undefined && userConfig[key] === value) {
+        return userConfigPath;
+      }
+      // Default
+      return 'default';
+    };
+
+    // Get source for each config value
+    const config = await this.getConfig();
+    sources.model = await getSource('model', config.model);
+    sources.host = await getSource('host', config.host);
+    sources.verbose = await getSource('verbose', config.verbose);
+    sources.interactive = await getSource('interactive', config.interactive);
+    sources.debug = await getSource('debug', config.debug);
+    sources.autoStage = await getSource('autoStage', config.autoStage);
+    sources.autoModel = await getSource('autoModel', config.autoModel);
+    sources.promptFile = await getSource('promptFile', config.promptFile);
+    sources.promptTemplate = await getSource('promptTemplate', config.promptTemplate);
+    sources.useEmojis = await getSource('useEmojis', config.useEmojis);
+
+    // Handle nested timeouts
+    sources.timeouts = {
+      connection: await getSource('timeouts.connection', config.timeouts.connection),
+      generation: await getSource('timeouts.generation', config.timeouts.generation),
+      modelPull: await getSource('timeouts.modelPull', config.timeouts.modelPull),
+    };
+
+    return sources;
   }
 }
 
 // Convenience function for getting config
-export function getConfig(): Readonly<OllamaCommitConfig> {
-  return ConfigManager.getInstance().getConfig();
+export async function getConfig(): Promise<Readonly<OllamaCommitConfig>> {
+  const configManager = ConfigManager.getInstance();
+  await configManager.initialize();
+  return configManager.getConfig();
 }
 
 // Convenience function for getting a specific config value
-export function getConfigValue<K extends keyof OllamaCommitConfig>(
+export async function getConfigValue<K extends keyof OllamaCommitConfig>(
   key: K,
-): OllamaCommitConfig[K] {
-  return ConfigManager.getInstance().get(key);
+): Promise<OllamaCommitConfig[K]> {
+  const config = await getConfig();
+  return config[key];
 }

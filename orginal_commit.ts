@@ -9,11 +9,9 @@ import { ModelsCommand } from './models';
 import { TestCommand } from './test';
 import type { CommitConfig } from '../index';
 import { getConfig } from '../core/config';
-import { join } from 'path';
-import { homedir } from 'os';
 
-export interface CommitOptions {
-  directory?: string;
+interface CommitOptions {
+  directory: string;
   model?: string;
   host?: string;
   verbose?: boolean;
@@ -41,12 +39,12 @@ export class CommitCommand {
 
   async execute(options: CommitOptions): Promise<void> {
     // Set up configuration with defaults
-    const config = await this.buildConfig(options);
+    const config = this.buildConfig(options);
 
     Logger.debug('Configuration:', config);
 
     // Validate environment
-    validateGitRepository(options.directory || process.cwd());
+    validateGitRepository(options.directory);
 
     // Test Ollama connection
     if (config.verbose || config.debug) {
@@ -83,7 +81,7 @@ export class CommitCommand {
     const systemPrompt = this.promptService.getSystemPrompt(config.promptFile, config.verbose);
 
     // Helper function to determine if an error should be retried
-    const isRetryableError = (error: Error): boolean => {
+    function isRetryableError(error: Error): boolean {
       // Non-retryable errors (permanent states)
       if (error instanceof GitNoChangesError || error instanceof GitRepositoryError) {
         return false;
@@ -119,10 +117,10 @@ export class CommitCommand {
 
       // For unknown errors, don't retry to fail fast
       return false;
-    };
+    }
 
     // Generate commit message with retries
-    const generateMessage = async (): Promise<string> => {
+    async function generateMessage(): Promise<string> {
       const maxErrorRetries = 3;
       let errorRetryCount = 0;
 
@@ -143,11 +141,19 @@ export class CommitCommand {
           );
 
           // Call Ollama API
-          const message = await this.ollamaService.generateCommitMessage(
+          const response = await this.ollamaService.generateCommitMessage(
             config.model,
             config.host,
             fullPrompt,
             config.verbose,
+          );
+
+          // Parse response
+          const message = this.ollamaService.parseResponse(
+            response,
+            config.verbose,
+            config.model,
+            config.host,
           );
 
           return message;
@@ -158,11 +164,9 @@ export class CommitCommand {
             if (error instanceof GitNoChangesError || error instanceof GitRepositoryError) {
               console.log(`ℹ️  ${error.message}`);
               process.exit(0);
-            } else if (error instanceof Error) {
+            } else {
               // These are actual non-retryable errors
               throw error;
-            } else {
-              throw new Error(`An unexpected non-retryable error occurred: ${String(error)}`);
             }
           }
 
@@ -181,11 +185,7 @@ export class CommitCommand {
 
           if (config.verbose) {
             Logger.info(`Retrying... (${errorRetryCount}/${maxErrorRetries})`);
-            if (error instanceof Error) {
-              Logger.debug(`Error type: ${error.constructor.name} (retryable)`);
-            } else {
-              Logger.debug('Error type: Unknown (retryable)');
-            }
+            Logger.debug(`Error type: ${error.constructor.name} (retryable)`);
           }
 
           // Add backoff delay for retryable errors
@@ -198,7 +198,7 @@ export class CommitCommand {
       }
 
       throw new Error(`Failed to generate commit message after ${maxErrorRetries} attempts`);
-    };
+    }
 
     // Main user interaction loop - completely separate from error handling
     while (true) {
@@ -290,9 +290,9 @@ export class CommitCommand {
     }
   }
 
-  private async buildConfig(options: CommitOptions): Promise<Required<CommitConfig>> {
+  private buildConfig(options: CommitOptions): Required<CommitConfig> {
     // Get base config from the config system
-    const baseConfig = await getConfig();
+    const baseConfig = getConfig();
 
     // Override with CLI options (CLI options take highest priority)
     return {
@@ -300,7 +300,7 @@ export class CommitCommand {
       host: options.host || baseConfig.host,
       verbose: options.verbose || baseConfig.verbose,
       interactive: options.interactive !== undefined ? options.interactive : baseConfig.interactive,
-      promptFile: options.promptFile || baseConfig.promptFile || join(homedir(), '.config', 'ollama-git-commit', 'prompt.txt'),
+      promptFile: options.promptFile || baseConfig.promptFile,
       debug: options.debug || baseConfig.debug,
       autoStage: options.autoStage || baseConfig.autoStage,
       autoModel: options.autoModel || baseConfig.autoModel,

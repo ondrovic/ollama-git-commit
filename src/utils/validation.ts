@@ -1,31 +1,6 @@
 import { execSync } from 'child_process';
 import { Logger } from './logger';
 
-// export function validateNodeVersion(): void {
-//   const requiredVersion = '18.12.0';
-//   const currentVersion = process.version.slice(1); // Remove 'v' prefix
-
-//   if (!isVersionCompatible(currentVersion, requiredVersion)) {
-//     Logger.error(`Node.js version ${requiredVersion} or higher is required. Current version: ${currentVersion}`);
-//     Logger.error('Please upgrade Node.js: https://nodejs.org/');
-//     process.exit(1);
-//   }
-
-//   Logger.debug(`Node.js version: ${currentVersion} ✓`);
-// }
-
-// export function validateGitRepository(directory: string = process.cwd()): void {
-//    console.log(directory)
-//   try {
-//     execSync('git rev-parse --git-dir', { stdio: 'pipe', cwd: directory });
-//     Logger.debug('Git repository detected ✓');
-//   } catch {
-//     Logger.error('Not a git repository');
-//     Logger.error('Please run this command from within a git repository');
-//     process.exit(1);
-//   }
-// }
-
 export function validateNodeVersion(): void {
   const requiredVersion = '18.12.0';
   const currentVersion = process.version.slice(1); // Remove 'v' prefix
@@ -49,6 +24,7 @@ export function validateGitRepository(directory: string = process.cwd()): void {
     process.exit(1);
   }
 }
+
 export function validateGitConfig(directory: string = process.cwd()): { name?: string | undefined; email?: string | undefined; warnings: string[] } {
   const warnings: string[] = [];
   let name: string | undefined;
@@ -125,9 +101,9 @@ export function validateEnvironment(directory: string = process.cwd()): { valid:
     validateNodeVersion();
   } catch (error: unknown) {
     if (typeof error === 'object' && error && 'message' in error) {
-      errors.push((error as { message: string }).message);
+      errors.push(`Node.js validation failed: ${(error as { message: string }).message}`);
     } else {
-      errors.push(String(error));
+      errors.push(`Node.js validation failed: ${String(error)}`);
     }
   }
 

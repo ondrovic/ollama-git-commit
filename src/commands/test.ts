@@ -1,7 +1,7 @@
-import { OllamaService } from '../core/ollama';
 import { Logger } from '../utils/logger';
-import { formatFileSize } from '../utils/formatFileSize';
+import { OllamaService } from '../core/ollama';
 import { getConfig } from '../core/config';
+import { normalizeHost } from '../utils/url';
 
 export class TestCommand {
   private ollamaService: OllamaService;
@@ -11,123 +11,109 @@ export class TestCommand {
   }
 
   async testConnection(host?: string, verbose = false): Promise<boolean> {
-    const config = getConfig();
-    const ollamaHost = host || config.host; // Use config default instead of hardcoded
-    const timeouts = config.timeouts;
-
-    if (verbose) {
-      Logger.info(`Testing Ollama connection to ${ollamaHost}`);
-      Logger.debug(`Connection timeout: ${timeouts.connection}ms`);
-    }
-
     try {
-      const response = await fetch(`${ollamaHost}/api/tags`, {
-        signal: AbortSignal.timeout(timeouts.connection), // Use config timeout
-      });
-
-      if (!response.ok) {
-        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-      }
-
-      const data = await response.json();
+      const config = await getConfig();
+      const serverHost = normalizeHost(host || config.host);
 
       if (verbose) {
-        Logger.success('Ollama connection successful');
-        console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+        Logger.info(`Testing connection to Ollama server at ${serverHost}...`);
+      }
 
-        if (data.models && Array.isArray(data.models)) {
-          console.log(`📦 Available models (${data.models.length}):`);
+      const success = await this.ollamaService.testConnection(serverHost, verbose);
+      if (!success) {
+        throw new Error('Connection test failed');
+      }
+      return true;
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+      Logger.error('Connection test failed:', errorMessage);
+      return false;
+    }
+  }
 
-          let totalSize = 0;
-          const modelFamilies: Record<string, number> = {};
+  async testModel(model?: string, host?: string, verbose = false): Promise<boolean> {
+    try {
+      const config = await getConfig();
+      const ollamaHost = normalizeHost(host || config.host);
+      const testModel = model || config.model;
 
-          data.models.forEach((model: { name: string; size?: number; details?: { family?: string } }) => {
-            const size = model.size ? formatFileSize(model.size) : 'unknown size';
-            const family = model.details?.family ? ` [${model.details.family}]` : '';
-            const currentModel = model.name === config.model ? ' ⭐ (current)' : '';
+      if (verbose) {
+        Logger.info(`Testing model '${testModel}' on ${ollamaHost}...`);
+      }
 
-            console.log(`   📄 ${model.name} ${size}${family}${currentModel}`);
-
-            // Collect stats
-            if (model.size) totalSize += model.size;
-            if (model.details?.family) {
-              modelFamilies[model.details.family] = (modelFamilies[model.details.family] || 0) + 1;
-            }
-          });
-
-          console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-          console.log('📊 Summary:');
-          console.log(`   Total models: ${data.models.length}`);
-          console.log(`   Total size: ${formatFileSize(totalSize)}`);
-          console.log(`   Current configured model: ${config.model}`);
-
-          if (Object.keys(modelFamilies).length > 0) {
-            console.log(`   Model families: ${Object.entries(modelFamilies)
-              .map(([family, count]) => `${family} (${count})`)
-              .join(', ')}`);
-          }
-        } else {
-          console.log('⚠️  No models found on server');
-          console.log('');
-          console.log('💡 Install some models:');
-          console.log('   ollama pull llama3.2');
-          console.log('   ollama pull codellama');
-          console.log('   ollama pull mistral');
-        }
-
-        console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-      } else {
-        Logger.success(`Connection OK - ${ollamaHost}`);
+      const connectionOk = await this.testConnection(ollamaHost, verbose);
+      if (!connectionOk) {
+        Logger.error('❌ Model test failed');
+        return false;
       }
 
       return true;
     } catch (error: unknown) {
-      Logger.error(`Cannot connect to Ollama at ${ollamaHost}`);
+      Logger.error('Test model failed:', error);
+      if (typeof error === 'object' && error && 'message' in error) {
+        Logger.error(`Error: ${(error as { message: string }).message}`);
+      } else {
+        Logger.error(`Error: ${String(error)}`);
+      }
+      return false;
+    }
+  }
+
+  async testAll(model?: string, host?: string, verbose = false): Promise<boolean> {
+    try {
+      const config = await getConfig();
+      const ollamaHost = normalizeHost(host || config.host);
+      const testModel = model || config.model;
 
       if (verbose) {
-        if (typeof error === 'object' && error && 'message' in error) {
-          Logger.error(`Detailed error: ${(error as { message: string }).message}`);
-        } else {
-          Logger.error(`Detailed error: ${String(error)}`);
-        }
-        console.log('');
-        console.log('🔧 Troubleshooting steps:');
-        console.log('   1. Check if Ollama is running:');
-        console.log('      ollama serve');
-        console.log('');
-        console.log('   2. Verify the host configuration:');
-        console.log('      ollama-commit --config-show');
-        console.log('');
-        console.log('   3. Try different host formats:');
-        console.log('      http://localhost:11434 (local)');
-        console.log('      http://127.0.0.1:11434 (local IP)');
-        console.log('      http://your-server:11434 (remote)');
-        console.log('');
-        console.log('   4. Check firewall and network:');
-        console.log('      curl http://localhost:11434/api/tags');
-
-        if (typeof error === 'object' && error && 'name' in error && (error as { name: string }).name === 'TimeoutError') {
-          console.log('');
-          console.log('   5. Increase connection timeout in config file:');
-          console.log('      "timeouts": { "connection": 30000 }');
-        }
-
-        console.log('');
-        console.log('   6. Verify Ollama installation:');
-        console.log('      ollama --version');
-      } else {
-        Logger.error('Make sure Ollama is running and accessible');
-        Logger.info('Use --verbose for detailed troubleshooting information');
+        Logger.info(`Running all tests with model '${testModel}' on ${ollamaHost}...`);
       }
 
+      // Test 1: Connection
+      console.log('1️⃣  Testing connection...');
+      const connectionOk = await this.testConnection(ollamaHost, verbose);
+      if (!connectionOk) {
+        Logger.error('Connection test failed');
+        return false;
+      }
+
+      // Test 2: Model
+      console.log('\n2️⃣  Testing model...');
+      const modelOk = await this.testModel(testModel, ollamaHost, verbose);
+      if (!modelOk) {
+        Logger.error('Model test failed');
+        return false;
+      }
+
+      // Test 3: Simple Prompt
+      console.log('\n3️⃣  Testing simple prompt...');
+      const promptOk = await this.testSimplePrompt(ollamaHost, testModel, verbose);
+      if (!promptOk) {
+        Logger.error('Simple prompt test failed');
+        return false;
+      }
+
+      // Test 4: Benchmark
+      console.log('\n4️⃣  Running benchmark...');
+      await this.benchmarkModel(testModel, ollamaHost, 3);
+
+      console.log('\n✅ All tests passed!');
+      return true;
+    } catch (error: unknown) {
+      Logger.error('Test all failed:', error);
+      if (typeof error === 'object' && error && 'message' in error) {
+        Logger.error(`Error: ${(error as { message: string }).message}`);
+      } else {
+        Logger.error(`Error: ${String(error)}`);
+      }
       return false;
     }
   }
 
   async testSimplePrompt(host?: string, model?: string, verbose = false): Promise<boolean> {
-    const config = getConfig();
-    const ollamaHost = host || config.host; // Use config default
-    const testModel = model || config.model; // Use config default model
+    const config = await getConfig();
+    const ollamaHost = normalizeHost(host || config.host);
+    const testModel = model || config.model;
     const timeouts = config.timeouts;
 
     if (verbose) {
@@ -155,7 +141,7 @@ export class TestCommand {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
-        signal: AbortSignal.timeout(timeouts.generation), // Use config timeout
+        signal: AbortSignal.timeout(timeouts.generation),
       });
 
       const responseText = await response.text();
@@ -174,11 +160,11 @@ export class TestCommand {
         const data = JSON.parse(responseText);
 
         if (verbose) {
-          Logger.success('✅ Valid JSON response');
+          Logger.success('Valid JSON response');
           Logger.info('Response field exists:', 'response' in data);
 
           if (data.response) {
-            Logger.info('Response preview:', `${data.response.substring(0, 100)  }...`);
+            Logger.info('Response preview:', `${data.response.substring(0, 100)}...`);
           }
 
           if (data.model) {
@@ -189,7 +175,7 @@ export class TestCommand {
             Logger.info('Generation time:', `${(data.total_duration / 1000000).toFixed(0)}ms`);
           }
         } else {
-          Logger.success('✅ Simple prompt test passed');
+          Logger.success('Simple prompt test passed');
         }
 
         // Check for error in response
@@ -209,16 +195,16 @@ export class TestCommand {
 
         // Check if we got a reasonable response
         if (!data.response || data.response.trim().length === 0) {
-          Logger.warn('⚠️  Model returned empty response');
+          Logger.warn('Model returned empty response');
           return false;
         }
 
         return true;
       } catch (parseError: unknown) {
         if (typeof parseError === 'object' && parseError && 'message' in parseError) {
-          Logger.error('❌ JSON parsing failed:', (parseError as { message: string }).message);
+          Logger.error('JSON parsing failed:', (parseError as { message: string }).message);
         } else {
-          Logger.error('❌ JSON parsing failed:', String(parseError));
+          Logger.error('JSON parsing failed:', String(parseError));
         }
 
         if (verbose) {
@@ -241,7 +227,7 @@ export class TestCommand {
       }
     } catch (error: unknown) {
       if (typeof error === 'object' && error && 'name' in error && (error as { name: string }).name === 'TimeoutError') {
-        Logger.error('❌ Request timed out');
+        Logger.error('Request timed out');
         if (verbose) {
           console.log('');
           console.log('🔧 Timeout troubleshooting:');
@@ -252,7 +238,7 @@ export class TestCommand {
           console.log('   • Check system resources (CPU/Memory/GPU)');
         }
       } else if (typeof error === 'object' && error && 'message' in error && (error as { message: string }).message.includes('fetch')) {
-        Logger.error('❌ Network request failed:', (error as { message: string }).message);
+        Logger.error('Network request failed:', (error as { message: string }).message);
         if (verbose) {
           console.log('');
           console.log('🔧 Network troubleshooting:');
@@ -262,9 +248,9 @@ export class TestCommand {
         }
       } else {
         if (typeof error === 'object' && error && 'message' in error) {
-          Logger.error('❌ Request failed:', (error as { message: string }).message);
+          Logger.error('Request failed:', (error as { message: string }).message);
         } else {
-          Logger.error('❌ Request failed:', String(error));
+          Logger.error('Request failed:', String(error));
         }
       }
 
@@ -273,8 +259,8 @@ export class TestCommand {
   }
 
   async testModelAvailability(model: string, host?: string): Promise<boolean> {
-    const config = getConfig();
-    const ollamaHost = host || config.host;
+    const config = await getConfig();
+    const ollamaHost = normalizeHost(host || config.host);
 
     try {
       const available = await this.ollamaService.isModelAvailable(ollamaHost, model);
@@ -300,8 +286,8 @@ export class TestCommand {
   }
 
   async testFullWorkflow(host?: string, model?: string, verbose = false): Promise<boolean> {
-    const config = getConfig();
-    const ollamaHost = host || config.host;
+    const config = await getConfig();
+    const ollamaHost = normalizeHost(host || config.host);
     const testModel = model || config.model;
 
     console.log('🧪 Running full workflow test...');
@@ -348,8 +334,8 @@ export class TestCommand {
   }
 
   async benchmarkModel(model?: string, host?: string, iterations = 3): Promise<void> {
-    const config = getConfig();
-    const ollamaHost = host || config.host;
+    const config = await getConfig();
+    const ollamaHost = normalizeHost(host || config.host);
     const testModel = model || config.model;
 
     console.log(`⏱️  Benchmarking model: ${testModel}`);
@@ -405,103 +391,3 @@ export class TestCommand {
     }
   }
 }
-// import { OllamaService } from '../core/ollama';
-// import { Logger } from '../utils/logger';
-// import { getConfigValue, getConfig } from '../core/config';
-
-// export class TestCommand {
-//   private ollamaService: OllamaService;
-//   constructor() {
-//     this.ollamaService = new OllamaService();
-//   }
-
-//   async testConnection(host?: string, verbose: boolean = false): Promise<boolean> {
-//     // const ollamaHost = host || process.env.OLLAMA_HOST || 'http://192.168.0.3:11434';
-//     const config = getConfig();
-//     const ollamaHost = host || config.host;
-//     const timeouts = getConfigValue('timeouts');
-
-//     if (verbose) {
-//       Logger.info(`Testing Ollama connection to ${ollamaHost}`);
-//     }
-
-//     try {
-//       const response = await fetch(`${ollamaHost}/api/tags`, {
-//         signal: AbortSignal.timeout(10000),
-//       });
-
-//       if (!response.ok) {
-//         throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-//       }
-
-//       const data = await response.json();
-
-//       if (verbose) {
-//         Logger.success('Ollama connection successful');
-//         if (data.models && Array.isArray(data.models)) {
-//           console.log('Available models:');
-//           data.models.forEach((model: any) => {
-//             const size = model.size ? `(${(model.size / (1024 * 1024 * 1024)).toFixed(1)} GB)` : '';
-//             console.log(`  - ${model.name} ${size}`);
-//           });
-//         }
-//       } else {
-//         Logger.success('OK')
-//       }
-//       return true;
-//     } catch (error: any) {
-//       Logger.error(`Cannot connect to Ollama at ${ollamaHost}`);
-//       Logger.error('Make sure Ollama is running and accessible');
-//       if (verbose) {
-//         Logger.error(`Error: ${error.message}`);
-//       }
-//       return false;
-//     }
-//   }
-
-//   async testSimplePrompt(host?: string, model: string = 'mistral:7b-instruct', verbose: boolean = false): Promise<boolean> {
-//     const ollamaHost = host || process.env.OLLAMA_HOST || 'http://192.168.0.3:11434';
-
-//     if (verbose) Logger.info(`Testing with simple prompt for ${ollamaHost}`);
-
-//     const payload = {
-//       model,
-//       prompt: 'Hello, please respond with: Test successful',
-//       stream: false,
-//     };
-
-//     if (verbose) Logger.debug('Test payload:', JSON.stringify(payload, null, 2));
-
-//     try {
-//       const response = await fetch(`${ollamaHost}/api/generate`, {
-//         method: 'POST',
-//         headers: { 'Content-Type': 'application/json' },
-//         body: JSON.stringify(payload),
-//         signal: AbortSignal.timeout(30000),
-//       });
-
-//       const responseText = await response.text();
-
-//       if (verbose) Logger.info(`Raw response length: ${responseText.length}`);
-//       if (verbose) Logger.debug(`First 500 chars: ${responseText.substring(0, 500)}`);
-
-//       // Test JSON validity
-//       try {
-//         const data = JSON.parse(responseText);
-//         Logger.success('Valid JSON');
-//         if (verbose) Logger.info('Response field exists:', 'response' in data);
-
-//         if (verbose && data.response) {
-//           Logger.info('Response content:', data.response.substring(0, 100));
-//         }
-//         return true;
-//       } catch {
-//         Logger.error('JSON parsing failed');
-//         return false;
-//       }
-//     } catch (error: any) {
-//       Logger.error('Request failed:', error.message);
-//       return false;
-//     }
-//   }
-// }
