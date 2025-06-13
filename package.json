@@ -1,11 +1,11 @@
 {
-  "name": "ollama-commit",
+  "name": "@ondrovic/ollama-git-commit",
   "version": "1.0.0",
   "description": "Enhanced Ollama Git Commit Message Generator - A CLI tool that generates meaningful commit messages using Ollama AI",
   "main": "dist/index.js",
   "type": "module",
   "bin": {
-    "ollama-commit": "./dist/cli.js"
+    "ollama-git-commit": "./dist/cli.js"
   },
   "files": [
     "dist/**/*",
@@ -37,7 +37,12 @@
     "automation",
     "developer-tools"
   ],
-  "author": "Your Name",
+  "author": "Chris Ondrovic",
+  "contributors": [
+    "Chris Ondrovic"
+  ],
+  "licenseText": "MIT License\n\nCopyright (c) 2025 Chris Ondrovic\n\nPermission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the \"Software\"), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:\n\nThe above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.\n\nTHE SOFTWARE IS PROVIDED \"AS IS\", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.",
+  "licenseFile": "LICENSE",
   "license": "MIT",
   "engines": {
     "node": ">=18.12.0"
@@ -48,12 +53,12 @@
   "devDependencies": {
     "@typescript-eslint/eslint-plugin": "^8.34.0",
     "@typescript-eslint/parser": "^8.34.0",
+    "bun": "latest",
+    "bun-types": "latest",
     "eslint": "^9.28.0",
     "prettier": "^3.5.3",
     "ts-node": "^10.9.2",
-    "typescript": "^5.8.3",
-    "bun": "latest",
-    "bun-types": "latest"
+    "typescript": "^5.8.3"
   },
   "repository": {
     "type": "git",

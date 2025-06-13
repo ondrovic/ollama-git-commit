@@ -2,7 +2,7 @@
 
 A powerful CLI tool that generates meaningful, contextual commit messages using Ollama AI. This modern Node.js/TypeScript implementation fixes git diff parsing issues and provides better error handling, cross-platform compatibility, and a maintainable codebase.
 
-[![npm version](https://badge.fury.io/js/ollama-commit.svg)](https://badge.fury.io/js/ollama-commit)
+[![npm version](https://badge.fury.io/js/ollama-git-commit.svg)](https://badge.fury.io/js/ollama-git-commit)
 [![Node.js Version](https://img.shields.io/badge/node-%3E%3D18.12.0-brightgreen.svg)](https://nodejs.org/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.0+-blue.svg)](https://www.typescriptlang.org/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
@@ -27,44 +27,48 @@ A powerful CLI tool that generates meaningful, contextual commit messages using 
 - **Node.js 18.12+** (we recommend using the latest LTS version)
 - **[Ollama](https://ollama.ai)** running locally or remotely
 - **Git repository** (must be run within a git repository)
+> **⚠️ Windows Users**: This tool has limited Windows support. For the best experience, please use WSL (Windows Subsystem for Linux) or Git Bash. Some Git operations may fail on native Windows Command Prompt/PowerShell.
 
 ### Using Bun (Recommended)
-
+![Pending](https://img.shields.io/badge/⏳-Pending-yellow)
 ```bash
 # Install globally with bun
-bun install -g ollama-commit
+bun install -g ollama-git-commit
 
 # Or add to your project
-bun add ollama-commit
+bun add ollama-git-commit
 ```
 
 ### Using npm/yarn/pnpm
+![Pending](https://img.shields.io/badge/⏳-Pending-yellow)
 
 ```bash
 # Install globally
-npm install -g ollama-commit
+npm install -g ollama-git-commit
 # or
-yarn global add ollama-commit
+yarn global add ollama-git-commit
 # or
-pnpm add -g ollama-commit
+pnpm add -g ollama-git-commit
 
 # Or add to your project
-npm install ollama-commit
+npm install ollama-git-commit
 # or
-yarn add ollama-commit
+yarn add ollama-git-commit
 # or
-pnpm add ollama-commit
+pnpm add ollama-git-commit
 ```
 
 ### Development Installation
-
+![Preferred](https://img.shields.io/badge/Method-Preferred-blue)
 ```bash
-git clone https://github.com/yourusername/ollama-commit.git
-cd ollama-commit
+git clone https://github.com/ondrovic/ollama-git-commit.git
+cd ollama-git-commit
 bun install
 bun run build
 npm link
 ```
+
+> **Windows Development Note**: Currently, development on Windows requires WSL (Windows Subsystem for Linux). Native Windows support is in progress but not fully implemented. Please use WSL for the best development experience.
 
 ## 🎯 Quick Start
 
@@ -87,7 +91,7 @@ npm link
 
 4. **Generate commit message**:
    ```bash
-   ollama-commit
+   ollama-git-commit
    ```
 
 5. **Follow the interactive prompts** to review, regenerate, or copy your commit message!
@@ -98,54 +102,54 @@ npm link
 
 ```bash
 # Generate commit message for staged changes
-ollama-commit
+ollama-git-commit
 
 # Non-interactive mode (just display the message)
-ollama-commit -n
+ollama-git-commit -n
 
 # Verbose output with detailed information
-ollama-commit -v
+ollama-git-commit -v
 
 # Auto-stage all changes if nothing is staged
-ollama-commit --auto-stage
+ollama-git-commit --auto-stage
 
 # Debug mode with comprehensive logging
-ollama-commit --debug
+ollama-git-commit --debug
 ```
 
 ### Model Management
 
 ```bash
 # Use specific model
-ollama-commit -m codellama
+ollama-git-commit -m codellama
 
 # Auto-select best available model
-ollama-commit --auto-model
+ollama-git-commit --auto-model
 
 # List all available models
-ollama-commit --list-models
+ollama-git-commit --list-models
 
 # Test connection to Ollama
-ollama-commit --test
+ollama-git-commit --test
 
 # Test with simple prompt (debug JSON issues)
-ollama-commit --test-simple
+ollama-git-commit --test-simple
 ```
 
 ### Advanced Usage
 
 ```bash
 # Custom Ollama host
-ollama-commit -H http://192.168.1.100:11434
+ollama-git-commit -H http://192.168.1.100:11434
 
 # Custom prompt file
-ollama-commit -p ~/.config/my-custom-prompt.txt
+ollama-git-commit -p ~/.config/my-custom-prompt.txt
 
 # Combine multiple options
-ollama-commit -v -m llama3.2 --auto-stage --debug
+ollama-git-commit -v -m llama3.2 --auto-stage --debug
 
 # Non-interactive with custom model
-ollama-commit -n -m codellama --auto-stage
+ollama-git-commit -n -m codellama --auto-stage
 ```
 
 ## ⚙️ Configuration
@@ -162,14 +166,14 @@ echo 'export OLLAMA_HOST=http://192.168.1.100:11434' >> ~/.zshrc
 
 ### Custom Prompts
 
-The tool automatically creates a default prompt file at `~/.config/prompts/ollama-commit-prompt.txt`. You can customize this file or create your own:
+The tool automatically creates a default prompt file at `~/.config/prompts/ollama-git-commit-prompt.txt`. You can customize this file or create your own:
 
 ```bash
 # Edit the default prompt
-nano ~/.config/prompts/ollama-commit-prompt.txt
+nano ~/.config/prompts/ollama-git-commit-prompt.txt
 
 # Use a custom prompt file
-ollama-commit -p /path/to/your/custom-prompt.txt
+ollama-git-commit -p /path/to/your/custom-prompt.txt
 ```
 
 #### Example Custom Prompt (Conventional Commits)
@@ -215,7 +219,7 @@ Example: "Fix user authentication bug in login component"
 | `--host` | `-H` | Ollama server URL | `$OLLAMA_HOST` or `http://192.168.0.3:11434` |
 | `--verbose` | `-v` | Show detailed output | `false` |
 | `--non-interactive` | `-n` | Skip confirmation prompts | `false` |
-| `--prompt` | `-p` | Custom prompt file path | `~/.config/prompts/ollama-commit-prompt.txt` |
+| `--prompt` | `-p` | Custom prompt file path | `~/.config/prompts/ollama-git-commit-prompt.txt` |
 | `--auto-stage` | | Auto-stage changes if nothing staged | `false` |
 | `--test` | | Test connection to Ollama server | - |
 | `--test-simple` | | Test with simple prompt for debugging | - |
@@ -231,13 +235,13 @@ Example: "Fix user authentication bug in login component"
 #### 1. "Model not found" error
 ```bash
 # Check available models
-ollama-commit --list-models
+ollama-git-commit --list-models
 
 # Install a model
 ollama pull llama3.2
 
 # Or let the tool auto-select
-ollama-commit --auto-model
+ollama-git-commit --auto-model
 ```
 
 #### 2. "Connection refused" error
@@ -246,10 +250,10 @@ ollama-commit --auto-model
 ollama serve
 
 # Test the connection
-ollama-commit --test
+ollama-git-commit --test
 
 # Check if Ollama is on a different host/port
-ollama-commit -H http://localhost:11434 --test
+ollama-git-commit -H http://localhost:11434 --test
 ```
 
 #### 3. "No changes detected"
@@ -261,25 +265,25 @@ git status
 git add .
 
 # Or auto-stage with the tool
-ollama-commit --auto-stage
+ollama-git-commit --auto-stage
 ```
 
 #### 4. Empty or invalid responses
 ```bash
 # Test with simple prompt
-ollama-commit --test-simple
+ollama-git-commit --test-simple
 
 # Try a different model
-ollama-commit --auto-model
+ollama-git-commit --auto-model
 
 # Enable debug mode for detailed logs
-ollama-commit --debug -v
+ollama-git-commit --debug -v
 ```
 
 #### 5. Git diff parsing issues
 ```bash
 # Enable debug mode to see git parsing details
-ollama-commit --debug
+ollama-git-commit --debug
 
 # Check if you're in a git repository
 git status
@@ -288,12 +292,21 @@ git status
 git config --global core.quotepath false
 ```
 
+#### 6. Windows-specific issues
+```bash
+# If you encounter pathspec errors on Windows:
+# Make sure you're using a recent version of Git
+git --version
+
+# Try using WSL instead of native Windows
+# Or use Git Bash instead of Command Prompt/PowerShell
+
 ### Debug Mode
 
 For comprehensive troubleshooting, enable debug mode:
 
 ```bash
-ollama-commit --debug -v
+ollama-git-commit --debug -v
 ```
 
 This shows:
@@ -315,7 +328,7 @@ This shows:
 ## 🌟 Example Output
 
 ```bash
-$ ollama-commit -v
+$ ollama-git-commit -v
 
 🔍 Configuration:
    Model: llama3:latest
@@ -396,8 +409,8 @@ We welcome contributions! Please see our [Contributing Guide](CONTRIBUTING.md) f
 
 ```bash
 # Clone the repository
-git clone https://github.com/yourusername/ollama-commit.git
-cd ollama-commit
+git clone https://github.com/yourusername/ollama-git-commit.git
+cd ollama-git-commit
 
 # Install dependencies
 bun install
@@ -442,8 +455,8 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 - [Ollama Documentation](https://ollama.ai/docs)
 - [Node.js Downloads](https://nodejs.org/)
 - [Bun Installation](https://bun.sh/docs/installation)
-- [Report Issues](https://github.com/yourusername/ollama-commit/issues)
-- [Feature Requests](https://github.com/yourusername/ollama-commit/discussions)
+- [Report Issues](https://github.com/yourusername/ollama-git-commit/issues)
+- [Feature Requests](https://github.com/yourusername/ollama-git-commit/discussions)
 
 ---
 
