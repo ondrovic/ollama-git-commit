@@ -1,14 +1,16 @@
-import { homedir } from 'os';
-import { join } from 'path';
+// import { homedir } from 'os';
+// import { join } from 'path';
 import { GitService, GitCommandError, GitNoChangesError, GitRepositoryError } from '../core/git';
 import { OllamaService } from '../core/ollama';
 import { PromptService } from '../core/prompt';
 import { Logger } from '../utils/logger';
 import { validateGitRepository } from '../utils/validation';
+import { askCommitAction } from '../utils/interactive';
 import { copyToClipboard } from '../utils/clipboard';
 import { ModelsCommand } from './models';
 import { TestCommand } from './test';
 import type { CommitConfig } from '../index';
+import { getConfig } from '../core/config';
 
 interface CommitOptions {
   directory: string;
@@ -37,7 +39,6 @@ export class CommitCommand {
     this.testCommand = new TestCommand();
   }
 
-  
   async execute(options: CommitOptions): Promise<void> {
     // Set up configuration with defaults
     const config = this.buildConfig(options);
@@ -71,7 +72,9 @@ export class CommitCommand {
     if (config.debug) {
       Logger.info('Running simple prompt test...');
       if (!(await this.testCommand.testSimplePrompt(config.host, config.model))) {
-        throw new Error(`Simple test failed - there may be issues with the Ollama setup. Try: ollama pull ${config.model}`);
+        throw new Error(
+          `Simple test failed - there may be issues with the Ollama setup. Try: ollama pull ${config.model}`,
+        );
       }
       Logger.success('Simple test passed');
     }
@@ -82,8 +85,7 @@ export class CommitCommand {
     // Helper function to determine if an error should be retried
     function isRetryableError(error: Error): boolean {
       // Non-retryable errors (permanent states)
-      if (error instanceof GitNoChangesError ||
-        error instanceof GitRepositoryError) {
+      if (error instanceof GitNoChangesError || error instanceof GitRepositoryError) {
         return false;
       }
 
@@ -96,18 +98,22 @@ export class CommitCommand {
       const errorMessage = error.message.toLowerCase();
 
       // Non-retryable Ollama errors
-      if (errorMessage.includes('empty response') ||
+      if (
+        errorMessage.includes('empty response') ||
         errorMessage.includes('model not found') ||
-        errorMessage.includes('invalid model')) {
+        errorMessage.includes('invalid model')
+      ) {
         return false;
       }
 
       // Retryable Ollama errors (connection, timeout, etc.)
-      if (errorMessage.includes('failed to connect') ||
+      if (
+        errorMessage.includes('failed to connect') ||
         errorMessage.includes('timeout') ||
         errorMessage.includes('network') ||
         errorMessage.includes('connection') ||
-        errorMessage.includes('http')) {
+        errorMessage.includes('http')
+      ) {
         return true;
       }
 
@@ -120,7 +126,8 @@ export class CommitCommand {
     let errorRetryCount = 0;
 
     try {
-      while (true) { // Continue until user accepts, cancels, or we hit max error retries
+      while (true) {
+        // Continue until user accepts, cancels, or we hit max error retries
         try {
           // Get git changes
           const gitChanges = this.gitService.getChanges(config.verbose, config.autoStage);
@@ -133,7 +140,7 @@ export class CommitCommand {
           const fullPrompt = this.promptService.buildCommitPrompt(
             gitChanges.filesInfo,
             gitChanges.diff,
-            systemPrompt
+            systemPrompt,
           );
 
           // Call Ollama API
@@ -141,7 +148,7 @@ export class CommitCommand {
             config.model,
             config.host,
             fullPrompt,
-            config.verbose
+            config.verbose,
           );
 
           // Parse response
@@ -149,7 +156,7 @@ export class CommitCommand {
             response,
             config.verbose,
             config.model,
-            config.host
+            config.host,
           );
 
           // Display result and handle user interaction
@@ -171,7 +178,6 @@ export class CommitCommand {
 
           // Reset error counter on successful generation
           errorRetryCount = 0;
-
         } catch (error: any) {
           // Check if this error should be retried
           if (!isRetryableError(error)) {
@@ -217,18 +223,34 @@ export class CommitCommand {
     }
   }
 
-  private buildConfig(options: CommitOptions): Required<CommitConfig> {
-    const defaultPromptFile = join(homedir(), '.config', 'prompts', 'ollama-commit-prompt.txt');
+  // private buildConfig(options: CommitOptions): Required<CommitConfig> {
+  //   const defaultPromptFile = join(homedir(), '.config', 'prompts', 'ollama-commit-prompt.txt');
 
+  //   return {
+  //     model: options.model || 'mistral:7b-instruct',
+  //     host: options.host || process.env.OLLAMA_HOST || 'http://192.168.0.3:11434',
+  //     verbose: options.verbose || false,
+  //     interactive: options.interactive !== undefined ? options.interactive : true,
+  //     promptFile: options.promptFile || defaultPromptFile,
+  //     debug: options.debug || false,
+  //     autoStage: options.autoStage || false,
+  //     autoModel: options.autoModel || false,
+  //   };
+
+  private buildConfig(options: CommitOptions): Required<CommitConfig> {
+    // Get base config from the config system
+    const baseConfig = getConfig();
+
+    // Override with CLI options (CLI options take highest priority)
     return {
-      model: options.model || 'mistral:7b-instruct',
-      host: options.host || process.env.OLLAMA_HOST || 'http://192.168.0.3:11434',
-      verbose: options.verbose || false,
-      interactive: options.interactive !== undefined ? options.interactive : true,
-      promptFile: options.promptFile || defaultPromptFile,
-      debug: options.debug || false,
-      autoStage: options.autoStage || false,
-      autoModel: options.autoModel || false,
+      model: options.model || baseConfig.model,
+      host: options.host || baseConfig.host,
+      verbose: options.verbose || baseConfig.verbose,
+      interactive: options.interactive !== undefined ? options.interactive : baseConfig.interactive,
+      promptFile: options.promptFile || baseConfig.promptFile,
+      debug: options.debug || baseConfig.debug,
+      autoStage: options.autoStage || baseConfig.autoStage,
+      autoModel: options.autoModel || baseConfig.autoModel,
     };
   }
 
@@ -240,60 +262,107 @@ export class CommitCommand {
     console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
     console.log('');
 
-    if (interactive) {
-      console.log('📋 Available actions:');
-      console.log('   [y] Use this message and copy commit command');
-      console.log('   [c] Copy message to clipboard (if available)');
-      console.log('   [r] Regenerate message');
-      console.log('   [n] Cancel');
-      console.log('');
+  //   if (interactive) {
+  //     console.log('📋 Available actions:');
+  //     console.log('   [y] Use this message and copy commit command');
+  //     console.log('   [c] Copy message to clipboard (if available)');
+  //     console.log('   [r] Regenerate message');
+  //     console.log('   [n] Cancel');
+  //     console.log('');
 
-      return new Promise((resolve) => {
-        const askQuestion = () => {
-          process.stdout.write('What would you like to do? [y/c/r/n]: ');
+  //     return new Promise(resolve => {
+  //       const askQuestion = () => {
+  //         process.stdout.write('What would you like to do? [y/c/r/n]: ');
 
-          process.stdin.setRawMode(true);
-          process.stdin.resume();
-          process.stdin.once('data', (data) => {
-            const choice = data.toString().toLowerCase().trim();
-            process.stdin.setRawMode(false);
-            process.stdin.pause();
+  //         process.stdin.setRawMode(true);
+  //         process.stdin.resume();
+  //         process.stdin.once('data', data => {
+  //           const choice = data.toString().toLowerCase().trim();
+  //           process.stdin.setRawMode(false);
+  //           process.stdin.pause();
 
-            console.log(choice); // Echo the choice
+  //           console.log(choice); // Echo the choice
 
-            switch (choice) {
-              case 'y':
-                console.log('');
-                console.log('📋 Copy and run this command:');
-                const escapedMessage = message.replace(/"/g, '\\"');
-                console.log(`git commit -m "${escapedMessage}"`);
-                resolve(0);
-                break;
+  //           switch (choice) {
+  //             case 'y':
+  //               console.log('');
+  //               console.log('📋 Copy and run this command:');
+  //               const escapedMessage = message.replace(/"/g, '\\"');
+  //               console.log(`git commit -m "${escapedMessage}"`);
+  //               resolve(0);
+  //               break;
 
-              case 'c':
-                copyToClipboard(message);
-                resolve(0);
-                break;
+  //             case 'c':
+  //               copyToClipboard(message);
+  //               resolve(0);
+  //               break;
 
-              case 'r':
-                Logger.info('Regenerating message...');
-                resolve(2);
-                break;
+  //             case 'r':
+  //               Logger.info('Regenerating message...');
+  //               resolve(2);
+  //               break;
 
-              case 'n':
-                Logger.warn('Cancelled');
-                resolve(1);
-                break;
+  //             case 'n':
+  //               Logger.warn('Cancelled');
+  //               resolve(1);
+  //               break;
 
-              default:
-                console.log('Please choose y, c, r, or n');
-                askQuestion();
-            }
-          });
-        };
+  //             default:
+  //               console.log('Please choose y, c, r, or n');
+  //               askQuestion();
+  //           }
+  //         });
+  //       };
 
-        askQuestion();
-      });
+  //       askQuestion();
+  //     });
+  //   } else {
+  //     console.log('📋 To commit with this message, run:');
+  //     const escapedMessage = message.replace(/"/g, '\\"');
+  //     console.log(`git commit -m "${escapedMessage}"`);
+  //     console.log('');
+  //     return 0;
+  //   }
+  // }
+  if (interactive) {
+      try {
+        const action = await askCommitAction();
+        
+        switch (action) {
+          case 'use':
+            console.log('');
+            console.log('📋 Copy and run this command:');
+            const escapedMessage = message.replace(/"/g, '\\"');
+            console.log(`git commit -m "${escapedMessage}"`);
+            return 0;
+
+          case 'copy':
+            await copyToClipboard(message);
+            return 0;
+
+          case 'regenerate':
+            Logger.info('Regenerating message...');
+            return 2;
+
+          case 'cancel':
+            Logger.warn('Cancelled');
+            return 1;
+
+          default:
+            Logger.warn('Cancelled');
+            return 1;
+        }
+      } catch (error: any) {
+        Logger.error('Interactive prompt failed:', error.message);
+        Logger.info('Falling back to non-interactive mode');
+        
+        // Fallback to non-interactive behavior
+        console.log('📋 To commit with this message, run:');
+        const escapedMessage = message.replace(/"/g, '\\"');
+        console.log(`git commit -m "${escapedMessage}"`);
+        console.log('');
+        return 0;
+      }
     } else {
       console.log('📋 To commit with this message, run:');
       const escapedMessage = message.replace(/"/g, '\\"');

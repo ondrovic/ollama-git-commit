@@ -1,0 +1,8 @@
+// ~/.ollama-git-commit.json
+{
+  "model": "codellama:13b",
+  "host": "http://192.168.1.100:11434",
+  "verbose": true,
+  "useEmojis": false,
+  "promptTemplate": "conventional"
+}

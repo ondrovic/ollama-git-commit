@@ -1,0 +1,9 @@
+// ./.ollama-git-commit.json (Project Local Config)
+{
+  "model": "deepseek-coder:6.7b",
+  "autoStage": true,
+  "promptTemplate": "detailed",
+  "timeouts": {
+    "generation": 180000
+  }
+}

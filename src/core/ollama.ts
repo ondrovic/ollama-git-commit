@@ -2,6 +2,8 @@ import { Logger } from '../utils/logger';
 import { Spinner } from '../utils/spinner';
 import { ModelsCommand } from '../commands/models';
 import type { OllamaResponse } from '../index';
+import { getConfigValue } from './config';
+import { time } from 'console';
 
 export class OllamaService {
   private modelsCommand: ModelsCommand;
@@ -16,6 +18,8 @@ export class OllamaService {
     prompt: string,
     verbose: boolean
   ): Promise<string> {
+    const timeouts = getConfigValue('timeouts');
+
     if (verbose) {
       Logger.info(`Generating commit message with ${model}...`);
       Logger.info(`Ollama host: ${host}`);
@@ -43,7 +47,7 @@ export class OllamaService {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
-        signal: AbortSignal.timeout(120000), // 2 minute timeout
+        signal: AbortSignal.timeout(timeouts.generation), // Use config timeout
       });
 
       if (!verbose) {
@@ -182,9 +186,10 @@ export class OllamaService {
   }
 
   async testConnection(host: string): Promise<boolean> {
+    const timeouts = getConfigValue('timeouts');
     try {
       const response = await fetch(`${host}/api/tags`, {
-        signal: AbortSignal.timeout(10000),
+        signal: AbortSignal.timeout(timeouts.generation), // Use config timeout
       });
 
       return response.ok;

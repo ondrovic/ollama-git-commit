@@ -1,0 +1,18 @@
+// ~/.config/ollama-git-commit/config.json (Default/Global Config)
+{
+  "model": "llama3.2:latest",
+  "host": "http://localhost:11434",
+  "verbose": false,
+  "interactive": true,
+  "debug": false,
+  "autoStage": false,
+  "autoModel": false,
+  "useEmojis": true,
+  "promptTemplate": "default",
+  "promptFile": "~/.config/ollama-git-commit/prompt.txt",
+  "timeouts": {
+    "connection": 10000,
+    "generation": 120000,
+    "modelPull": 300000
+  }
+}
