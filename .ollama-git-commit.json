@@ -1,0 +1,17 @@
+{
+  "model": "mistral:7b-instruct",
+  "host": "http://192.168.0.3:11434",
+  "verbose": false,
+  "interactive": true,
+  "debug": false,
+  "autoStage": false,
+  "autoModel": false,
+  "useEmojis": true,
+  "promptTemplate": "default",
+  "promptFile": "~/.config/ollama-git-commit/prompt.txt",
+  "timeouts": {
+    "connection": 10000,
+    "generation": 120000,
+    "modelPull": 300000
+  }
+}
