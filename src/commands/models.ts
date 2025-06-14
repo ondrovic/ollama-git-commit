@@ -35,6 +35,14 @@ export class ModelsCommand {
       }
 
       // Pretty output: table with model name, size, family, and star for current model
+      if (verbose) {
+        console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+        console.log(`🔧 Current configured model: ${config.model}`);
+        console.log(`🌐 Ollama host: ${config.host}`);
+        console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+      } else {
+        console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+      }
       console.log('Available models:');
       console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
       data.models.forEach((model: ModelInfo) => {
@@ -45,10 +53,7 @@ export class ModelsCommand {
       });
       console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
       console.log(`📊 Total: ${data.models.length} models available`);
-      if (verbose) {
-        console.log(`🔧 Current configured model: ${config.model}`);
-        console.log(`🌐 Ollama host: ${ollamaHost}`);
-      }
+
     } catch (error: unknown) {
       this.logger.error(`Cannot fetch models from ${ollamaHost}`);
       if (typeof error === 'object' && error && 'message' in error) {
