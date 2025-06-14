@@ -284,8 +284,8 @@ export class TestCommand {
 
   async testModelAvailability(model: string, host: string): Promise<boolean> {
     try {
-      const ollama = new OllamaService(host);
-      const available = await ollama.isModelAvailable(model);
+      const ollama = new OllamaService(this.logger);
+      const available = await ollama.isModelAvailable(host, model);
       if (available) {
         this.logger.success(`Model '${model}' is available`);
       } else {

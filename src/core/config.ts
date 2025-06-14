@@ -2,7 +2,6 @@ import fsExtra from 'fs-extra';
 import { join, dirname } from 'path';
 import { homedir } from 'os';
 import { Logger } from '../utils/logger';
-import type { OllamaCommitConfig } from '../index';
 import { IConfigManager, ILogger } from './interfaces';
 
 export interface OllamaCommitConfig {
@@ -111,16 +110,14 @@ export class ConfigManager implements IConfigManager {
     }
   }
 
-  // Deep merge helper
-  private deepMerge(target: Record<string, unknown>, source: Record<string, unknown>): Record<string, unknown> {
-    const result = { ...target };
+  private deepMerge(target: OllamaCommitConfig, source: Record<string, unknown>): OllamaCommitConfig {
+    const result: OllamaCommitConfig = { ...target };
     for (const key in source) {
-      if (Object.prototype.hasOwnProperty.call(source, key)) {
-        if (source[key] && typeof source[key] === 'object' && !Array.isArray(source[key])) {
-          result[key] = this.deepMerge(result[key] as Record<string, unknown>, source[key] as Record<string, unknown>);
-        } else {
-          result[key] = source[key];
-        }
+      if (!Object.prototype.hasOwnProperty.call(source, key)) continue;
+      if (key === 'timeouts' && typeof source[key] === 'object' && source[key] !== null) {
+        result.timeouts = { ...result.timeouts, ...(source.timeouts as object) };
+      } else if (key in result) {
+        (result as Record<string, unknown>)[key] = source[key];
       }
     }
     return result;
@@ -350,117 +347,37 @@ export class ConfigManager implements IConfigManager {
       modelPull: string;
     };
   }> {
-    const sources: {
-      model: string;
-      host: string;
-      verbose: string;
-      interactive: string;
-      debug: string;
-      autoStage: string;
-      autoModel: string;
-      promptFile: string;
-      promptTemplate: string;
-      useEmojis: string;
+    const sources = {
+      model: '',
+      host: '',
+      verbose: '',
+      interactive: '',
+      debug: '',
+      autoStage: '',
+      autoModel: '',
+      promptFile: '',
+      promptTemplate: '',
+      useEmojis: '',
       timeouts: {
-        connection: string;
-        generation: string;
-        modelPull: string;
-      };
-    } = {
-      model: 'default',
-      host: 'default',
-      verbose: 'default',
-      interactive: 'default',
-      debug: 'default',
-      autoStage: 'default',
-      autoModel: 'default',
-      promptFile: 'default',
-      promptTemplate: 'default',
-      useEmojis: 'default',
-      timeouts: {
-        connection: 'default',
-        generation: 'default',
-        modelPull: 'default',
+        connection: '',
+        generation: '',
+        modelPull: '',
       },
     };
-
-    // Load config files and their paths
-    const projectConfigPath = this.localConfigFile;
-    const userConfigPath = this.globalConfigFile;
-    const defaultConfigPath = this.defaultConfigFile;
-    let projectConfig: Record<string, unknown> = {};
-    let userConfig: Record<string, unknown> = {};
-    let defaultConfig: Record<string, unknown> = {};
-
-    try {
-      projectConfig = await this.loadConfigFile(projectConfigPath);
-    } catch {
-      // Ignore missing project config
-    }
-    try {
-      userConfig = await this.loadConfigFile(userConfigPath);
-    } catch {
-      // Ignore missing user config
-    }
-    try {
-      defaultConfig = await this.loadConfigFile(defaultConfigPath);
-    } catch {
-      // Ignore missing default config
-    }
-
-    // Helper to determine source
     const getSource = async (key: string): Promise<string> => {
-      // Check environment variables first (highest priority)
-      const envKeyDirect = `OLLAMA_${key.toUpperCase()}`;
-      if (process.env[envKeyDirect]) {
-        return 'ENV';
-      }
-
-      // Split the key to handle nested keys (e.g., 'timeouts.connection')
       const keyParts = key.split('.');
-      let currentProjectConfig = projectConfig;
-      let currentUserConfig = userConfig;
-      let currentDefaultConfig = defaultConfig;
-
-      // Traverse the config objects for nested keys
-      for (const part of keyParts) {
-        if (Object.prototype.hasOwnProperty.call(currentProjectConfig, part)) {
-          currentProjectConfig = currentProjectConfig[part] as Record<string, unknown>;
-        } else {
-          currentProjectConfig = {};
-        }
-        if (Object.prototype.hasOwnProperty.call(currentUserConfig, part)) {
-          currentUserConfig = currentUserConfig[part] as Record<string, unknown>;
-        } else {
-          currentUserConfig = {};
-        }
-        if (Object.prototype.hasOwnProperty.call(currentDefaultConfig, part)) {
-          currentDefaultConfig = currentDefaultConfig[part] as Record<string, unknown>;
-        } else {
-          currentDefaultConfig = {};
-        }
-      }
-
-      // Check project config
-      if (Object.prototype.hasOwnProperty.call(currentProjectConfig, keyParts[keyParts.length - 1])) {
-        return 'LOCAL';
-      }
-
-      // Check user config
-      if (Object.prototype.hasOwnProperty.call(currentUserConfig, keyParts[keyParts.length - 1])) {
-        return 'USER';
-      }
-
-      // Check default config
-      if (Object.prototype.hasOwnProperty.call(currentDefaultConfig, keyParts[keyParts.length - 1])) {
-        return 'DEFAULT';
-      }
-
-      // If not found in any config, return DEFAULT
-      return 'DEFAULT';
+      const lastKey = keyParts[keyParts.length - 1];
+      if (!lastKey) return 'built-in';
+      const currentProjectConfig = await this.loadConfigFile(this.localConfigFile);
+      const currentUserConfig = await this.loadConfigFile(this.globalConfigFile);
+      const currentDefaultConfig = await this.loadConfigFile(this.defaultConfigFile);
+      const envKey = `OLLAMA_COMMIT_${key.toUpperCase().replace('.', '_')}`;
+      if (process.env[envKey]) return 'environment';
+      if (Object.prototype.hasOwnProperty.call(currentProjectConfig, lastKey)) return 'project';
+      if (Object.prototype.hasOwnProperty.call(currentUserConfig, lastKey)) return 'user';
+      if (Object.prototype.hasOwnProperty.call(currentDefaultConfig, lastKey)) return 'default';
+      return 'built-in';
     };
-
-    // Populate sources
     sources.model = await getSource('model');
     sources.host = await getSource('host');
     sources.verbose = await getSource('verbose');
@@ -474,7 +391,6 @@ export class ConfigManager implements IConfigManager {
     sources.timeouts.connection = await getSource('timeouts.connection');
     sources.timeouts.generation = await getSource('timeouts.generation');
     sources.timeouts.modelPull = await getSource('timeouts.modelPull');
-
     return sources;
   }
 }

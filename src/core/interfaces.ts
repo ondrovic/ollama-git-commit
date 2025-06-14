@@ -1,4 +1,5 @@
-import type { GitChanges } from '../index';
+// import type { GitChanges } from '../index';
+import type { ModelInfo, OllamaCommitConfig, GitChanges } from '../index';
 // import type { ModelInfo } from '../index';
 
 export interface IGitService {

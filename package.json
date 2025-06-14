@@ -15,7 +15,7 @@
   "scripts": {
     "build": "bun build src/cli.ts --outdir dist --target node --format esm && bun run build:types",
     "build:types": "tsc --emitDeclarationOnly --outDir dist",
-    "local:link": "npm link",
+    "local:link": "bun run build && npm link",
     "local:unlink": "npm uninstall -g @ondrovic/ollama-git-commit",
     "dev": "bun --watch src/cli.ts",
     "dev:noWatch": "bun src/cli.ts",

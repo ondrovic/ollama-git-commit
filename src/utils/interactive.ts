@@ -51,8 +51,7 @@ export class InteractivePrompt {
   }
 
   private static isBunRuntime(): boolean {
-    // @ts-expect-error Bun global exists only in Bun runtime
-    return typeof Bun !== 'undefined' || process.versions?.bun !== undefined;
+    return typeof process !== 'undefined' && process.versions?.bun !== undefined;
   }
 
   private static handleBunInput(
