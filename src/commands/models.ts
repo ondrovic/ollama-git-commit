@@ -1,7 +1,7 @@
 import { Logger } from '../utils/logger';
 import { formatFileSize } from '../utils/formatFileSize';
 import { getConfig } from '../core/config';
-import type { ModelInfo } from '../index';
+import type { ModelInfo } from '../types';
 import { normalizeHost } from '../utils/url';
 import { ILogger, IOllamaService } from '../core/interfaces';
 import { OllamaService } from '../core/ollama';

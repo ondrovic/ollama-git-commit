@@ -7,7 +7,7 @@ import { askCommitAction } from '../utils/interactive';
 import { copyToClipboard } from '../utils/clipboard';
 import { ModelsCommand } from './models';
 import { TestCommand } from './test';
-import type { CommitConfig } from '../index';
+import type { CommitConfig } from '../types';
 import { getConfig } from '../core/config';
 import { join } from 'path';
 import { homedir } from 'os';
