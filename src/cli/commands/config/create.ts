@@ -45,11 +45,11 @@ export const registerCreateCommands = (configCommand: Command) => {
     });
 
   createCommand
-    .command('project')
-    .description('Create project configuration file in current directory')
+    .command('local')
+    .description('Create local configuration file in current directory')
     .action(async () => {
       try {
-        const projectConfigPath = path.join(process.cwd(), '.ollama-git-commit.json');
+        const localConfigPath = path.join(process.cwd(), '.ollama-git-commit.json');
         const defaultConfig = {
           model: 'mistral:7b-instruct',
           host: '0.0.0.0:11434',
@@ -67,10 +67,10 @@ export const registerCreateCommands = (configCommand: Command) => {
           promptTemplate: 'default',
         };
         // Write config
-        await fs.writeFile(projectConfigPath, JSON.stringify(defaultConfig, null, 2));
-        Logger.success(`Project configuration file created at: ${projectConfigPath}`);
+        await fs.writeFile(localConfigPath, JSON.stringify(defaultConfig, null, 2));
+        Logger.success(`Local configuration file created at: ${localConfigPath}`);
       } catch (error) {
-        Logger.error('Failed to create project configuration:', error);
+        Logger.error('Failed to create local configuration:', error);
         process.exit(1);
       }
     });
