@@ -26,7 +26,10 @@ export class ConfigManager implements IConfigManager {
     this.config = this.getDefaults();
   }
 
-  static getInstance(logger: ILogger = Logger.getDefault(), fs: typeof fsExtra = fsExtra): ConfigManager {
+  static getInstance(
+    logger: ILogger = Logger.getDefault(),
+    fs: typeof fsExtra = fsExtra,
+  ): ConfigManager {
     if (!ConfigManager.instance) {
       ConfigManager.instance = new ConfigManager(logger, fs);
     }
@@ -59,9 +62,9 @@ export class ConfigManager implements IConfigManager {
 
       // Network settings (in milliseconds)
       timeouts: {
-        connection: 10000,   // 10 seconds
-        generation: 120000,  // 2 minutes
-        modelPull: 300000,   // 5 minutes
+        connection: 10000, // 10 seconds
+        generation: 120000, // 2 minutes
+        modelPull: 300000, // 5 minutes
       },
 
       // UI settings
@@ -83,14 +86,17 @@ export class ConfigManager implements IConfigManager {
     }
   }
 
-  private deepMerge(target: OllamaCommitConfig, source: Record<string, unknown>): OllamaCommitConfig {
+  private deepMerge(
+    target: OllamaCommitConfig,
+    source: Record<string, unknown>,
+  ): OllamaCommitConfig {
     const result: OllamaCommitConfig = { ...target };
     for (const key in source) {
       if (!Object.prototype.hasOwnProperty.call(source, key)) continue;
       if (key === 'timeouts' && typeof source[key] === 'object' && source[key] !== null) {
         result.timeouts = { ...result.timeouts, ...(source.timeouts as object) };
       } else if (key in result) {
-        ((result as unknown) as Record<string, unknown>)[key] = source[key];
+        (result as unknown as Record<string, unknown>)[key] = source[key];
       }
     }
     return result;
@@ -136,7 +142,10 @@ export class ConfigManager implements IConfigManager {
     return config;
   }
 
-  private validateAndTransformConfig(config: Record<string, unknown>, source: string): Record<string, unknown> {
+  private validateAndTransformConfig(
+    config: Record<string, unknown>,
+    source: string,
+  ): Record<string, unknown> {
     const validated: Record<string, unknown> = { ...config };
 
     // Validate host URL
@@ -221,13 +230,6 @@ export class ConfigManager implements IConfigManager {
     return { ...this.config };
   }
 
-  // get<K extends keyof OllamaCommitConfig>(key: K): OllamaCommitConfig[K] {
-  //   if (!this.initialized) {
-  //     throw new Error('ConfigManager not initialized. Call initialize() first.');
-  //   }
-  //   const value = this.config[key];
-  //   return value as OllamaCommitConfig[K];
-  // }
   get<K extends keyof OllamaCommitConfig>(key: K): OllamaCommitConfig[K] {
     if (!this.initialized) {
       throw new Error('ConfigManager not initialized. Call initialize() first.');
@@ -253,7 +255,9 @@ export class ConfigManager implements IConfigManager {
       Logger.success(`Configuration file created at: ${this.defaultConfigFile}`);
     } catch (error: unknown) {
       if (typeof error === 'object' && error && 'message' in error) {
-        throw new Error(`Failed to create default config: ${(error as { message: string }).message}`);
+        throw new Error(
+          `Failed to create default config: ${(error as { message: string }).message}`,
+        );
       } else {
         throw new Error(`Failed to create default config: ${String(error)}`);
       }
@@ -268,8 +272,10 @@ export class ConfigManager implements IConfigManager {
   }> {
     const active: ActiveFile[] = [];
 
-    if (await this.fs.pathExists(this.defaultConfigFile)) active.push({ type: 'user', path: this.defaultConfigFile, 'in-use': true });
-    if (await this.fs.pathExists(this.localConfigFile)) active.push({ type: 'local', path: this.localConfigFile, 'in-use': true });
+    if (await this.fs.pathExists(this.defaultConfigFile))
+      active.push({ type: 'user', path: this.defaultConfigFile, 'in-use': true });
+    if (await this.fs.pathExists(this.localConfigFile))
+      active.push({ type: 'local', path: this.localConfigFile, 'in-use': true });
 
     return {
       user: this.defaultConfigFile,
@@ -361,7 +367,11 @@ export class ConfigManager implements IConfigManager {
         if (!obj) return false;
         let curr: unknown = obj;
         for (const part of parts) {
-          if (curr && typeof curr === 'object' && Object.prototype.hasOwnProperty.call(curr, part)) {
+          if (
+            curr &&
+            typeof curr === 'object' &&
+            Object.prototype.hasOwnProperty.call(curr, part)
+          ) {
             curr = (curr as Record<string, unknown>)[part];
           } else {
             return false;

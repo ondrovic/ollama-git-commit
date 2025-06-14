@@ -14,7 +14,9 @@ const program = new Command();
 
 program
   .name('ollama-commit')
-  .description('Enhanced Ollama Git Commit Message Generator - A CLI tool that generates meaningful commit messages using Ollama AI')
+  .description(
+    'Enhanced Ollama Git Commit Message Generator - A CLI tool that generates meaningful commit messages using Ollama AI',
+  )
   .version(VERSION);
 
 // Register all commands
@@ -24,12 +26,12 @@ registerListModelsCommand(program);
 registerConfigCommands(program);
 
 // Error handling
-process.on('uncaughtException', (error) => {
+process.on('uncaughtException', error => {
   Logger.error('Uncaught exception:', error);
   process.exit(1);
 });
 
-process.on('unhandledRejection', (reason) => {
+process.on('unhandledRejection', reason => {
   Logger.error('Unhandled rejection:', reason);
   process.exit(1);
 });

@@ -60,7 +60,10 @@ const getSourceLabel = (source: string | undefined): string => {
   const currentDir = process.cwd().replace(/\\/g, '/');
   const homeDir = (process.env.HOME || process.env.USERPROFILE)?.replace(/\\/g, '/');
 
-  if (normalizedSource.includes('.ollama-git-commit.json') || normalizedSource.includes(currentDir)) {
+  if (
+    normalizedSource.includes('.ollama-git-commit.json') ||
+    normalizedSource.includes(currentDir)
+  ) {
     return CONFIG_LABELS.LOCAL.label;
   }
 

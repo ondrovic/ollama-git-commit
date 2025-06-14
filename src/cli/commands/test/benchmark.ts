@@ -9,7 +9,7 @@ export const registerBenchmarkTest = (testCommand: Command) => {
     .option('-m, --model <model>', 'Model to benchmark')
     .option('-H, --host <host>', 'Ollama server URL')
     .option('-i, --iterations <number>', 'Number of iterations', '3')
-    .action(async (options) => {
+    .action(async options => {
       const logger = new Logger();
       logger.setVerbose(options.verbose);
       logger.setDebug(options.verbose);

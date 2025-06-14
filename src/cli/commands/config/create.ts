@@ -5,16 +5,19 @@ import * as fs from 'fs/promises';
 import { Logger } from '../../../utils/logger';
 
 export const registerCreateCommands = (configCommand: Command) => {
-  const createCommand = configCommand
-    .command('create')
-    .description('Create configuration files');
+  const createCommand = configCommand.command('create').description('Create configuration files');
 
   createCommand
     .command('user')
     .description('Create user configuration file')
     .action(async () => {
       try {
-        const userConfigPath = path.join(os.homedir(), '.config', 'ollama-git-commit', 'config.json');
+        const userConfigPath = path.join(
+          os.homedir(),
+          '.config',
+          'ollama-git-commit',
+          'config.json',
+        );
         const defaultConfig = {
           model: 'mistral:7b-instruct',
           host: '0.0.0.0:11434',

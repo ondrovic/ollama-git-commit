@@ -9,15 +9,23 @@ export interface IGitService {
 }
 
 export interface IOllamaService {
-  generateCommitMessage(model: string, host: string, prompt: string, verbose?: boolean): Promise<string>;
+  generateCommitMessage(
+    model: string,
+    host: string,
+    prompt: string,
+    verbose?: boolean,
+  ): Promise<string>;
   testConnection(host: string, verbose?: boolean): Promise<boolean>;
   getModels(host: string): Promise<ModelInfo[]>;
   isModelAvailable(host: string, model: string): Promise<boolean>;
 }
 
 export interface IPromptService {
-  getSystemPrompt(promptFile?: string, verbose?: boolean): string;
+  getSystemPrompt(promptFile: string, verbose: boolean, promptTemplate?: string): string;
   buildCommitPrompt(filesInfo: string, diff: string, systemPrompt: string): string;
+  validatePrompt(prompt: string): { valid: boolean; errors: string[] };
+  getPromptTemplates(): Record<string, string>;
+  createPromptFromTemplate(templateName: string): string;
 }
 
 export interface IConfigManager {
@@ -53,7 +61,11 @@ export interface ILogger {
   warn(message: string, ...args: unknown[]): void;
   error(message: string, ...args: unknown[]): void;
   debug(message: string, ...args: unknown[]): void;
-  log(level: 'info' | 'warn' | 'error' | 'success' | 'debug', message: string, ...args: unknown[]): void;
+  log(
+    level: 'info' | 'warn' | 'error' | 'success' | 'debug',
+    message: string,
+    ...args: unknown[]
+  ): void;
   table(data: Record<string, unknown>[]): void;
   group(label: string, fn: () => void): void;
   time(label: string): void;

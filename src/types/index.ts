@@ -1,14 +1,15 @@
 export type ActiveFile = { type: 'user' | 'local'; path: string; 'in-use': boolean };
 
 export interface CommitConfig {
-  model?: string;
-  host?: string;
-  verbose?: boolean;
-  interactive?: boolean;
-  promptFile?: string;
-  debug?: boolean;
-  autoStage?: boolean;
-  autoModel?: boolean;
+  model: string;
+  host: string;
+  verbose: boolean;
+  interactive: boolean;
+  promptFile: string;
+  debug: boolean;
+  autoStage: boolean;
+  autoModel: boolean;
+  promptTemplate?: string;
 }
 
 export interface GitChanges {

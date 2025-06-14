@@ -146,6 +146,10 @@ export class OllamaService implements IOllamaService {
       .replace(/\(\s*[^)]*\s*\)/g, '') // Remove parentheses with any content and spaces
       .replace(/\.([A-Z])/g, '. $1') // Add space after period before capital letter
       .replace(/\s+,/g, ',') // Remove spaces before commas
+      .replace(/,{2,}/g, ',') // Replace multiple consecutive commas with single comma
+      .replace(/,+\s*(and|or)\s*/g, ' and ') // Replace ",,,,, and" with just " and"
+      .replace(/lines,+\s*(and|$)/g, 'lines') // Remove trailing commas after "lines"
+      .replace(/on\s+lines\s*,*\s*and\s*$/gm, '') // Remove incomplete "on lines,,, and" phrases
       .replace(/-\s{2,}/g, '- ') // Replace multiple dashes with a single dash
       .replace(/\s+/g, ' ') // Replace multiple spaces with a single space
       .replace(/([a-z])([A-Z])/g, '$1 $2') // Add space between camelCase words

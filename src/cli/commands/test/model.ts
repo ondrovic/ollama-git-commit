@@ -9,7 +9,7 @@ export const registerModelTest = (testCommand: Command) => {
     .option('-m, --model <model>', 'Model to test')
     .option('-H, --host <host>', 'Ollama server URL')
     .option('-v, --verbose', 'Show detailed output')
-    .action(async (options) => {
+    .action(async options => {
       const logger = new Logger();
       logger.setVerbose(options.verbose);
       logger.setDebug(options.verbose);

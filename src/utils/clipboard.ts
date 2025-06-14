@@ -61,7 +61,7 @@ export async function copyToClipboard(text: string): Promise<void> {
 }
 
 async function tryClipboardTool(tool: ClipboardTool, text: string): Promise<boolean> {
-  return new Promise((resolve) => {
+  return new Promise(resolve => {
     try {
       const proc = spawn(tool.cmd, tool.args || [], {
         stdio: ['pipe', 'pipe', 'pipe'],
@@ -69,16 +69,16 @@ async function tryClipboardTool(tool: ClipboardTool, text: string): Promise<bool
 
       let errorOutput = '';
 
-      proc.stderr.on('data', (data) => {
+      proc.stderr.on('data', data => {
         errorOutput += data.toString();
       });
 
-      proc.on('error', (error) => {
+      proc.on('error', error => {
         Logger.debug(`${tool.cmd} error: ${error.message}`);
         resolve(false);
       });
 
-      proc.on('close', (code) => {
+      proc.on('close', code => {
         if (code === 0) {
           resolve(true);
         } else {
@@ -101,7 +101,6 @@ async function tryClipboardTool(tool: ClipboardTool, text: string): Promise<bool
       // Write the text to the process
       proc.stdin.write(text);
       proc.stdin.end();
-
     } catch (error) {
       Logger.debug(`Exception with ${tool.cmd}: ${error}`);
       resolve(false);

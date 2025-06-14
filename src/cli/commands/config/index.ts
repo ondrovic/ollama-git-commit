@@ -4,9 +4,7 @@ import { registerRemoveCommands } from './remove';
 import { registerShowCommands } from './show';
 
 export const registerConfigCommands = (program: Command) => {
-  const configCommand = program
-    .command('config')
-    .description('Manage configuration settings');
+  const configCommand = program.command('config').description('Manage configuration settings');
 
   // Register all config subcommands
   registerCreateCommands(configCommand);

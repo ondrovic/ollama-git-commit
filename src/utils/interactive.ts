@@ -74,7 +74,7 @@ export class InteractivePrompt {
           process.stdin.setRawMode(true);
           process.stdin.resume();
 
-          process.stdin.once('data', (data) => {
+          process.stdin.once('data', data => {
             const input = data.toString().trim().toLowerCase();
             process.stdin.setRawMode(false);
             process.stdin.pause();
@@ -84,7 +84,7 @@ export class InteractivePrompt {
             this.handleChoice(input || defaultChoice || '', choices, resolve, askQuestion);
           });
 
-          process.stdin.once('error', (error) => {
+          process.stdin.once('error', error => {
             process.stdin.setRawMode(false);
             process.stdin.pause();
             reject(error);
@@ -252,11 +252,16 @@ export async function askCommitAction(): Promise<'use' | 'copy' | 'regenerate' |
     });
 
     switch (choice) {
-      case 'y': return 'use';
-      case 'c': return 'copy';
-      case 'r': return 'regenerate';
-      case 'n': return 'cancel';
-      default: return 'cancel';
+      case 'y':
+        return 'use';
+      case 'c':
+        return 'copy';
+      case 'r':
+        return 'regenerate';
+      case 'n':
+        return 'cancel';
+      default:
+        return 'cancel';
     }
   } catch (error) {
     Logger.debug('askCommitAction error:', error);

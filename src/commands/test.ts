@@ -250,7 +250,12 @@ export class TestCommand {
         return false;
       }
     } catch (error: unknown) {
-      if (typeof error === 'object' && error && 'name' in error && (error as { name: string }).name === 'TimeoutError') {
+      if (
+        typeof error === 'object' &&
+        error &&
+        'name' in error &&
+        (error as { name: string }).name === 'TimeoutError'
+      ) {
         this.logger.error('Request timed out');
         if (verbose) {
           console.log('');
@@ -261,7 +266,12 @@ export class TestCommand {
           console.log('     "timeouts": { "generation": 300000 }');
           console.log('   • Check system resources (CPU/Memory/GPU)');
         }
-      } else if (typeof error === 'object' && error && 'message' in error && (error as { message: string }).message.includes('fetch')) {
+      } else if (
+        typeof error === 'object' &&
+        error &&
+        'message' in error &&
+        (error as { message: string }).message.includes('fetch')
+      ) {
         this.logger.error('Network request failed:', (error as { message: string }).message);
         if (verbose) {
           console.log('');
@@ -390,12 +400,16 @@ export class TestCommand {
       const minTime = Math.min(...results);
       const maxTime = Math.max(...results);
 
-      console.log('\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+      console.log(
+        '\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━',
+      );
       console.log('📈 Benchmark Results:');
       console.log(`   Average time: ${avgTime}ms`);
       console.log(`   Fastest time: ${minTime}ms`);
       console.log(`   Slowest time: ${maxTime}ms`);
-      console.log(`   Success rate: ${results.length}/${iterations} (${Math.round(results.length / iterations * 100)}%)`);
+      console.log(
+        `   Success rate: ${results.length}/${iterations} (${Math.round((results.length / iterations) * 100)}%)`,
+      );
 
       // Performance rating
       if (avgTime < 2000) {
@@ -409,6 +423,137 @@ export class TestCommand {
       }
     } else {
       console.log('\n❌ No successful runs completed');
+    }
+  }
+
+  async testPrompt(
+    host?: string,
+    model?: string,
+    prompt?: string,
+    verbose = false,
+  ): Promise<boolean> {
+    const config = await getConfig();
+    const ollamaHost = normalizeHost(host || config.host);
+    const testModel = model || config.model;
+    const testPrompt = prompt || 'Test prompt';
+    const timeouts = config.timeouts;
+
+    if (verbose) {
+      this.logger.info(`Testing prompt with model '${testModel}' on ${ollamaHost}...`);
+      this.logger.debug(`Prompt length: ${testPrompt.length} characters`);
+    }
+
+    try {
+      const response = await fetch(`${ollamaHost}/api/generate`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          model: testModel,
+          prompt: testPrompt,
+          stream: false,
+        }),
+        signal: AbortSignal.timeout(timeouts.generation),
+      });
+
+      const responseText = await response.text();
+
+      if (verbose) {
+        this.logger.info(`Response received (${responseText.length} characters)`);
+        this.logger.debug(`First 500 chars: ${responseText.substring(0, 500)}`);
+      }
+
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
+
+      // Test JSON validity
+      try {
+        const data = JSON.parse(responseText);
+
+        if (verbose) {
+          this.logger.success('Valid JSON response');
+          this.logger.info('Response field exists:', 'response' in data);
+
+          if (data.response) {
+            this.logger.info('Response preview:', `${data.response.substring(0, 100)}...`);
+          }
+
+          if (data.model) {
+            this.logger.info('Model used:', data.model);
+          }
+
+          if (data.total_duration) {
+            this.logger.info('Generation time:', `${(data.total_duration / 1000000).toFixed(0)}ms`);
+          }
+        }
+
+        // Check for error in response
+        if (data.error) {
+          this.logger.error('Model returned error:', data.error);
+          return false;
+        }
+
+        // Check if we got a reasonable response
+        if (!data.response || data.response.trim().length === 0) {
+          this.logger.warn('Model returned empty response');
+          return false;
+        }
+
+        return true;
+      } catch (parseError: unknown) {
+        if (typeof parseError === 'object' && parseError && 'message' in parseError) {
+          this.logger.error('JSON parsing failed:', (parseError as { message: string }).message);
+        } else {
+          this.logger.error('JSON parsing failed:', String(parseError));
+        }
+
+        if (verbose) {
+          this.logger.debug('Raw response that failed to parse:');
+          console.log(responseText);
+        }
+
+        return false;
+      }
+    } catch (error: unknown) {
+      if (
+        typeof error === 'object' &&
+        error &&
+        'name' in error &&
+        (error as { name: string }).name === 'TimeoutError'
+      ) {
+        this.logger.error('Request timed out');
+        if (verbose) {
+          console.log('');
+          console.log('🔧 Timeout troubleshooting:');
+          console.log(`   • Current timeout: ${timeouts.generation}ms`);
+          console.log('   • Try a smaller model for faster response');
+          console.log('   • Increase timeout in config file:');
+          console.log('     "timeouts": { "generation": 300000 }');
+          console.log('   • Check system resources (CPU/Memory/GPU)');
+        }
+      } else if (
+        typeof error === 'object' &&
+        error &&
+        'message' in error &&
+        (error as { message: string }).message.includes('fetch')
+      ) {
+        this.logger.error('Network request failed:', (error as { message: string }).message);
+        if (verbose) {
+          console.log('');
+          console.log('🔧 Network troubleshooting:');
+          console.log('   • Verify Ollama is running: ollama serve');
+          console.log('   • Check host configuration: ollama-commit --config-show');
+          console.log('   • Test basic connection: ollama-commit --test');
+        }
+      } else {
+        if (typeof error === 'object' && error && 'message' in error) {
+          this.logger.error('Request failed:', (error as { message: string }).message);
+        } else {
+          this.logger.error('Request failed:', String(error));
+        }
+      }
+
+      return false;
     }
   }
 }

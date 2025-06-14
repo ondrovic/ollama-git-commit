@@ -5,9 +5,7 @@ import { getConfigFileInfo } from '../../utils/get-friendly-source';
 import fsExtra from 'fs-extra';
 
 export const registerRemoveCommands = (configCommand: Command) => {
-  const removeCommand = configCommand
-    .command('remove')
-    .description('Remove configuration files');
+  const removeCommand = configCommand.command('remove').description('Remove configuration files');
 
   removeCommand
     .command('user')

@@ -23,6 +23,7 @@ export interface CommitOptions {
   debug?: boolean;
   autoStage?: boolean;
   autoModel?: boolean;
+  promptTemplate?: string;
 }
 
 export class CommitCommand {
@@ -77,19 +78,42 @@ export class CommitCommand {
       }
     }
 
-    // Run simple test if in debug mode
-    if (config.debug) {
-      this.logger.info('Running simple prompt test...');
-      if (!(await this.testCommand.testSimplePrompt(config.host, config.model))) {
-        throw new Error(
-          `Simple test failed - there may be issues with the Ollama setup. Try: ollama pull ${config.model}`,
-        );
+    // Setup system prompt
+    const systemPrompt = this.promptService.getSystemPrompt(
+      config.promptFile,
+      config.verbose,
+      config.promptTemplate,
+    );
+
+    // Show prompt template info in verbose/debug mode
+    if (config.verbose || config.debug) {
+      const currentTemplate = config.promptTemplate || 'default';
+      this.logger.info(`Using prompt template: ${currentTemplate}`);
+      if (currentTemplate === 'custom') {
+        this.logger.info(`Custom prompt file: ${config.promptFile}`);
       }
-      this.logger.success('Simple test passed');
     }
 
-    // Setup system prompt
-    const systemPrompt = this.promptService.getSystemPrompt(config.promptFile, config.verbose);
+    // Run prompt test if in debug mode
+    if (config.debug) {
+      this.logger.info('Running in debug mode...');
+      this.logger.debug('Configuration:', config);
+
+      // Test the actual prompt template instead of a simple test
+      const testSuccess = await this.testCommand.testPrompt(
+        config.host,
+        config.model,
+        systemPrompt,
+        true,
+      );
+
+      if (!testSuccess) {
+        this.logger.error('❌ Prompt test failed');
+        process.exit(1);
+      }
+
+      this.logger.success('Prompt test passed');
+    }
 
     // Helper function to determine if an error should be retried
     const isRetryableError = (error: Error): boolean => {
@@ -167,7 +191,8 @@ export class CommitCommand {
             if (error instanceof GitNoChangesError) {
               console.log(`ℹ️  ${error.message}`);
               process.exit(0); // Only exit for NoChangesError
-            } else if (error instanceof GitRepositoryError) { // Allow GitRepositoryError to throw
+            } else if (error instanceof GitRepositoryError) {
+              // Allow GitRepositoryError to throw
               throw error;
             } else if (error instanceof Error) {
               // These are actual non-retryable errors
@@ -180,7 +205,9 @@ export class CommitCommand {
           // This is a retryable error
           errorRetryCount++;
           if (typeof error === 'object' && error && 'message' in error) {
-            this.logger.error(`❌ Failed on attempt ${errorRetryCount}: ${(error as { message: string }).message}`);
+            this.logger.error(
+              `❌ Failed on attempt ${errorRetryCount}: ${(error as { message: string }).message}`,
+            );
           } else {
             this.logger.error(`❌ Failed on attempt ${errorRetryCount}: ${String(error)}`);
           }
@@ -309,12 +336,16 @@ export class CommitCommand {
     return {
       model: options.model || baseConfig.model,
       host: options.host || baseConfig.host,
-      verbose: options.verbose || baseConfig.verbose,
+      verbose: options.verbose !== undefined ? options.verbose : baseConfig.verbose,
       interactive: options.interactive !== undefined ? options.interactive : baseConfig.interactive,
-      promptFile: options.promptFile || baseConfig.promptFile || join(homedir(), '.config', 'ollama-git-commit', 'prompt.txt'),
+      promptFile:
+        options.promptFile ||
+        baseConfig.promptFile ||
+        join(homedir(), '.config', 'ollama-git-commit', 'prompt.txt'),
       debug: options.debug || baseConfig.debug,
       autoStage: options.autoStage || baseConfig.autoStage,
       autoModel: options.autoModel || baseConfig.autoModel,
+      promptTemplate: baseConfig.promptTemplate,
     };
   }
 }

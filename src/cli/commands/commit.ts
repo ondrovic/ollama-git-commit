@@ -17,9 +17,10 @@ export const registerCommitCommand = (program: Command) => {
     .option('--debug', 'Enable debug mode')
     .option('--auto-stage', 'Automatically stage changes')
     .option('--auto-model', 'Automatically select model')
-    .action(async (options) => {
+    .action(async options => {
       try {
         const logger = new Logger();
+        logger.setVerbose(options.verbose);
         logger.setDebug(options.debug);
 
         await validateEnvironment();
@@ -27,7 +28,13 @@ export const registerCommitCommand = (program: Command) => {
         const configManager = ConfigManager.getInstance(logger);
         await configManager.initialize();
 
-        const commitCommand = new CommitCommand(options.directory, undefined, undefined, undefined, logger);
+        const commitCommand = new CommitCommand(
+          options.directory,
+          undefined,
+          undefined,
+          undefined,
+          logger,
+        );
         await commitCommand.execute({
           directory: options.directory,
           model: options.model,
@@ -40,7 +47,6 @@ export const registerCommitCommand = (program: Command) => {
           autoModel: options.autoModel,
         });
       } catch (error: unknown) {
-
         if (options.verbose) {
           Logger.error('Commit failed:', error);
         } else {

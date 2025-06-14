@@ -18,7 +18,9 @@ export const registerShowCommands = (configCommand: Command) => {
         const sourceInfo = getConfigSourceInfo(configSources);
 
         console.log('Current Configuration:');
-        console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+        console.log(
+          '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━',
+        );
 
         // Show active config files
         console.log('Config Files (in order of precedence):');
@@ -45,7 +47,9 @@ export const registerShowCommands = (configCommand: Command) => {
         console.log(`   Model: ${config.model} (from ${sourceInfo.model})`);
         console.log(`   Host: ${config.host} (from ${sourceInfo.host})`);
         console.log(`   Prompt File: ${config.promptFile} (from ${sourceInfo.promptFile})`);
-        console.log(`   Prompt Template: ${config.promptTemplate} (from ${sourceInfo.promptTemplate})`);
+        console.log(
+          `   Prompt Template: ${config.promptTemplate} (from ${sourceInfo.promptTemplate})`,
+        );
         console.log('');
 
         // Behavior Settings
@@ -60,10 +64,18 @@ export const registerShowCommands = (configCommand: Command) => {
 
         // Timeouts
         console.log('Timeouts (ms):');
-        console.log(`   Connection: ${config.timeouts.connection}ms (from ${sourceInfo.timeouts.connection})`);
-        console.log(`   Generation: ${config.timeouts.generation}ms (from ${sourceInfo.timeouts.generation})`);
-        console.log(`   Model Pull: ${config.timeouts.modelPull}ms (from ${sourceInfo.timeouts.modelPull})`);
-        console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+        console.log(
+          `   Connection: ${config.timeouts.connection}ms (from ${sourceInfo.timeouts.connection})`,
+        );
+        console.log(
+          `   Generation: ${config.timeouts.generation}ms (from ${sourceInfo.timeouts.generation})`,
+        );
+        console.log(
+          `   Model Pull: ${config.timeouts.modelPull}ms (from ${sourceInfo.timeouts.modelPull})`,
+        );
+        console.log(
+          '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━',
+        );
       } catch (error) {
         Logger.error('Failed to show configuration:', error);
         process.exit(1);

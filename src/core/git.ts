@@ -34,17 +34,24 @@ export class GitService implements IGitService {
     this.logger = logger;
   }
 
-  private execCommand(command: string, options: { encoding?: BufferEncoding; cwd?: string } = {}): string {
+  private execCommand(
+    command: string,
+    options: { encoding?: BufferEncoding; cwd?: string } = {},
+  ): string {
     try {
       return execSync(command, {
         encoding: 'utf8',
         stdio: ['pipe', 'pipe', 'pipe'],
         cwd: this.directory,
         ...options,
-      }).toString().trim();
+      })
+        .toString()
+        .trim();
     } catch (error: unknown) {
       if (typeof error === 'object' && error && 'message' in error) {
-        throw new GitCommandError(`Git command failed: ${command}\n${(error as { message: string }).message}`);
+        throw new GitCommandError(
+          `Git command failed: ${command}\n${(error as { message: string }).message}`,
+        );
       } else {
         throw new GitCommandError(`Git command failed: ${command}\n${String(error)}`);
       }
@@ -76,7 +83,9 @@ export class GitService implements IGitService {
       diff = this.execCommand('git diff --cached');
     } catch (error: unknown) {
       if (typeof error === 'object' && error && 'message' in error) {
-        throw new GitCommandError(`Failed to get staged changes: ${(error as { message: string }).message}`);
+        throw new GitCommandError(
+          `Failed to get staged changes: ${(error as { message: string }).message}`,
+        );
       } else {
         throw new GitCommandError(`Failed to get staged changes: ${String(error)}`);
       }
@@ -89,7 +98,9 @@ export class GitService implements IGitService {
         unstagedDiff = this.execCommand('git diff');
       } catch (error: unknown) {
         if (typeof error === 'object' && error && 'message' in error) {
-          throw new GitCommandError(`Failed to check unstaged changes: ${(error as { message: string }).message}`);
+          throw new GitCommandError(
+            `Failed to check unstaged changes: ${(error as { message: string }).message}`,
+          );
         } else {
           throw new GitCommandError(`Failed to check unstaged changes: ${String(error)}`);
         }
@@ -111,7 +122,9 @@ export class GitService implements IGitService {
           staged = true;
         } catch (error: unknown) {
           if (typeof error === 'object' && error && 'message' in error) {
-            throw new GitCommandError(`Failed to stage changes: ${(error as { message: string }).message}`);
+            throw new GitCommandError(
+              `Failed to stage changes: ${(error as { message: string }).message}`,
+            );
           } else {
             throw new GitCommandError(`Failed to stage changes: ${String(error)}`);
           }
@@ -121,7 +134,7 @@ export class GitService implements IGitService {
         staged = false;
         if (verbose) {
           Logger.info('Using unstaged changes for commit message generation');
-          Logger.warn('Note: You\'ll need to stage these changes before committing');
+          Logger.warn("Note: You'll need to stage these changes before committing");
         }
       }
     } else if (verbose) {
@@ -150,7 +163,11 @@ export class GitService implements IGitService {
     return { diff, staged, stats, filesInfo };
   }
 
-  private getChangeStats(staged: boolean): { files: number; insertions: number; deletions: number } {
+  private getChangeStats(staged: boolean): {
+    files: number;
+    insertions: number;
+    deletions: number;
+  } {
     const stats = { files: 0, insertions: 0, deletions: 0 };
 
     try {
@@ -196,11 +213,21 @@ export class GitService implements IGitService {
         let action = 'modified';
         if (status) {
           switch (status.charAt(0)) {
-            case 'A': action = 'added'; break;
-            case 'D': action = 'deleted'; break;
-            case 'M': action = 'modified'; break;
-            case 'R': action = 'renamed'; break;
-            case 'C': action = 'copied'; break;
+            case 'A':
+              action = 'added';
+              break;
+            case 'D':
+              action = 'deleted';
+              break;
+            case 'M':
+              action = 'modified';
+              break;
+            case 'R':
+              action = 'renamed';
+              break;
+            case 'C':
+              action = 'copied';
+              break;
           }
         }
 
@@ -214,7 +241,9 @@ export class GitService implements IGitService {
             if (fileDiff) {
               const additions = (fileDiff.match(/^\+/gm) || []).length;
               const deletions = (fileDiff.match(/^-/gm) || []).length;
-              const functionsAdded = (fileDiff.match(/^\+.*(function|def |const |let |var |interface |class )/gm) || []).length;
+              const functionsAdded = (
+                fileDiff.match(/^\+.*(function|def |const |let |var |interface |class )/gm) || []
+              ).length;
 
               changeSummary = `(+${additions} -${deletions}`;
               if (functionsAdded > 0) {
@@ -236,7 +265,8 @@ export class GitService implements IGitService {
             const fileDiff = this.execCommand(fileCommand);
 
             if (fileDiff) {
-              const keyChanges = fileDiff.split('\n')
+              const keyChanges = fileDiff
+                .split('\n')
                 .filter(line => line.startsWith('+') && !line.startsWith('+++'))
                 .slice(0, 3);
 

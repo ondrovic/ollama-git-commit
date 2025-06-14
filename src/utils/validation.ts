@@ -7,7 +7,9 @@ export function validateNodeVersion(): void {
   const currentVersion = process.version.slice(1); // Remove 'v' prefix
 
   if (!isVersionCompatible(currentVersion, requiredVersion)) {
-    Logger.error(`Node.js version ${requiredVersion} or higher is required. Current version: ${currentVersion}`);
+    Logger.error(
+      `Node.js version ${requiredVersion} or higher is required. Current version: ${currentVersion}`,
+    );
     Logger.error('Please upgrade Node.js: https://nodejs.org/');
     process.exit(1);
   }
@@ -24,7 +26,11 @@ export function validateGitRepository(directory: string = process.cwd()): void {
   }
 }
 
-export function validateGitConfig(directory: string = process.cwd()): { name?: string | undefined; email?: string | undefined; warnings: string[] } {
+export function validateGitConfig(directory: string = process.cwd()): {
+  name?: string | undefined;
+  email?: string | undefined;
+  warnings: string[];
+} {
   const warnings: string[] = [];
   let name: string | undefined;
   let email: string | undefined;
@@ -32,13 +38,17 @@ export function validateGitConfig(directory: string = process.cwd()): { name?: s
   try {
     name = execSync('git config user.name', { encoding: 'utf8', cwd: directory }).trim();
   } catch {
-    warnings.push('Git user.name is not configured. Run: git config --global user.name "Your Name"');
+    warnings.push(
+      'Git user.name is not configured. Run: git config --global user.name "Your Name"',
+    );
   }
 
   try {
     email = execSync('git config user.email', { encoding: 'utf8', cwd: directory }).trim();
   } catch {
-    warnings.push('Git user.email is not configured. Run: git config --global user.email "your.email@example.com"');
+    warnings.push(
+      'Git user.email is not configured. Run: git config --global user.email "your.email@example.com"',
+    );
   }
 
   return { name, email, warnings };
@@ -91,7 +101,11 @@ export function isVersionCompatible(current: string, required: string): boolean 
   return true; // Equal versions
 }
 
-export function validateEnvironment(directory: string = process.cwd()): { valid: boolean; errors: string[]; warnings: string[] } {
+export function validateEnvironment(directory: string = process.cwd()): {
+  valid: boolean;
+  errors: string[];
+  warnings: string[];
+} {
   const errors: string[] = [];
   const warnings: string[] = [];
 

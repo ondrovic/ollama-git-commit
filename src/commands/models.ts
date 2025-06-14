@@ -36,12 +36,18 @@ export class ModelsCommand {
 
       // Pretty output: table with model name, size, family, and star for current model
       if (verbose) {
-        console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+        console.log(
+          '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━',
+        );
         console.log(`🔧 Current configured model: ${config.model}`);
         console.log(`🌐 Ollama host: ${config.host}`);
-        console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+        console.log(
+          '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━',
+        );
       } else {
-        console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+        console.log(
+          '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━',
+        );
       }
       console.log('Available models:');
       console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
@@ -53,7 +59,6 @@ export class ModelsCommand {
       });
       console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
       console.log(`📊 Total: ${data.models.length} models available`);
-
     } catch (error: unknown) {
       this.logger.error(`Cannot fetch models from ${ollamaHost}`);
       if (typeof error === 'object' && error && 'message' in error) {
@@ -68,7 +73,12 @@ export class ModelsCommand {
       console.log('   2. Test connection: ollama-commit --test');
       console.log('   3. Check configuration: ollama-commit --config-show');
       console.log('   4. Verify host URL format (http://host:port)');
-      if (typeof error === 'object' && error && 'name' in error && (error as { name: string }).name === 'TimeoutError') {
+      if (
+        typeof error === 'object' &&
+        error &&
+        'name' in error &&
+        (error as { name: string }).name === 'TimeoutError'
+      ) {
         console.log('   5. Increase timeout in config file');
       }
     }
@@ -117,8 +127,11 @@ export class ModelsCommand {
       for (const pref of preferred) {
         for (const name of modelNames) {
           const prefBase = pref.split(':')[0];
-          if (prefBase && (name.toLowerCase().includes(pref.toLowerCase()) ||
-              name.toLowerCase().includes(prefBase.toLowerCase()))) {
+          if (
+            prefBase &&
+            (name.toLowerCase().includes(pref.toLowerCase()) ||
+              name.toLowerCase().includes(prefBase.toLowerCase()))
+          ) {
             if (verbose) {
               this.logger.info(`Auto-selected model (partial match): ${name}`);
             }
@@ -139,7 +152,9 @@ export class ModelsCommand {
     } catch (error: unknown) {
       if (verbose) {
         if (typeof error === 'object' && error && 'message' in error) {
-          this.logger.error(`Error getting default model: ${(error as { message: string }).message}`);
+          this.logger.error(
+            `Error getting default model: ${(error as { message: string }).message}`,
+          );
         } else {
           this.logger.error(`Error getting default model: ${String(error)}`);
         }
@@ -258,7 +273,10 @@ export class ModelsCommand {
     }
   }
 
-  async suggestModel(useCase: 'speed' | 'quality' | 'balanced' = 'balanced', host?: string): Promise<string | null> {
+  async suggestModel(
+    useCase: 'speed' | 'quality' | 'balanced' = 'balanced',
+    host?: string,
+  ): Promise<string | null> {
     const config = await getConfig();
     const ollamaHost = normalizeHost(host || config.host);
 
@@ -281,25 +299,9 @@ export class ModelsCommand {
 
       // Model recommendations based on use case
       const recommendations = {
-        speed: [
-          'llama3.2:1b',
-          'phi3:mini',
-          'gemma2:2b',
-          'qwen2.5:1.5b',
-        ],
-        quality: [
-          'llama3.2:70b',
-          'codellama:34b',
-          'qwen2.5:72b',
-          'mistral:8x7b',
-        ],
-        balanced: [
-          'llama3.2:latest',
-          'llama3.2:8b',
-          'codellama:7b',
-          'qwen2.5:7b',
-          'mistral:7b',
-        ],
+        speed: ['llama3.2:1b', 'phi3:mini', 'gemma2:2b', 'qwen2.5:1.5b'],
+        quality: ['llama3.2:70b', 'codellama:34b', 'qwen2.5:72b', 'mistral:8x7b'],
+        balanced: ['llama3.2:latest', 'llama3.2:8b', 'codellama:7b', 'qwen2.5:7b', 'mistral:7b'],
       };
 
       // Find the first available model for the use case
@@ -316,7 +318,9 @@ export class ModelsCommand {
     }
   }
 
-  async getModelStats(host?: string): Promise<{ total: number; byFamily: Record<string, number>; totalSize: number }> {
+  async getModelStats(
+    host?: string,
+  ): Promise<{ total: number; byFamily: Record<string, number>; totalSize: number }> {
     const config = await getConfig();
     const ollamaHost = normalizeHost(host || config.host);
     const timeouts = config.timeouts;

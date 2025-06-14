@@ -80,7 +80,10 @@ export class Spinner {
 }
 
 export class MultiSpinner {
-  private spinners: Map<string, { spinner: Spinner; status: 'spinning' | 'success' | 'error' | 'warning' }> = new Map();
+  private spinners: Map<
+    string,
+    { spinner: Spinner; status: 'spinning' | 'success' | 'error' | 'warning' }
+  > = new Map();
   private completed = 0;
   private total = 0;
 

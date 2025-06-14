@@ -9,7 +9,7 @@ export const registerListModelsCommand = (program: Command) => {
     .description('Show all available models on the server')
     .option('-H, --host <host>', 'Ollama server URL')
     .option('-v, --verbose', 'Show detailed output')
-    .action(async (options) => {
+    .action(async options => {
       const logger = new Logger();
       logger.setVerbose(options.verbose);
       try {
