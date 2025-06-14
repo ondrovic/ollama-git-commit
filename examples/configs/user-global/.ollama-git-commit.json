@@ -1,6 +1,6 @@
 {
   "model": "mistral:7b-instruct",
-  "host": "http://192.168.0.3:11434",
+  "host": "http://127.0.0.1:11434",
   "verbose": false,
   "interactive": true,
   "debug": false,
@@ -8,8 +8,8 @@
   "autoModel": false,
   "useEmojis": false,
   "promptTemplate": "default",
-  "promptFile": "C:\\Users\\ondro\\.config\\ollama-git-commit\\prompt.txt",
-  "configFile": "C:\\Users\\ondro\\.config\\ollama-git-commit\\config.json",
+  "promptFile": "~/.config/ollama-git-commit/prompt.txt",
+  "configFile": "~/.config/ollama-git-commit/config.json",
   "timeouts": {
     "connection": 10000,
     "generation": 120000,
