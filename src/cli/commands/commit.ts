@@ -1,0 +1,47 @@
+import { Command } from 'commander';
+import { CommitCommand } from '../../commands/commit';
+import { ConfigManager } from '../../core/config';
+import { Logger } from '../../utils/logger';
+import { validateEnvironment } from '../../utils/validation';
+
+export const registerCommitCommand = (program: Command) => {
+  program
+    .command('commit')
+    .description('Generate a commit message using Ollama')
+    .requiredOption('-d, --directory <dir>', 'Git repository directory')
+    .option('-m, --model <model>', 'Ollama model to use')
+    .option('-H, --host <host>', 'Ollama server URL')
+    .option('-v, --verbose', 'Show detailed output')
+    .option('-i, --interactive', 'Interactive mode')
+    .option('-p, --prompt-file <file>', 'Custom prompt file')
+    .option('--debug', 'Enable debug mode')
+    .option('--auto-stage', 'Automatically stage changes')
+    .option('--auto-model', 'Automatically select model')
+    .action(async (options) => {
+      try {
+        const logger = new Logger();
+        logger.setDebug(options.debug);
+
+        await validateEnvironment();
+
+        const configManager = ConfigManager.getInstance(logger);
+        await configManager.initialize();
+
+        const commitCommand = new CommitCommand(options.directory, undefined, undefined, undefined, logger);
+        await commitCommand.execute({
+          directory: options.directory,
+          model: options.model,
+          host: options.host,
+          verbose: options.verbose,
+          interactive: options.interactive,
+          promptFile: options.promptFile,
+          debug: options.debug,
+          autoStage: options.autoStage,
+          autoModel: options.autoModel,
+        });
+      } catch (error) {
+        Logger.error('Commit failed:', error);
+        process.exit(1);
+      }
+    });
+};
