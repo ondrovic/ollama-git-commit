@@ -39,8 +39,17 @@ export const registerCommitCommand = (program: Command) => {
           autoStage: options.autoStage,
           autoModel: options.autoModel,
         });
-      } catch (error) {
-        Logger.error('Commit failed:', error);
+      } catch (error: unknown) {
+
+        if (options.verbose) {
+          Logger.error('Commit failed:', error);
+        } else {
+          if (error instanceof Error) {
+            Logger.error('Commit failed:', error.message);
+          } else {
+            throw error;
+          }
+        }
         process.exit(1);
       }
     });

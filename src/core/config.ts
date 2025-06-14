@@ -346,18 +346,19 @@ export class ConfigManager implements IConfigManager {
         modelPull: '',
       },
     };
+
     const getSource = async (key: string): Promise<string> => {
       const keyParts = key.split('.');
       const lastKey = keyParts[keyParts.length - 1];
       if (!lastKey) return 'built-in';
-      const currentProjectConfig = await this.loadConfigFile(this.localConfigFile);
-      const currentUserConfig = await this.loadConfigFile(this.globalConfigFile);
-      const currentDefaultConfig = await this.loadConfigFile(this.defaultConfigFile);
+
+      // Check environment variables first
       const envKey = `OLLAMA_COMMIT_${key.toUpperCase().replace('.', '_')}`;
       if (process.env[envKey]) return 'environment';
 
-      // Support nested keys
-      const hasNested = (obj: Record<string, unknown> | undefined, parts: string[]): boolean => {
+      // Helper function to check if a value exists in a config object
+      const hasValue = (obj: Record<string, unknown> | undefined, parts: string[]): boolean => {
+        if (!obj) return false;
         let curr: unknown = obj;
         for (const part of parts) {
           if (curr && typeof curr === 'object' && Object.prototype.hasOwnProperty.call(curr, part)) {
@@ -366,14 +367,18 @@ export class ConfigManager implements IConfigManager {
             return false;
           }
         }
-        return true;
+        return curr !== undefined;
       };
 
-      if (hasNested(currentProjectConfig, keyParts)) return 'project';
-      if (hasNested(currentUserConfig, keyParts)) return 'user';
-      if (hasNested(currentDefaultConfig, keyParts)) return 'default';
+      // Check configs in order of precedence
+      const currentProjectConfig = await this.loadConfigFile(this.localConfigFile);
+      const currentUserConfig = await this.loadConfigFile(this.defaultConfigFile); // Use defaultConfigFile as user config
+
+      if (hasValue(currentProjectConfig, keyParts)) return 'project';
+      if (hasValue(currentUserConfig, keyParts)) return 'user';
       return 'built-in';
     };
+
     sources.model = await getSource('model');
     sources.host = await getSource('host');
     sources.verbose = await getSource('verbose');

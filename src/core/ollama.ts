@@ -1,7 +1,7 @@
 import { Logger } from '../utils/logger';
 import { Spinner } from '../utils/spinner';
 import { getConfig } from './config';
-import type { ModelInfo } from '../index';
+import type { ModelInfo } from '../types';
 import { normalizeHost } from '../utils/url';
 import { IOllamaService, ILogger } from './interfaces';
 
@@ -15,7 +15,12 @@ export class OllamaService implements IOllamaService {
     this.spinner = spinner;
   }
 
-  async generateCommitMessage(_model: string, host: string, prompt: string, verbose = false): Promise<string> {
+  async generateCommitMessage(
+    _model: string,
+    host: string,
+    prompt: string,
+    verbose = false,
+  ): Promise<string> {
     const config = await this.config;
 
     const formattedHost = normalizeHost(host);
@@ -93,18 +98,28 @@ export class OllamaService implements IOllamaService {
         message = this.removeEmojis(message);
       }
 
+      // clean the message
+      message = this.cleanMessage(message);
+
       return message;
     } catch (error: unknown) {
       if (!verbose) {
         this.spinner.stop();
       }
 
-      if (typeof error === 'object' && error && 'name' in error && (error as { name: string }).name === 'TimeoutError') {
+      if (
+        typeof error === 'object' &&
+        error &&
+        'name' in error &&
+        (error as { name: string }).name === 'TimeoutError'
+      ) {
         throw new Error('❌ Request timed out - Ollama may be busy or the model is too large');
       }
 
       if (typeof error === 'object' && error && 'message' in error) {
-        throw new Error(`❌ Failed to connect to Ollama: ${(error as { message: string }).message}`);
+        throw new Error(
+          `❌ Failed to connect to Ollama: ${(error as { message: string }).message}`,
+        );
       } else {
         throw new Error(`❌ Failed to connect to Ollama: ${String(error)}`);
       }
@@ -112,12 +127,32 @@ export class OllamaService implements IOllamaService {
   }
 
   private removeEmojis(text: string): string {
-    // More comprehensive emoji regex pattern
+    // More comprehensive emoji and symbol removal
     return text
       .replace(/[\p{Emoji}\u{1F3FB}-\u{1F3FF}\u{1F9B0}-\u{1F9B3}]/gu, '') // Remove emojis and skin tone modifiers
+      .replace(/[\u{2600}-\u{26FF}\u{2700}-\u{27BF}]/gu, '') // Remove additional symbols
+      .replace(/️/g, '') // Remove variation selector (invisible character that follows some emojis)
       .replace(/^\s+|\s+$/gm, '') // Trim whitespace from each line
       .replace(/\n\s*\n/g, '\n') // Remove empty lines
       .trim();
+  }
+
+  private cleanMessage(text: string): string {
+    // properly format the message
+    return text
+      .replace(/`/g, "'") // replace ` with '
+      .replace(/"/g, "'") // replace " with '
+      .replace(/'''/g, '') // Remove triple single quotes
+      .replace(/\(\s*[^)]*\s*\)/g, '') // Remove parentheses with any content and spaces
+      .replace(/\.([A-Z])/g, '. $1') // Add space after period before capital letter
+      .replace(/\s+,/g, ',') // Remove spaces before commas
+      .replace(/-\s{2,}/g, '- ') // Replace multiple dashes with a single dash
+      .replace(/\s+/g, ' ') // Replace multiple spaces with a single space
+      .replace(/([a-z])([A-Z])/g, '$1 $2') // Add space between camelCase words
+      .replace(/^\s+|\s+$/gm, '') // Trim whitespace from each line
+      .replace(/\n\s*\n/g, '\n') // Remove empty lines
+      .replace(/([^\n])-\s+/g, '$1\n- ') // Ensure single line breaks after dashes
+      .trimEnd(); // trim end
   }
 
   async testConnection(host?: string, verbose = false): Promise<boolean> {
@@ -159,7 +194,12 @@ export class OllamaService implements IOllamaService {
       console.log('      http://your-server:11434 (remote)');
       console.log('\n   4. Check firewall and network:');
       console.log('      curl http://localhost:11434/api/tags');
-      if (typeof error === 'object' && error && 'name' in error && (error as { name: string }).name === 'TimeoutError') {
+      if (
+        typeof error === 'object' &&
+        error &&
+        'name' in error &&
+        (error as { name: string }).name === 'TimeoutError'
+      ) {
         console.log('\n   5. Increase timeout in config file');
       }
       return false;
@@ -185,9 +225,13 @@ export class OllamaService implements IOllamaService {
     } catch (error: unknown) {
       if (typeof error === 'object' && error && 'message' in error) {
         if ((error as { message: string }).message.includes('not found')) {
-          this.logger.error(`Ollama server not found at ${formattedHost}. Please ensure Ollama is running.`);
+          this.logger.error(
+            `Ollama server not found at ${formattedHost}. Please ensure Ollama is running.`,
+          );
         } else {
-          this.logger.error(`Error checking model availability: ${(error as { message: string }).message}`);
+          this.logger.error(
+            `Error checking model availability: ${(error as { message: string }).message}`,
+          );
         }
       } else {
         this.logger.error(`Error checking model availability: ${String(error)}`);

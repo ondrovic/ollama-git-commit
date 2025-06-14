@@ -18,7 +18,7 @@
     "local:link": "bun run build && npm link",
     "local:unlink": "npm uninstall -g @ondrovic/ollama-git-commit",
     "dev": "bun --watch src/cli.ts",
-    "dev:noWatch": "bun src/cli.ts",
+    "dev:run": "bun run src/cli.ts",
     "test": "bun test",
     "test:watch": "bun test --watch",
     "lint": "eslint",
