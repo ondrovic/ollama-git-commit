@@ -52,8 +52,7 @@ describe('ConfigManager', () => {
 
   it('should get config files', async () => {
     const files = await configManager.getConfigFiles();
-    expect(files).toHaveProperty('default');
-    expect(files).toHaveProperty('global');
+    expect(files).toHaveProperty('user');
     expect(files).toHaveProperty('local');
     expect(Array.isArray(files.active)).toBe(true);
   });

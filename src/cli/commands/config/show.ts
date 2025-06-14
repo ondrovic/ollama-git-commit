@@ -1,7 +1,7 @@
 import { Command } from 'commander';
 import { ConfigManager } from '../../../core/config';
 import { Logger } from '../../../utils/logger';
-import { getFriendlySource } from '../../utils/get-friendly-source';
+import { getConfigSourceInfo, getConfigFileInfo } from '../../utils/get-friendly-source';
 
 export const registerShowCommands = (configCommand: Command) => {
   configCommand
@@ -15,6 +15,7 @@ export const registerShowCommands = (configCommand: Command) => {
         const config = await configManager.getConfig();
         const files = await configManager.getConfigFiles();
         const configSources = await configManager.getConfigSources();
+        const sourceInfo = getConfigSourceInfo(configSources);
 
         console.log('Current Configuration:');
         console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
@@ -22,18 +23,16 @@ export const registerShowCommands = (configCommand: Command) => {
         // Show active config files
         console.log('Config Files (in order of precedence):');
 
-        // Filter active files based on their type and existence, and sort by precedence
-        const sortedActiveFiles: { path: string; label: string }[] = [];
-
-        if (files.active.includes(files.local)) {
-          sortedActiveFiles.push({ path: files.local, label: 'Local' });
-        }
-        if (files.active.includes(files.global)) {
-          sortedActiveFiles.push({ path: files.global, label: 'Global User' });
-        }
-        if (files.active.includes(files.default)) {
-          sortedActiveFiles.push({ path: files.default, label: 'Default User' });
-        }
+        // Use the new active structure
+        const sortedActiveFiles = files.active
+          .map(fileObj => {
+            // fileObj: { type, path, 'in-use' }
+            return getConfigFileInfo(fileObj.path);
+          })
+          .sort((a, b) => {
+            const precedence = { local: 0, global: 1, default: 2 };
+            return precedence[a.type] - precedence[b.type];
+          });
 
         sortedActiveFiles.forEach((fileInfo, index) => {
           const prefix = index === 0 ? '   → ' : '     ';
@@ -43,27 +42,27 @@ export const registerShowCommands = (configCommand: Command) => {
 
         // Core Settings
         console.log('Core Settings:');
-        console.log(`   Model: ${config.model} (from ${getFriendlySource(configSources.model)})`);
-        console.log(`   Host: ${config.host} (from ${getFriendlySource(configSources.host)})`);
-        console.log(`   Prompt File: ${config.promptFile} (from ${getFriendlySource(configSources.promptFile)})`);
-        console.log(`   Prompt Template: ${config.promptTemplate} (from ${getFriendlySource(configSources.promptTemplate)})`);
+        console.log(`   Model: ${config.model} (from ${sourceInfo.model})`);
+        console.log(`   Host: ${config.host} (from ${sourceInfo.host})`);
+        console.log(`   Prompt File: ${config.promptFile} (from ${sourceInfo.promptFile})`);
+        console.log(`   Prompt Template: ${config.promptTemplate} (from ${sourceInfo.promptTemplate})`);
         console.log('');
 
         // Behavior Settings
         console.log('Behavior Settings:');
-        console.log(`   Verbose: ${config.verbose} (from ${getFriendlySource(configSources.verbose)})`);
-        console.log(`   Interactive: ${config.interactive} (from ${getFriendlySource(configSources.interactive)})`);
-        console.log(`   Debug: ${config.debug} (from ${getFriendlySource(configSources.debug)})`);
-        console.log(`   Auto Stage: ${config.autoStage} (from ${getFriendlySource(configSources.autoStage)})`);
-        console.log(`   Auto Model: ${config.autoModel} (from ${getFriendlySource(configSources.autoModel)})`);
-        console.log(`   Use Emojis: ${config.useEmojis} (from ${getFriendlySource(configSources.useEmojis)})`);
+        console.log(`   Verbose: ${config.verbose} (from ${sourceInfo.verbose})`);
+        console.log(`   Interactive: ${config.interactive} (from ${sourceInfo.interactive})`);
+        console.log(`   Debug: ${config.debug} (from ${sourceInfo.debug})`);
+        console.log(`   Auto Stage: ${config.autoStage} (from ${sourceInfo.autoStage})`);
+        console.log(`   Auto Model: ${config.autoModel} (from ${sourceInfo.autoModel})`);
+        console.log(`   Use Emojis: ${config.useEmojis} (from ${sourceInfo.useEmojis})`);
         console.log('');
 
         // Timeouts
         console.log('Timeouts (ms):');
-        console.log(`   Connection: ${config.timeouts.connection}ms (from ${getFriendlySource(configSources.timeouts.connection)})`);
-        console.log(`   Generation: ${config.timeouts.generation}ms (from ${getFriendlySource(configSources.timeouts.generation)})`);
-        console.log(`   Model Pull: ${config.timeouts.modelPull}ms (from ${getFriendlySource(configSources.timeouts.modelPull)})`);
+        console.log(`   Connection: ${config.timeouts.connection}ms (from ${sourceInfo.timeouts.connection})`);
+        console.log(`   Generation: ${config.timeouts.generation}ms (from ${sourceInfo.timeouts.generation})`);
+        console.log(`   Model Pull: ${config.timeouts.modelPull}ms (from ${sourceInfo.timeouts.modelPull})`);
         console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
       } catch (error) {
         Logger.error('Failed to show configuration:', error);

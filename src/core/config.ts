@@ -3,34 +3,7 @@ import { join, dirname } from 'path';
 import { homedir } from 'os';
 import { Logger } from '../utils/logger';
 import { IConfigManager, ILogger } from './interfaces';
-
-export interface OllamaCommitConfig {
-  // Core settings
-  model: string;
-  host: string;
-
-  // Behavior settings
-  verbose: boolean;
-  interactive: boolean;
-  debug: boolean;
-  autoStage: boolean;
-  autoModel: boolean;
-
-  // File paths
-  promptFile: string;
-  configFile: string;
-
-  // Network settings
-  timeouts: {
-    connection: number;
-    generation: number;
-    modelPull: number;
-  };
-
-  // UI settings
-  useEmojis: boolean;
-  promptTemplate: 'default' | 'conventional' | 'simple' | 'detailed';
-}
+import { OllamaCommitConfig, type ActiveFile } from '../types';
 
 export class ConfigManager implements IConfigManager {
   private static instance: ConfigManager;
@@ -117,7 +90,7 @@ export class ConfigManager implements IConfigManager {
       if (key === 'timeouts' && typeof source[key] === 'object' && source[key] !== null) {
         result.timeouts = { ...result.timeouts, ...(source.timeouts as object) };
       } else if (key in result) {
-        (result as Record<string, unknown>)[key] = source[key];
+        ((result as unknown) as Record<string, unknown>)[key] = source[key];
       }
     }
     return result;
@@ -150,6 +123,10 @@ export class ConfigManager implements IConfigManager {
     // Load local config file (highest priority)
     const localConfig = await this.loadConfigFile(this.localConfigFile);
     if (localConfig) {
+      // If local config has timeouts, use them; otherwise, keep the defaults
+      if (localConfig.timeouts) {
+        config.timeouts = localConfig.timeouts as OllamaCommitConfig['timeouts'];
+      }
       config = this.deepMerge(config, localConfig);
     }
 
@@ -244,11 +221,19 @@ export class ConfigManager implements IConfigManager {
     return { ...this.config };
   }
 
+  // get<K extends keyof OllamaCommitConfig>(key: K): OllamaCommitConfig[K] {
+  //   if (!this.initialized) {
+  //     throw new Error('ConfigManager not initialized. Call initialize() first.');
+  //   }
+  //   const value = this.config[key];
+  //   return value as OllamaCommitConfig[K];
+  // }
   get<K extends keyof OllamaCommitConfig>(key: K): OllamaCommitConfig[K] {
     if (!this.initialized) {
       throw new Error('ConfigManager not initialized. Call initialize() first.');
     }
-    return this.config[key];
+    const value = this.config[key];
+    return value;
   }
 
   // Override config for current session (doesn't persist)
@@ -277,20 +262,17 @@ export class ConfigManager implements IConfigManager {
 
   // Get config file locations for CLI info
   async getConfigFiles(): Promise<{
-    default: string;
-    global: string;
+    user: string;
     local: string;
-    active: string[];
+    active: ActiveFile[];
   }> {
-    const active: string[] = [];
+    const active: ActiveFile[] = [];
 
-    if (await this.fs.pathExists(this.defaultConfigFile)) active.push(this.defaultConfigFile);
-    if (await this.fs.pathExists(this.globalConfigFile)) active.push(this.globalConfigFile);
-    if (await this.fs.pathExists(this.localConfigFile)) active.push(this.localConfigFile);
+    if (await this.fs.pathExists(this.defaultConfigFile)) active.push({ type: 'user', path: this.defaultConfigFile, 'in-use': true });
+    if (await this.fs.pathExists(this.localConfigFile)) active.push({ type: 'local', path: this.localConfigFile, 'in-use': true });
 
     return {
-      default: this.defaultConfigFile,
-      global: this.globalConfigFile,
+      user: this.defaultConfigFile,
       local: this.localConfigFile,
       active,
     };
@@ -307,7 +289,7 @@ export class ConfigManager implements IConfigManager {
     const files = await this.getConfigFiles();
 
     return {
-      config,
+      config: config as unknown as Record<string, unknown>,
       files,
       environment: {
         platform: process.platform,
@@ -373,9 +355,23 @@ export class ConfigManager implements IConfigManager {
       const currentDefaultConfig = await this.loadConfigFile(this.defaultConfigFile);
       const envKey = `OLLAMA_COMMIT_${key.toUpperCase().replace('.', '_')}`;
       if (process.env[envKey]) return 'environment';
-      if (Object.prototype.hasOwnProperty.call(currentProjectConfig, lastKey)) return 'project';
-      if (Object.prototype.hasOwnProperty.call(currentUserConfig, lastKey)) return 'user';
-      if (Object.prototype.hasOwnProperty.call(currentDefaultConfig, lastKey)) return 'default';
+
+      // Support nested keys
+      const hasNested = (obj: Record<string, unknown> | undefined, parts: string[]): boolean => {
+        let curr: unknown = obj;
+        for (const part of parts) {
+          if (curr && typeof curr === 'object' && Object.prototype.hasOwnProperty.call(curr, part)) {
+            curr = (curr as Record<string, unknown>)[part];
+          } else {
+            return false;
+          }
+        }
+        return true;
+      };
+
+      if (hasNested(currentProjectConfig, keyParts)) return 'project';
+      if (hasNested(currentUserConfig, keyParts)) return 'user';
+      if (hasNested(currentDefaultConfig, keyParts)) return 'default';
       return 'built-in';
     };
     sources.model = await getSource('model');

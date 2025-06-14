@@ -1,6 +1,4 @@
-// import type { GitChanges } from '../index';
-import type { ModelInfo, OllamaCommitConfig, GitChanges } from '../index';
-// import type { ModelInfo } from '../index';
+import type { ModelInfo, OllamaCommitConfig, GitChanges } from '../types';
 
 export interface IGitService {
   getChanges(verbose: boolean, autoStage: boolean): GitChanges;

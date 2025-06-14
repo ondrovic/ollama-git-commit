@@ -1,8 +1,8 @@
 import { Command } from 'commander';
-import * as path from 'path';
-import * as os from 'os';
-import * as fs from 'fs/promises';
+import { ConfigManager } from '../../../core/config';
 import { Logger } from '../../../utils/logger';
+import { getConfigFileInfo } from '../../utils/get-friendly-source';
+import fsExtra from 'fs-extra';
 
 export const registerRemoveCommands = (configCommand: Command) => {
   const removeCommand = configCommand
@@ -14,12 +14,15 @@ export const registerRemoveCommands = (configCommand: Command) => {
     .description('Remove user configuration file')
     .action(async () => {
       try {
-        const userConfigPath = path.join(os.homedir(), '.config', 'ollama-git-commit', 'config.json');
+        const configManager = ConfigManager.getInstance();
+        await configManager.initialize();
+        const files = await configManager.getConfigFiles();
+        const userConfigPath = files.user;
 
         try {
-          await fs.access(userConfigPath);
-          await fs.unlink(userConfigPath);
-          Logger.success(`User configuration file removed: ${userConfigPath}`);
+          await fsExtra.unlink(userConfigPath);
+          const fileInfo = getConfigFileInfo(userConfigPath);
+          Logger.success(`${fileInfo.label} configuration file removed: ${userConfigPath}`);
         } catch (error: unknown) {
           if (error instanceof Error && 'code' in error && error.code === 'ENOENT') {
             Logger.info('No user configuration file found.');
@@ -34,25 +37,28 @@ export const registerRemoveCommands = (configCommand: Command) => {
     });
 
   removeCommand
-    .command('project')
-    .description('Remove project configuration file from current directory')
+    .command('local')
+    .description('Remove local configuration file from current directory')
     .action(async () => {
       try {
-        const projectConfigPath = path.join(process.cwd(), '.ollama-git-commit.json');
+        const configManager = ConfigManager.getInstance();
+        await configManager.initialize();
+        const files = await configManager.getConfigFiles();
+        const projectConfigPath = files.local;
 
         try {
-          await fs.access(projectConfigPath);
-          await fs.unlink(projectConfigPath);
-          Logger.success(`Project configuration file removed: ${projectConfigPath}`);
+          await fsExtra.unlink(projectConfigPath);
+          const fileInfo = getConfigFileInfo(projectConfigPath);
+          Logger.success(`${fileInfo.label} configuration file removed: ${projectConfigPath}`);
         } catch (error: unknown) {
           if (error instanceof Error && 'code' in error && error.code === 'ENOENT') {
-            Logger.info('No project configuration file found in current directory.');
+            Logger.info('No local configuration file found in current directory.');
           } else {
             throw error;
           }
         }
       } catch (error) {
-        Logger.error('Failed to remove project configuration:', error);
+        Logger.error('Failed to remove local configuration:', error);
         process.exit(1);
       }
     });
