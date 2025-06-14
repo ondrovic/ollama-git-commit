@@ -1,5 +1,6 @@
 import { execSync } from 'child_process';
 import { Logger } from './logger';
+import { GitRepositoryError } from '../core/git';
 
 export function validateNodeVersion(): void {
   const requiredVersion = '18.12.0';
@@ -18,10 +19,8 @@ export function validateGitRepository(directory: string = process.cwd()): void {
   try {
     execSync('git rev-parse --git-dir', { stdio: 'pipe', cwd: directory });
     Logger.debug('Git repository detected ✓');
-  } catch {
-    Logger.error('Not a git repository');
-    Logger.error('Please run this command from within a git repository');
-    process.exit(1);
+  } catch (error) {
+    throw new GitRepositoryError('Not a git repository');
   }
 }
 

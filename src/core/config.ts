@@ -367,8 +367,11 @@ export class ConfigManager {
     // Load config files and their paths
     const projectConfigPath = this.localConfigFile;
     const userConfigPath = this.globalConfigFile;
+    const defaultConfigPath = this.defaultConfigFile;
     let projectConfig: Record<string, unknown> = {};
     let userConfig: Record<string, unknown> = {};
+    let defaultConfig: Record<string, unknown> = {};
+
     try {
       projectConfig = await this.loadConfigFile(projectConfigPath);
     } catch {
@@ -379,28 +382,46 @@ export class ConfigManager {
     } catch {
       // Ignore missing user config
     }
+    try {
+      defaultConfig = await this.loadConfigFile(defaultConfigPath);
+    } catch {
+      // Ignore missing default config
+    }
 
     // Helper to determine source
     const getSource = async (key: string, value: unknown): Promise<string> => {
-      // Check environment variables first
-      const envKey = `OLLAMA_${key.toUpperCase()}`;
-      if (process.env[envKey] !== undefined) {
+      // Check environment variables first (highest priority)
+      const envKeyDirect = `OLLAMA_${key.toUpperCase()}`;
+      const envKeyCommit = `OLLAMA_COMMIT_${key.toUpperCase()}`;
+
+      if (process.env[envKeyCommit] !== undefined) {
         return 'environment variable';
       }
-      // Check project config
-      if (projectConfig && projectConfig[key] !== undefined && projectConfig[key] === value) {
+      if (process.env[envKeyDirect] !== undefined && (key === 'host')) { // Only check OLLAMA_HOST if the key is 'host'
+          return 'environment variable';
+      }
+
+      // Check local config (next highest priority)
+      if (projectConfig && projectConfig[key] !== undefined) {
         return projectConfigPath;
       }
-      // Check user config
-      if (userConfig && userConfig[key] !== undefined && userConfig[key] === value) {
+
+      // Check user global config
+      if (userConfig && userConfig[key] !== undefined) {
         return userConfigPath;
       }
-      // Default
+
+      // Check default config file
+      if (defaultConfig && defaultConfig[key] !== undefined) {
+          return defaultConfigPath;
+      }
+
+      // Default built-in
       return 'default';
     };
 
     // Get source for each config value
-    const config = await this.getConfig();
+    const config = await this.getConfig(); // This `config` object already has the correct merged values
     sources.model = await getSource('model', config.model);
     sources.host = await getSource('host', config.host);
     sources.verbose = await getSource('verbose', config.verbose);
@@ -412,35 +433,42 @@ export class ConfigManager {
     sources.promptTemplate = await getSource('promptTemplate', config.promptTemplate);
     sources.useEmojis = await getSource('useEmojis', config.useEmojis);
 
-    // Handle nested timeouts
+    // Handle nested timeouts - similar logic
     const getNestedSource = async (path: string, value: unknown): Promise<string> => {
-      // Check environment variables first
+      // Check environment variables first (highest priority)
       const envKey = `OLLAMA_COMMIT_${path.toUpperCase().replace('.', '_')}`;
       if (process.env[envKey] !== undefined) {
         return 'environment variable';
       }
 
-      // Helper to check if a config has the nested value
-      const hasNestedValue = (config: Record<string, unknown>, parent: string, child: string, val: unknown): boolean => {
-        return config[parent] !== undefined &&
-               typeof config[parent] === 'object' &&
-               config[parent] !== null &&
-               (config[parent] as Record<string, unknown>)[child] === val;
-      };
-
+      const parentKey = path.split('.')[0];
       const childKey = path.split('.')[1];
-      if (!childKey) {
+
+      if (!parentKey || !childKey) {
         return 'default';
       }
 
-      // Check project config
-      if (projectConfig && hasNestedValue(projectConfig, 'timeouts', childKey, value)) {
+      // Helper to check if a config has the nested value
+      const hasNestedKey = (cfg: Record<string, unknown>, pKey: string, cKey: string): boolean => {
+        return cfg[pKey] !== undefined &&
+               typeof cfg[pKey] === 'object' &&
+               cfg[pKey] !== null &&
+               (cfg[pKey] as Record<string, unknown>)[cKey] !== undefined;
+      };
+
+      // Check local config
+      if (projectConfig && hasNestedKey(projectConfig, parentKey, childKey)) {
         return projectConfigPath;
       }
 
       // Check user config
-      if (userConfig && hasNestedValue(userConfig, 'timeouts', childKey, value)) {
+      if (userConfig && hasNestedKey(userConfig, parentKey, childKey)) {
         return userConfigPath;
+      }
+
+      // Check default config file
+      if (defaultConfig && hasNestedKey(defaultConfig, parentKey, childKey)) {
+          return defaultConfigPath;
       }
 
       // Default

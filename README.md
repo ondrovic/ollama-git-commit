@@ -18,17 +18,97 @@ A powerful CLI tool that generates meaningful, contextual commit messages using 
 - 🎨 **Emoji-Rich**: Fun, expressive commit messages with emojis
 - 🎨 **Emoji Control**: Choose whether commit messages include emojis using the `useEmojis` config option
 - ⚡ **Fast**: Optimized git diff parsing and API calls
-- 🔧 **Robust**: Proper error handling and recovery mechanisms
+- 🔧 **Robust**: Enhanced error handling and validation mechanisms
 - 🎭 **Template System**: Multiple prompt templates (conventional, simple, detailed)
 - ⚙️ **Flexible Configuration**: Hierarchical config system with environment variables
+- 🔒 **Security**: Input sanitization and path validation for enhanced security
+- 🛡️ **Environment Validation**: Comprehensive checks for Node.js, Git, and Ollama setup
 
 ## 🚀 Installation
+
+### Global Installation for Development
+
+For local development and testing, `bun link` can be used to symlink the package globally. However, due to known issues with `bun link` on some Windows environments, `npm link` is often a more reliable alternative.
+
+First, make sure you have built the project:
+
+```bash
+bun run build
+```
+
+Then, from the root of this project, choose one of the following:
+
+**Using Bun (may have issues on Windows):**
+
+```bash
+bun link
+```
+
+**Using npm (recommended for cross-platform reliability):**
+
+```bash
+npm link
+```
+
+After linking, the `ollama-git-commit` command should be available in your terminal globally. You might need to open a **new terminal window** for the changes to take effect.
+
+### Permanent Global Installation
+
+If you want to install the package globally in a more permanent fashion (e.g., for general system use), using `npm` is currently recommended due to known issues with `bun install -g` on Windows.
+
+```bash
+npm install -g .
+```
+
+### Uninstallation
+
+To remove the global installation of `ollama-git-commit`, use the command corresponding to how you installed it. You should run these commands from the root of the `ollama-git-commit` project directory if you used `npm link` or `bun link`.
+
+**If you used `npm link` or `npm install -g .`:**
+
+```bash
+npm unlink # If run from the project directory
+# OR (for full uninstallation)
+npm uninstall -g @ondrovic/ollama-git-commit
+```
+
+**If you used `bun link` or `bun install -g .`:**
+
+```bash
+bun unlink # If run from the project directory
+# OR (for full uninstallation)
+bun uninstall -g @ondrovic/ollama-git-commit
+```
+
+**Troubleshooting Uninstallation (especially on Windows):**
+
+If the above commands report success but `ollama-git-commit` is still available, it's likely due to lingering executable files or issues with how your environment manages global packages. You can find where the command is being executed from using:
+
+```bash
+where.exe ollama-git-commit
+```
+
+If this command returns a path (e.g., `C:\path\to\ollama-git-commit.cmd`), you may need to manually delete the associated files (`.cmd`, `.ps1`, or the executable itself) from that directory. Restarting your terminal after deletion is often required for changes to take effect.
 
 ### Prerequisites
 
 - **Node.js 18.12+** (we recommend using the latest LTS version)
 - **[Ollama](https://ollama.ai)** running locally or remotely
 - **Git repository** (must be run within a git repository)
+- **Git user configuration** (name and email) for proper commit attribution
+
+### Environment Validation
+
+The tool performs comprehensive environment validation to ensure all prerequisites are met:
+
+- Node.js version compatibility check
+- Git installation and repository validation
+- Git user configuration verification
+- Ollama host accessibility
+- HTTP client availability
+- Input sanitization and path validation
+
+Any validation issues will be reported with helpful error messages and suggestions for resolution.
 
 ## 🎯 Quick Start
 

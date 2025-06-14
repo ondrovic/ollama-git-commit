@@ -33,7 +33,8 @@ program
   .option('--auto-model', 'Automatically select model')
   .action(async (options) => {
     try {
-      await validateNodeVersion();
+      Logger.setDebug(options.debug);
+
       await validateEnvironment();
 
       const configManager = ConfigManager.getInstance();
@@ -339,10 +340,23 @@ configCommand
 
       // Show active config files
       console.log('Config Files (in order of precedence):');
-      files.active.forEach((file, index) => {
+      
+      // Filter active files based on their type and existence, and sort by precedence
+      const sortedActiveFiles: { path: string; label: string }[] = [];
+
+      if (files.active.includes(files.local)) {
+        sortedActiveFiles.push({ path: files.local, label: 'Local' });
+      }
+      if (files.active.includes(files.global)) {
+        sortedActiveFiles.push({ path: files.global, label: 'Global User' });
+      }
+      if (files.active.includes(files.default)) {
+        sortedActiveFiles.push({ path: files.default, label: 'Default User' });
+      }
+
+      sortedActiveFiles.forEach((fileInfo, index) => {
         const prefix = index === 0 ? '   → ' : '     ';
-        const type = file.includes('.ollama-git-commit.json') ? 'Project' : 'User';
-        console.log(`${prefix}${type} - ${file}`);
+        console.log(`${prefix}${fileInfo.label} - ${fileInfo.path}`);
       });
       console.log('');
 

@@ -50,8 +50,11 @@ export class GitService {
   isGitRepository(): boolean {
     try {
       this.execCommand('git rev-parse --git-dir');
+      Logger.debug(`Git repository check for ${this.directory}: Success`);
       return true;
-    } catch {
+    } catch (error) {
+      Logger.debug(`Git repository check for ${this.directory}: Failed`);
+      Logger.debug(`Error: ${error}`);
       return false;
     }
   }

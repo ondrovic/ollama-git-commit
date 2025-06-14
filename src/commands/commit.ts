@@ -155,9 +155,11 @@ export class CommitCommand {
           // Check if this error should be retried
           if (!isRetryableError(error as Error)) {
             // Non-retryable error - handle immediately and exit
-            if (error instanceof GitNoChangesError || error instanceof GitRepositoryError) {
+            if (error instanceof GitNoChangesError) {
               console.log(`ℹ️  ${error.message}`);
-              process.exit(0);
+              process.exit(0); // Only exit for NoChangesError
+            } else if (error instanceof GitRepositoryError) { // Allow GitRepositoryError to throw
+                throw error;
             } else if (error instanceof Error) {
               // These are actual non-retryable errors
               throw error;
