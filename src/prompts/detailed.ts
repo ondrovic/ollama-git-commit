@@ -1,6 +1,6 @@
 export const detailedPrompt = `Generate comprehensive commit messages with full context:
 
-- Start with a clear, descriptive summary (50-72 chars)
+- Start with a clear, descriptive summary (50-72 characters)
 - Include the reasoning behind the changes
 - List all modified files and their purposes
 - Explain any breaking changes or side effects
@@ -9,7 +9,7 @@ export const detailedPrompt = `Generate comprehensive commit messages with full 
 - Use emojis sparingly for categorization
 
 Format:
-🔧 Summary of the main change
+Summary of the main change
 
 Context:
 - Why this change was needed
@@ -22,4 +22,6 @@ Changes:
 Impact:
 - Any breaking changes
 - Performance implications
-- Testing considerations`;
+- Testing considerations
+
+What you write will be passed directly to git commit -m "[message]"`;

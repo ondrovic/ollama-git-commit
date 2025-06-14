@@ -13,4 +13,6 @@ Format:
 type(scope): short description
 
 - detailed change 1
-- detailed change 2`;
+- detailed change 2
+
+What you write will be passed directly to git commit -m "[message]"`;

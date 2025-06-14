@@ -1,17 +1,17 @@
-export const defaultPrompt = `Write short commit messages:
+export const defaultPrompt = `Write concise commit messages:
 - The first line should be a short summary of the changes
-- Remember to mention the files that were changed, and what was changed
-- Explain the 'why' behind changes
+- Mention the files that were changed and what was modified
+- Explain the reasoning behind changes
 - Use bullet points for multiple changes
-- Tone: Use a LOT of emojis, be funny, and expressive. Feel free to be profane, but don't be offensive
-- If there are no changes, or the input is blank - then return a blank string
+- Use appropriate emojis sparingly for categorization
+- If there are no changes or the input is blank, return a blank string
 
-Think carefully before you write your commit message.
+Think carefully before writing your commit message.
 
 The output format should be:
 
 Summary of changes
-- changes
-- changes
+- change description
+- change description
 
 What you write will be passed directly to git commit -m "[message]"`;

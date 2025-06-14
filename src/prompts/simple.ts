@@ -4,6 +4,8 @@ export const simplePrompt = `Create simple, clear commit messages:
 - Mention what files or features were changed
 - Keep it concise but informative
 - Use normal capitalization
-- No need for emojis or special formatting
+- No special formatting required
 
-Example: "Fix user authentication bug in login component"`;
+Example: "Fix user authentication bug in login component"
+
+What you write will be passed directly to git commit -m "[message]"`;
