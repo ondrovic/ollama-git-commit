@@ -9,7 +9,7 @@ import { TestCommand } from './commands/test';
 import { ModelsCommand } from './commands/models';
 import { ConfigManager } from './core/config';
 import { Logger } from './utils/logger';
-import { validateNodeVersion, validateEnvironment } from './utils/validation';
+import { validateEnvironment } from './utils/validation';
 
 const program = new Command();
 
@@ -33,14 +33,16 @@ program
   .option('--auto-model', 'Automatically select model')
   .action(async (options) => {
     try {
-      Logger.setDebug(options.debug);
+      const logger = new Logger();
+      logger.setDebug(options.debug);
+      // logger.setVerbose(options.verbose);
 
       await validateEnvironment();
 
-      const configManager = ConfigManager.getInstance();
+      const configManager = ConfigManager.getInstance(logger);
       await configManager.initialize();
 
-      const commitCommand = new CommitCommand(options.directory);
+      const commitCommand = new CommitCommand(options.directory, undefined, undefined, undefined, logger);
       await commitCommand.execute({
         directory: options.directory,
         model: options.model,
@@ -61,7 +63,14 @@ program
 // Test commands
 const testCommand = program
   .command('test')
-  .description('Run various tests on Ollama setup');
+  .description('Run various tests on Ollama setup')
+  .action(async (options, command) => {
+    // Show help if no subcommand is provided
+    if (!command.args.length) {
+      command.outputHelp();
+      return;
+    }
+  });
 
 // Test connection subcommand
 testCommand
@@ -70,9 +79,17 @@ testCommand
   .option('-H, --host <host>', 'Ollama server URL')
   .option('-v, --verbose', 'Show detailed output')
   .action(async (options) => {
+    const logger = new Logger();
+    logger.setVerbose(options.verbose);
+    logger.setDebug(options.verbose);
+    // console.log('Options:', options);
+    console.log(options.host);
     try {
-      const test = new TestCommand();
-      await test.testConnection(options.host, options.verbose);
+      const test = new TestCommand(undefined, logger);
+      const success = await test.testConnection(options.host, options.verbose);
+      if (success) {
+        logger.success(`Successfully connected to Ollama server at ${options.host || 'configured host'}`);
+      }
     } catch (error) {
       Logger.error('Test failed:', error);
       process.exit(1);
@@ -87,8 +104,11 @@ testCommand
   .option('-H, --host <host>', 'Ollama server URL')
   .option('-v, --verbose', 'Show detailed output')
   .action(async (options) => {
+    const logger = new Logger();
+    logger.setVerbose(options.verbose);
+    logger.setDebug(options.verbose);
     try {
-      const test = new TestCommand();
+      const test = new TestCommand(undefined, logger);
       await test.testModel(options.model, options.host, options.verbose);
     } catch (error) {
       Logger.error('Test failed:', error);
@@ -104,8 +124,11 @@ testCommand
   .option('-H, --host <host>', 'Ollama server URL')
   .option('-v, --verbose', 'Show detailed output')
   .action(async (options) => {
+    const logger = new Logger();
+    logger.setVerbose(options.verbose);
+    logger.setDebug(options.verbose);
     try {
-      const test = new TestCommand();
+      const test = new TestCommand(undefined, logger);
       await test.testSimplePrompt(options.host, options.model, options.verbose);
     } catch (error) {
       Logger.error('Test failed:', error);
@@ -121,8 +144,11 @@ testCommand
   .option('-H, --host <host>', 'Ollama server URL')
   .option('-v, --verbose', 'Show detailed output')
   .action(async (options) => {
+    const logger = new Logger();
+    logger.setVerbose(options.verbose);
+    logger.setDebug(options.verbose);
     try {
-      const test = new TestCommand();
+      const test = new TestCommand(undefined, logger);
       await test.testAll(options.model, options.host, options.verbose);
     } catch (error) {
       Logger.error('Test failed:', error);
@@ -138,8 +164,11 @@ testCommand
   .option('-H, --host <host>', 'Ollama server URL')
   .option('-i, --iterations <number>', 'Number of iterations', '3')
   .action(async (options) => {
+    const logger = new Logger();
+    logger.setVerbose(options.verbose);
+    logger.setDebug(options.verbose);
     try {
-      const test = new TestCommand();
+      const test = new TestCommand(undefined, logger);
       await test.benchmarkModel(options.model, options.host, parseInt(options.iterations));
     } catch (error) {
       Logger.error('Test failed:', error);
@@ -154,10 +183,12 @@ program
   .option('-H, --host <host>', 'Ollama server URL')
   .option('-v, --verbose', 'Show detailed output')
   .action(async (options) => {
+    const logger = new Logger();
+    logger.setVerbose(options.verbose);
     try {
-      const configManager = ConfigManager.getInstance();
+      const configManager = ConfigManager.getInstance(logger);
       await configManager.initialize();
-      const modelsCommand = new ModelsCommand();
+      const modelsCommand = new ModelsCommand(logger);
       await modelsCommand.listModels(options.host, options.verbose);
     } catch (error) {
       Logger.error('List models failed:', error);
@@ -170,12 +201,12 @@ const configCommand = program
   .command('config')
   .description('Manage configuration settings');
 
-// Init subcommands
-const initCommand = configCommand
-  .command('init')
-  .description('Initialize configuration files');
+// Create subcommands
+const createCommand = configCommand
+  .command('create')
+  .description('Create configuration files');
 
-initCommand
+createCommand
   .command('user')
   .description('Create user configuration file')
   .action(async () => {
@@ -210,7 +241,7 @@ initCommand
     }
   });
 
-initCommand
+createCommand
   .command('project')
   .description('Create project configuration file in current directory')
   .action(async () => {
@@ -295,13 +326,13 @@ removeCommand
   });
 
 // Helper to get friendly source name
-const getFriendlySource = (source: string): string => {
+const getFriendlySource = (source: string | undefined): string => {
   if (!source) return 'DEFAULT';
   if (source === 'environment variable') return 'ENV';
   if (source === 'default') return 'DEFAULT';
 
   // Normalize path separators for Windows
-  const normalizedSource = source.replace(/\\/g, '/');
+  const normalizedSource = String(source).replace(/\\/g, '/');
 
   // Check for project config
   if (normalizedSource.includes('.ollama-git-commit.json')) return 'Project';
@@ -340,7 +371,7 @@ configCommand
 
       // Show active config files
       console.log('Config Files (in order of precedence):');
-      
+
       // Filter active files based on their type and existence, and sort by precedence
       const sortedActiveFiles: { path: string; label: string }[] = [];
 

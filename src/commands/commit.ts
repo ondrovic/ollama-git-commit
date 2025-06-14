@@ -11,6 +11,7 @@ import type { CommitConfig } from '../index';
 import { getConfig } from '../core/config';
 import { join } from 'path';
 import { homedir } from 'os';
+import { IGitService, IOllamaService, IPromptService, ILogger } from '../core/interfaces';
 
 export interface CommitOptions {
   directory?: string;
@@ -25,16 +26,24 @@ export interface CommitOptions {
 }
 
 export class CommitCommand {
-  private gitService: GitService;
-  private ollamaService: OllamaService;
-  private promptService: PromptService;
   private modelsCommand: ModelsCommand;
   private testCommand: TestCommand;
+  private gitService: IGitService;
+  private ollamaService: IOllamaService;
+  private promptService: IPromptService;
+  private logger: ILogger;
 
-  constructor(directory: string = process.cwd()) {
-    this.gitService = new GitService(directory);
-    this.ollamaService = new OllamaService();
-    this.promptService = new PromptService();
+  constructor(
+    private directory: string,
+    gitService?: IGitService,
+    ollamaService?: IOllamaService,
+    promptService?: IPromptService,
+    logger: ILogger = Logger.getDefault(),
+  ) {
+    this.logger = logger;
+    this.gitService = gitService || new GitService(this.directory, this.logger);
+    this.ollamaService = ollamaService || new OllamaService(this.logger);
+    this.promptService = promptService || new PromptService(this.logger);
     this.modelsCommand = new ModelsCommand();
     this.testCommand = new TestCommand();
   }
@@ -43,14 +52,14 @@ export class CommitCommand {
     // Set up configuration with defaults
     const config = await this.buildConfig(options);
 
-    Logger.debug('Configuration:', config);
+    this.logger.debug('Configuration:', config);
 
     // Validate environment
     validateGitRepository(options.directory || process.cwd());
 
     // Test Ollama connection
     if (config.verbose || config.debug) {
-      Logger.info(`Testing connection to ${config.host}...`);
+      this.logger.info(`Testing connection to ${config.host}...`);
     }
 
     if (!(await this.testCommand.testConnection(config.host, config.verbose))) {
@@ -62,7 +71,7 @@ export class CommitCommand {
       const autoModel = await this.modelsCommand.getDefaultModel(config.host, true);
       if (autoModel) {
         config.model = autoModel;
-        Logger.info(`Auto-selected model: ${autoModel}`);
+        this.logger.info(`Auto-selected model: ${autoModel}`);
       } else {
         throw new Error('No suitable model found');
       }
@@ -70,13 +79,13 @@ export class CommitCommand {
 
     // Run simple test if in debug mode
     if (config.debug) {
-      Logger.info('Running simple prompt test...');
+      this.logger.info('Running simple prompt test...');
       if (!(await this.testCommand.testSimplePrompt(config.host, config.model))) {
         throw new Error(
           `Simple test failed - there may be issues with the Ollama setup. Try: ollama pull ${config.model}`,
         );
       }
-      Logger.success('Simple test passed');
+      this.logger.success('Simple test passed');
     }
 
     // Setup system prompt
@@ -132,7 +141,7 @@ export class CommitCommand {
           const gitChanges = this.gitService.getChanges(config.verbose, config.autoStage);
 
           if (config.verbose) {
-            Logger.info('Analysis complete, generating commit message...');
+            this.logger.info('Analysis complete, generating commit message...');
           }
 
           // Build enhanced prompt
@@ -159,7 +168,7 @@ export class CommitCommand {
               console.log(`ℹ️  ${error.message}`);
               process.exit(0); // Only exit for NoChangesError
             } else if (error instanceof GitRepositoryError) { // Allow GitRepositoryError to throw
-                throw error;
+              throw error;
             } else if (error instanceof Error) {
               // These are actual non-retryable errors
               throw error;
@@ -171,29 +180,29 @@ export class CommitCommand {
           // This is a retryable error
           errorRetryCount++;
           if (typeof error === 'object' && error && 'message' in error) {
-            Logger.error(`❌ Failed on attempt ${errorRetryCount}: ${(error as { message: string }).message}`);
+            this.logger.error(`❌ Failed on attempt ${errorRetryCount}: ${(error as { message: string }).message}`);
           } else {
-            Logger.error(`❌ Failed on attempt ${errorRetryCount}: ${String(error)}`);
+            this.logger.error(`❌ Failed on attempt ${errorRetryCount}: ${String(error)}`);
           }
 
           if (errorRetryCount >= maxErrorRetries) {
-            Logger.error(`❌ Maximum error retries (${maxErrorRetries}) reached. Giving up.`);
+            this.logger.error(`❌ Maximum error retries (${maxErrorRetries}) reached. Giving up.`);
             throw error;
           }
 
           if (config.verbose) {
-            Logger.info(`Retrying... (${errorRetryCount}/${maxErrorRetries})`);
+            this.logger.info(`Retrying... (${errorRetryCount}/${maxErrorRetries})`);
             if (error instanceof Error) {
-              Logger.debug(`Error type: ${error.constructor.name} (retryable)`);
+              this.logger.debug(`Error type: ${error.constructor.name} (retryable)`);
             } else {
-              Logger.debug('Error type: Unknown (retryable)');
+              this.logger.debug('Error type: Unknown (retryable)');
             }
           }
 
           // Add backoff delay for retryable errors
           const delay = Math.min(1000 * Math.pow(2, errorRetryCount - 1), 5000);
           if (config.verbose) {
-            Logger.info(`Waiting ${delay}ms before retry...`);
+            this.logger.info(`Waiting ${delay}ms before retry...`);
           }
           await new Promise(resolve => setTimeout(resolve, delay));
         }
@@ -213,7 +222,7 @@ export class CommitCommand {
       if (displayResult === 2) {
         // User requested regeneration - continue loop
         if (config.verbose) {
-          Logger.info('Regenerating commit message...');
+          this.logger.info('Regenerating commit message...');
         }
         continue; // Generate a new message
       } else if (displayResult === 0) {
@@ -221,7 +230,7 @@ export class CommitCommand {
         break;
       } else {
         // User cancelled (displayResult === 1)
-        Logger.info('Operation cancelled by user');
+        this.logger.info('Operation cancelled by user');
         break;
       }
     }
@@ -229,7 +238,7 @@ export class CommitCommand {
 
   private async displayCommitResult(message: string, interactive: boolean): Promise<number> {
     console.log('');
-    Logger.success('Generated commit message:');
+    this.logger.success('Generated commit message:');
     console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
     console.log(message);
     console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
@@ -270,11 +279,11 @@ export class CommitCommand {
         return result;
       } catch (error: unknown) {
         if (typeof error === 'object' && error && 'message' in error) {
-          Logger.error('Interactive prompt failed:', (error as { message: string }).message);
+          this.logger.error('Interactive prompt failed:', (error as { message: string }).message);
         } else {
-          Logger.error('Interactive prompt failed:', String(error));
+          this.logger.error('Interactive prompt failed:', String(error));
         }
-        Logger.info('Falling back to non-interactive mode');
+        this.logger.info('Falling back to non-interactive mode');
 
         // Fallback to non-interactive behavior
         console.log('📋 To commit with this message, run:');

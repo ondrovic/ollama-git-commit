@@ -19,7 +19,7 @@ export function validateGitRepository(directory: string = process.cwd()): void {
   try {
     execSync('git rev-parse --git-dir', { stdio: 'pipe', cwd: directory });
     Logger.debug('Git repository detected ✓');
-  } catch (error) {
+  } catch {
     throw new GitRepositoryError('Not a git repository');
   }
 }
@@ -136,6 +136,11 @@ export function validateEnvironment(directory: string = process.cwd()): { valid:
     }
   } catch {
     warnings.push('HTTP client not available');
+  }
+
+  // Check for OLLAMA_HOST
+  if (!process.env.OLLAMA_HOST) {
+    errors.push('Ollama host is not configured');
   }
 
   return {

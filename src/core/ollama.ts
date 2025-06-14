@@ -3,11 +3,17 @@ import { Spinner } from '../utils/spinner';
 import { getConfig } from './config';
 import type { ModelInfo } from '../index';
 import { normalizeHost } from '../utils/url';
+import { IOllamaService, ILogger } from './interfaces';
 
-export class OllamaService {
+export class OllamaService implements IOllamaService {
   private config = getConfig();
+  private logger: ILogger;
+  private spinner: Spinner;
 
-  constructor() {}
+  constructor(logger: ILogger = Logger.getDefault(), spinner: Spinner = new Spinner()) {
+    this.logger = logger;
+    this.spinner = spinner;
+  }
 
   async generateCommitMessage(_model: string, host: string, prompt: string, verbose = false): Promise<string> {
     const config = await this.config;
@@ -15,15 +21,14 @@ export class OllamaService {
     const formattedHost = normalizeHost(host);
 
     if (verbose) {
-      Logger.info(`Generating commit message with ${_model}...`);
-      Logger.info(`Ollama host: ${formattedHost}`);
-      Logger.info(`Prompt length: ${prompt.length} characters`);
+      this.logger.info(`Generating commit message with ${_model}...`);
+      this.logger.info(`Ollama host: ${formattedHost}`);
+      this.logger.info(`Prompt length: ${prompt.length} characters`);
     }
 
     // Show spinner for non-verbose mode
-    const spinner = new Spinner();
     if (!verbose) {
-      spinner.start('🤖 Generating commit message');
+      this.spinner.start('🤖 Generating commit message');
     }
 
     try {
@@ -34,7 +39,7 @@ export class OllamaService {
       };
 
       if (verbose) {
-        Logger.debug(`JSON payload size: ${JSON.stringify(payload).length} bytes`);
+        this.logger.debug(`JSON payload size: ${JSON.stringify(payload).length} bytes`);
       }
 
       const url = `${formattedHost}/api/generate`;
@@ -42,9 +47,9 @@ export class OllamaService {
       const body = JSON.stringify(payload);
 
       if (verbose) {
-        Logger.debug(`Full URL: ${url}`);
-        Logger.debug(`Headers: ${JSON.stringify(headers)}`);
-        Logger.debug(`Payload: ${body}`);
+        this.logger.debug(`Full URL: ${url}`);
+        this.logger.debug(`Headers: ${JSON.stringify(headers)}`);
+        this.logger.debug(`Payload: ${body}`);
       }
 
       const response = await fetch(url, {
@@ -55,7 +60,7 @@ export class OllamaService {
       });
 
       if (!verbose) {
-        spinner.stop();
+        this.spinner.stop();
       }
 
       if (!response.ok) {
@@ -65,8 +70,8 @@ export class OllamaService {
       const responseText = await response.text();
 
       if (verbose) {
-        Logger.success(`Response received (${responseText.length} characters)`);
-        Logger.debug(`First 200 chars of response: ${responseText.substring(0, 200)}...`);
+        this.logger.success(`Response received (${responseText.length} characters)`);
+        this.logger.debug(`First 200 chars of response: ${responseText.substring(0, 200)}...`);
       }
 
       if (!responseText.trim()) {
@@ -91,7 +96,7 @@ export class OllamaService {
       return message;
     } catch (error: unknown) {
       if (!verbose) {
-        spinner.stop();
+        this.spinner.stop();
       }
 
       if (typeof error === 'object' && error && 'name' in error && (error as { name: string }).name === 'TimeoutError') {
@@ -121,8 +126,8 @@ export class OllamaService {
     const timeouts = config.timeouts;
 
     if (verbose) {
-      Logger.info(`Testing Ollama connection to ${ollamaHost}`);
-      Logger.debug(`Connection timeout: ${timeouts.connection}ms`);
+      this.logger.info(`Testing Ollama connection to ${ollamaHost}`);
+      this.logger.debug(`Connection timeout: ${timeouts.connection}ms`);
     }
 
     try {
@@ -136,11 +141,11 @@ export class OllamaService {
 
       return true;
     } catch (error: unknown) {
-      Logger.error(`Cannot connect to Ollama at ${ollamaHost}`);
+      this.logger.error(`Cannot connect to Ollama at ${ollamaHost}`);
       if (typeof error === 'object' && error && 'message' in error) {
-        Logger.error(`Detailed error: ${(error as { message: string }).message}`);
+        this.logger.error(`Detailed error: ${(error as { message: string }).message}`);
       } else {
-        Logger.error(`Detailed error: ${String(error)}`);
+        this.logger.error(`Detailed error: ${String(error)}`);
       }
       // Provide helpful troubleshooting
       console.log('\n🔧 Troubleshooting steps:');
@@ -180,12 +185,12 @@ export class OllamaService {
     } catch (error: unknown) {
       if (typeof error === 'object' && error && 'message' in error) {
         if ((error as { message: string }).message.includes('not found')) {
-          Logger.warn(`Ollama server not found at ${formattedHost}. Please ensure Ollama is running.`);
+          this.logger.error(`Ollama server not found at ${formattedHost}. Please ensure Ollama is running.`);
         } else {
-          Logger.warn(`Error checking model availability: ${(error as { message: string }).message}`);
+          this.logger.error(`Error checking model availability: ${(error as { message: string }).message}`);
         }
       } else {
-        Logger.warn(`Error checking model availability: ${String(error)}`);
+        this.logger.error(`Error checking model availability: ${String(error)}`);
       }
       return false;
     }
@@ -195,7 +200,7 @@ export class OllamaService {
     const config = await this.config;
     const formattedHost = normalizeHost(_host || config.host);
 
-    Logger.info(`⏳ Pulling model: ${_model} from ${formattedHost}`);
+    this.logger.info(`⏳ Pulling model: ${_model} from ${formattedHost}`);
 
     try {
       const response = await fetch(`${formattedHost}/api/pull`, {
@@ -218,13 +223,13 @@ export class OllamaService {
         if (done) break;
       }
 
-      Logger.success(`✅ Model '${_model}' pulled successfully.`);
+      this.logger.success(`✅ Model '${_model}' pulled successfully.`);
     } catch (error: unknown) {
-      Logger.error(`❌ Failed to pull model '${_model}':`);
+      this.logger.error(`❌ Failed to pull model '${_model}':`);
       if (typeof error === 'object' && error && 'message' in error) {
-        Logger.error(`Error: ${(error as { message: string }).message}`);
+        this.logger.error(`Error: ${(error as { message: string }).message}`);
       } else {
-        Logger.error(`Error: ${String(error)}`);
+        this.logger.error(`Error: ${String(error)}`);
       }
       throw error;
     }
@@ -262,5 +267,19 @@ export class OllamaService {
     // Placeholder for actual prompt building logic
     // For now, just return the diff as-is
     return _diff;
+  }
+
+  async getModels(host: string): Promise<ModelInfo[]> {
+    try {
+      const response = await fetch(`${normalizeHost(host)}/api/tags`);
+      if (!response.ok) {
+        throw new Error(`Failed to fetch models: ${response.statusText}`);
+      }
+      const data = await response.json();
+      return data.models || [];
+    } catch (error) {
+      this.logger.error('Failed to fetch models:', error);
+      return [];
+    }
   }
 }

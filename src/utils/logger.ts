@@ -1,54 +1,63 @@
-type LogLevel = 'info' | 'warn' | 'error' | 'success' | 'debug';
-type LogArgs = unknown[];
+import { ILogger } from '../core/interfaces';
 
-export class Logger {
-  private static verbose = false;
-  private static debugMode = false;
+export type LogLevel = 'info' | 'warn' | 'error' | 'success' | 'debug';
+export type LogArgs = unknown[];
 
-  static setVerbose(enabled: boolean): void {
+export class Logger implements ILogger {
+  private verbose = false;
+  private debugMode = false;
+
+  // Static default instance for global use
+  private static defaultInstance: Logger = new Logger();
+
+  static getDefault(): Logger {
+    return Logger.defaultInstance;
+  }
+
+  setVerbose(enabled: boolean): void {
     this.verbose = enabled;
   }
 
-  static setDebug(enabled: boolean): void {
+  setDebug(enabled: boolean): void {
     this.debugMode = enabled;
     if (enabled) {
       this.verbose = true;
     }
   }
 
-  static isVerbose(): boolean {
+  isVerbose(): boolean {
     return this.verbose;
   }
 
-  static isDebug(): boolean {
+  isDebug(): boolean {
     return this.debugMode;
   }
 
-  static info(message: string, ...args: LogArgs): void {
+  info(message: string, ...args: LogArgs): void {
     if (this.verbose) {
-      console.log(`🔍 ${message}`, ...args);
+      console.log(`ℹ️  ${message}`, ...args);
     }
   }
 
-  static success(message: string, ...args: LogArgs): void {
+  success(message: string, ...args: LogArgs): void {
     console.log(`✅ ${message}`, ...args);
   }
 
-  static warn(message: string, ...args: LogArgs): void {
+  warn(message: string, ...args: LogArgs): void {
     console.log(`⚠️  ${message}`, ...args);
   }
 
-  static error(message: string, ...args: LogArgs): void {
+  error(message: string, ...args: LogArgs): void {
     console.error(`❌ ${message}`, ...args);
   }
 
-  static debug(message: string, ...args: LogArgs): void {
+  debug(message: string, ...args: LogArgs): void {
     if (this.debugMode) {
       console.log(`🐛 ${message}`, ...args);
     }
   }
 
-  static log(level: LogLevel, message: string, ...args: LogArgs): void {
+  log(level: LogLevel, message: string, ...args: LogArgs): void {
     switch (level) {
       case 'info':
         this.info(message, ...args);
@@ -70,7 +79,7 @@ export class Logger {
     }
   }
 
-  static formatBytes(bytes: number): string {
+  formatBytes(bytes: number): string {
     const units = ['B', 'KB', 'MB', 'GB'];
     let size = bytes;
     let unitIndex = 0;
@@ -83,7 +92,7 @@ export class Logger {
     return `${size.toFixed(1)} ${units[unitIndex]}`;
   }
 
-  static formatDuration(ms: number): string {
+  formatDuration(ms: number): string {
     if (ms < 1000) {
       return `${ms}ms`;
     }
@@ -98,13 +107,13 @@ export class Logger {
     return `${seconds}s`;
   }
 
-  static table(data: Record<string, unknown>[]): void {
+  table(data: Record<string, unknown>[]): void {
     if (this.verbose) {
       console.table(data);
     }
   }
 
-  static group(label: string, fn: () => void): void {
+  group(label: string, fn: () => void): void {
     if (this.verbose) {
       console.group(`📋 ${label}`);
       fn();
@@ -114,15 +123,65 @@ export class Logger {
     }
   }
 
-  static time(label: string): void {
+  time(label: string): void {
     if (this.debugMode) {
       console.time(label);
     }
   }
 
-  static timeEnd(label: string): void {
+  timeEnd(label: string): void {
     if (this.debugMode) {
       console.timeEnd(label);
     }
+  }
+
+  // --- Static proxies for backward compatibility ---
+  static setVerbose(enabled: boolean): void {
+    Logger.getDefault().setVerbose(enabled);
+  }
+  static setDebug(enabled: boolean): void {
+    Logger.getDefault().setDebug(enabled);
+  }
+  static isVerbose(): boolean {
+    return Logger.getDefault().isVerbose();
+  }
+  static isDebug(): boolean {
+    return Logger.getDefault().isDebug();
+  }
+  static info(message: string, ...args: LogArgs): void {
+    Logger.getDefault().info(message, ...args);
+  }
+  static success(message: string, ...args: LogArgs): void {
+    Logger.getDefault().success(message, ...args);
+  }
+  static warn(message: string, ...args: LogArgs): void {
+    Logger.getDefault().warn(message, ...args);
+  }
+  static error(message: string, ...args: LogArgs): void {
+    Logger.getDefault().error(message, ...args);
+  }
+  static debug(message: string, ...args: LogArgs): void {
+    Logger.getDefault().debug(message, ...args);
+  }
+  static log(level: LogLevel, message: string, ...args: LogArgs): void {
+    Logger.getDefault().log(level, message, ...args);
+  }
+  static formatBytes(bytes: number): string {
+    return Logger.getDefault().formatBytes(bytes);
+  }
+  static formatDuration(ms: number): string {
+    return Logger.getDefault().formatDuration(ms);
+  }
+  static table(data: Record<string, unknown>[]): void {
+    Logger.getDefault().table(data);
+  }
+  static group(label: string, fn: () => void): void {
+    Logger.getDefault().group(label, fn);
+  }
+  static time(label: string): void {
+    Logger.getDefault().time(label);
+  }
+  static timeEnd(label: string): void {
+    Logger.getDefault().timeEnd(label);
   }
 }

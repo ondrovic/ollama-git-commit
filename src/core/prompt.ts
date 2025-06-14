@@ -1,8 +1,9 @@
 import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'fs';
-import { dirname } from 'path';
 import { Logger } from '../utils/logger';
+import { IPromptService, ILogger } from './interfaces';
+import { dirname } from 'path';
 
-export class PromptService {
+export class PromptService implements IPromptService {
   private readonly defaultPrompt = `Write short commit messages:
 - The first line should be a short summary of the changes
 - Remember to mention the files that were changed, and what was changed
@@ -21,6 +22,12 @@ Summary of changes
 
 What you write will be passed directly to git commit -m "[message]"`;
 
+  private logger: ILogger;
+
+  constructor(logger: ILogger = Logger.getDefault()) {
+    this.logger = logger;
+  }
+
   getSystemPrompt(promptFile: string, verbose: boolean): string {
     // Create prompt directory if it doesn't exist
     const promptDir = dirname(promptFile);
@@ -31,7 +38,7 @@ What you write will be passed directly to git commit -m "[message]"`;
     // Create default prompt if file doesn't exist
     if (!existsSync(promptFile)) {
       if (verbose) {
-        Logger.info(`Creating default prompt file at ${promptFile}`);
+        this.logger.info(`Creating default prompt file at ${promptFile}`);
       }
 
       try {
@@ -46,7 +53,7 @@ What you write will be passed directly to git commit -m "[message]"`;
     }
 
     if (verbose) {
-      Logger.info(`Using prompt file: ${promptFile}`);
+      this.logger.info(`Using prompt file: ${promptFile}`);
     }
 
     // Verify the file exists and is readable

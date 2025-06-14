@@ -1,9 +1,17 @@
-// ./.ollama-git-commit.json (Project Local Config)
 {
-  "model": "deepseek-coder:6.7b",
-  "autoStage": true,
-  "promptTemplate": "detailed",
+  "model": "mistral:7b-instruct",
+  "host": "http://192.168.0.3:11434",
+  "verbose": false,
+  "interactive": true,
+  "debug": false,
+  "autoStage": false,
+  "autoModel": false,
+  "useEmojis": false,
+  "promptTemplate": "default",
+  "promptFile": "C:\\Users\\ondro\\.config\\ollama-git-commit\\prompt.txt",
   "timeouts": {
-    "generation": 180000
+    "connection": 10000,
+    "generation": 120000,
+    "modelPull": 300000
   }
 }

@@ -7,6 +7,24 @@ A powerful CLI tool that generates meaningful, contextual commit messages using 
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.0+-blue.svg)](https://www.typescriptlang.org/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
+## 🚦 Continuous Integration (CI)
+
+This project uses **GitHub Actions** to automatically run the test suite on every push and pull request to any branch.
+
+- The workflow is defined in `.github/workflows/test.yml`.
+- All branches are tested automatically.
+- Tests are run using [Bun](https://bun.sh/) for fast and modern JavaScript/TypeScript execution.
+
+**How it works:**
+
+- On every push or PR, GitHub Actions will:
+  1. Check out the code
+  2. Set up Bun
+  3. Install dependencies (`bun install`)
+  4. Run the test suite (`bun test`)
+
+You can view the status of your tests in the "Actions" tab of your GitHub repository.
+
 ## ✨ Features
 
 - 🧠 **AI-Powered**: Uses Ollama models to generate intelligent commit messages

@@ -1,8 +1,18 @@
-// ~/.ollama-git-commit.json
 {
-  "model": "codellama:13b",
-  "host": "http://192.168.1.100:11434",
-  "verbose": true,
+  "model": "mistral:7b-instruct",
+  "host": "http://192.168.0.3:11434",
+  "verbose": false,
+  "interactive": true,
+  "debug": false,
+  "autoStage": false,
+  "autoModel": false,
   "useEmojis": false,
-  "promptTemplate": "conventional"
+  "promptTemplate": "default",
+  "promptFile": "C:\\Users\\ondro\\.config\\ollama-git-commit\\prompt.txt",
+  "configFile": "C:\\Users\\ondro\\.config\\ollama-git-commit\\config.json",
+  "timeouts": {
+    "connection": 10000,
+    "generation": 120000,
+    "modelPull": 300000
+  }
 }

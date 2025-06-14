@@ -2,29 +2,47 @@ import { Logger } from '../utils/logger';
 import { OllamaService } from '../core/ollama';
 import { getConfig } from '../core/config';
 import { normalizeHost } from '../utils/url';
+import { ILogger } from '../core/interfaces';
 
 export class TestCommand {
   private ollamaService: OllamaService;
+  private logger: ILogger;
 
-  constructor() {
-    this.ollamaService = new OllamaService();
+  constructor(ollamaService?: OllamaService, logger?: ILogger) {
+    this.ollamaService = ollamaService || new OllamaService();
+    this.logger = logger || Logger.getDefault();
   }
 
   async testConnection(host?: string, verbose = false): Promise<boolean> {
     try {
       const config = await getConfig();
       const serverHost = normalizeHost(host || config.host);
+      const timeouts = config.timeouts;
 
+      if (verbose) {
+        this.logger.info(`Testing connection to ${serverHost}...`);
+        this.logger.info(`Connection timeout: ${timeouts.connection}ms`);
+        this.logger.info('Sending GET request to /api/tags');
+        this.logger.info('Headers: { "Content-Type": "application/json" }');
+      }
+
+      const startTime = Date.now();
       const success = await this.ollamaService.testConnection(serverHost, verbose);
+      const duration = Date.now() - startTime;
+
       if (!success) {
         throw new Error('Connection test failed');
       }
-      
-      Logger.success(`Successfully connected to Ollama server at ${serverHost}`);
+
+      if (verbose) {
+        this.logger.info('Response: HTTP 200 OK');
+        this.logger.info(`⏱️ Connection established in ${duration}ms`);
+      }
+
       return true;
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
-      Logger.error('Connection test failed:', errorMessage);
+      this.logger.error('Connection test failed:', errorMessage);
       return false;
     }
   }
@@ -36,22 +54,30 @@ export class TestCommand {
       const testModel = model || config.model;
 
       if (verbose) {
-        Logger.info(`Testing model '${testModel}' on ${ollamaHost}...`);
+        this.logger.info(`Testing model '${testModel}' on ${ollamaHost}...`);
       }
 
+      // First test connection
       const connectionOk = await this.testConnection(ollamaHost, verbose);
       if (!connectionOk) {
-        Logger.error('❌ Model test failed');
+        this.logger.error('Connection test failed');
+        return false;
+      }
+
+      // Then test model availability
+      const modelOk = await this.testModelAvailability(testModel, ollamaHost);
+      if (!modelOk) {
+        this.logger.error('Model test failed');
         return false;
       }
 
       return true;
     } catch (error: unknown) {
-      Logger.error('Test model failed:', error);
+      this.logger.error('Test model failed:', error);
       if (typeof error === 'object' && error && 'message' in error) {
-        Logger.error(`Error: ${(error as { message: string }).message}`);
+        this.logger.error(`Error: ${(error as { message: string }).message}`);
       } else {
-        Logger.error(`Error: ${String(error)}`);
+        this.logger.error(`Error: ${String(error)}`);
       }
       return false;
     }
@@ -64,14 +90,14 @@ export class TestCommand {
       const testModel = model || config.model;
 
       if (verbose) {
-        Logger.info(`Running all tests with model '${testModel}' on ${ollamaHost}...`);
+        this.logger.info(`Running all tests with model '${testModel}' on ${ollamaHost}...`);
       }
 
       // Test 1: Connection
       console.log('1️⃣  Testing connection...');
       const connectionOk = await this.testConnection(ollamaHost, verbose);
       if (!connectionOk) {
-        Logger.error('Connection test failed');
+        this.logger.error('Connection test failed');
         return false;
       }
 
@@ -79,7 +105,7 @@ export class TestCommand {
       console.log('\n2️⃣  Testing model...');
       const modelOk = await this.testModel(testModel, ollamaHost, verbose);
       if (!modelOk) {
-        Logger.error('Model test failed');
+        this.logger.error('Model test failed');
         return false;
       }
 
@@ -87,7 +113,7 @@ export class TestCommand {
       console.log('\n3️⃣  Testing simple prompt...');
       const promptOk = await this.testSimplePrompt(ollamaHost, testModel, verbose);
       if (!promptOk) {
-        Logger.error('Simple prompt test failed');
+        this.logger.error('Simple prompt test failed');
         return false;
       }
 
@@ -98,11 +124,11 @@ export class TestCommand {
       console.log('\n✅ All tests passed!');
       return true;
     } catch (error: unknown) {
-      Logger.error('Test all failed:', error);
+      this.logger.error('Test all failed:', error);
       if (typeof error === 'object' && error && 'message' in error) {
-        Logger.error(`Error: ${(error as { message: string }).message}`);
+        this.logger.error(`Error: ${(error as { message: string }).message}`);
       } else {
-        Logger.error(`Error: ${String(error)}`);
+        this.logger.error(`Error: ${String(error)}`);
       }
       return false;
     }
@@ -115,9 +141,9 @@ export class TestCommand {
     const timeouts = config.timeouts;
 
     if (verbose) {
-      Logger.info(`Testing simple prompt with model: ${testModel}`);
-      Logger.info(`Host: ${ollamaHost}`);
-      Logger.debug(`Generation timeout: ${timeouts.generation}ms`);
+      this.logger.info(`Testing simple prompt with model: ${testModel}`);
+      this.logger.info(`Host: ${ollamaHost}`);
+      this.logger.debug(`Generation timeout: ${timeouts.generation}ms`);
     }
 
     const payload = {
@@ -127,12 +153,12 @@ export class TestCommand {
     };
 
     if (verbose) {
-      Logger.debug('Test payload:', JSON.stringify(payload, null, 2));
+      this.logger.debug('Test payload:', JSON.stringify(payload, null, 2));
     }
 
     try {
       if (verbose) {
-        Logger.info('Sending test request...');
+        this.logger.info('Sending test request...');
       }
 
       const response = await fetch(`${ollamaHost}/api/generate`, {
@@ -145,8 +171,8 @@ export class TestCommand {
       const responseText = await response.text();
 
       if (verbose) {
-        Logger.info(`Response received (${responseText.length} characters)`);
-        Logger.debug(`First 500 chars: ${responseText.substring(0, 500)}`);
+        this.logger.info(`Response received (${responseText.length} characters)`);
+        this.logger.debug(`First 500 chars: ${responseText.substring(0, 500)}`);
       }
 
       if (!response.ok) {
@@ -158,27 +184,27 @@ export class TestCommand {
         const data = JSON.parse(responseText);
 
         if (verbose) {
-          Logger.success('Valid JSON response');
-          Logger.info('Response field exists:', 'response' in data);
+          this.logger.success('Valid JSON response');
+          this.logger.info('Response field exists:', 'response' in data);
 
           if (data.response) {
-            Logger.info('Response preview:', `${data.response.substring(0, 100)}...`);
+            this.logger.info('Response preview:', `${data.response.substring(0, 100)}...`);
           }
 
           if (data.model) {
-            Logger.info('Model used:', data.model);
+            this.logger.info('Model used:', data.model);
           }
 
           if (data.total_duration) {
-            Logger.info('Generation time:', `${(data.total_duration / 1000000).toFixed(0)}ms`);
+            this.logger.info('Generation time:', `${(data.total_duration / 1000000).toFixed(0)}ms`);
           }
         } else {
-          Logger.success('Simple prompt test passed');
+          this.logger.success('Simple prompt test passed');
         }
 
         // Check for error in response
         if (data.error) {
-          Logger.error('Model returned error:', data.error);
+          this.logger.error('Model returned error:', data.error);
 
           if (data.error.toString().toLowerCase().includes('not found')) {
             console.log('');
@@ -193,26 +219,26 @@ export class TestCommand {
 
         // Check if we got a reasonable response
         if (!data.response || data.response.trim().length === 0) {
-          Logger.warn('Model returned empty response');
+          this.logger.warn('Model returned empty response');
           return false;
         }
 
         return true;
       } catch (parseError: unknown) {
         if (typeof parseError === 'object' && parseError && 'message' in parseError) {
-          Logger.error('JSON parsing failed:', (parseError as { message: string }).message);
+          this.logger.error('JSON parsing failed:', (parseError as { message: string }).message);
         } else {
-          Logger.error('JSON parsing failed:', String(parseError));
+          this.logger.error('JSON parsing failed:', String(parseError));
         }
 
         if (verbose) {
-          Logger.debug('Raw response that failed to parse:');
+          this.logger.debug('Raw response that failed to parse:');
           console.log(responseText);
         }
 
         // Try to extract useful information from malformed response
         if (responseText.includes('error')) {
-          Logger.error('Response contains error information');
+          this.logger.error('Response contains error information');
 
           if (responseText.toLowerCase().includes('not found')) {
             console.log('');
@@ -225,7 +251,7 @@ export class TestCommand {
       }
     } catch (error: unknown) {
       if (typeof error === 'object' && error && 'name' in error && (error as { name: string }).name === 'TimeoutError') {
-        Logger.error('Request timed out');
+        this.logger.error('Request timed out');
         if (verbose) {
           console.log('');
           console.log('🔧 Timeout troubleshooting:');
@@ -236,7 +262,7 @@ export class TestCommand {
           console.log('   • Check system resources (CPU/Memory/GPU)');
         }
       } else if (typeof error === 'object' && error && 'message' in error && (error as { message: string }).message.includes('fetch')) {
-        Logger.error('Network request failed:', (error as { message: string }).message);
+        this.logger.error('Network request failed:', (error as { message: string }).message);
         if (verbose) {
           console.log('');
           console.log('🔧 Network troubleshooting:');
@@ -246,9 +272,9 @@ export class TestCommand {
         }
       } else {
         if (typeof error === 'object' && error && 'message' in error) {
-          Logger.error('Request failed:', (error as { message: string }).message);
+          this.logger.error('Request failed:', (error as { message: string }).message);
         } else {
-          Logger.error('Request failed:', String(error));
+          this.logger.error('Request failed:', String(error));
         }
       }
 
@@ -256,28 +282,25 @@ export class TestCommand {
     }
   }
 
-  async testModelAvailability(model: string, host?: string): Promise<boolean> {
-    const config = await getConfig();
-    const ollamaHost = normalizeHost(host || config.host);
-
+  async testModelAvailability(model: string, host: string): Promise<boolean> {
     try {
-      const available = await this.ollamaService.isModelAvailable(ollamaHost, model);
-
+      const ollama = new OllamaService(host);
+      const available = await ollama.isModelAvailable(model);
       if (available) {
-        Logger.success(`✅ Model '${model}' is available`);
+        this.logger.success(`Model '${model}' is available`);
       } else {
-        Logger.warn(`⚠️  Model '${model}' is not available`);
+        this.logger.warn(`Model '${model}' is not available`);
         console.log('');
         console.log('🔧 To install this model:');
         console.log(`   ollama pull ${model}`);
       }
-
       return available;
     } catch (error: unknown) {
+      this.logger.error('Failed to check model availability:', error);
       if (typeof error === 'object' && error && 'message' in error) {
-        Logger.error(`Failed to check model availability: ${(error as { message: string }).message}`);
+        this.logger.error(`Error: ${(error as { message: string }).message}`);
       } else {
-        Logger.error(`Failed to check model availability: ${String(error)}`);
+        this.logger.error(`Error: ${String(error)}`);
       }
       return false;
     }
@@ -295,7 +318,7 @@ export class TestCommand {
     console.log('1️⃣  Testing connection...');
     const connectionOk = await this.testConnection(ollamaHost, verbose);
     if (!connectionOk) {
-      Logger.error('❌ Connection test failed');
+      this.logger.error('❌ Connection test failed');
       return false;
     }
 
@@ -303,7 +326,7 @@ export class TestCommand {
     console.log('\n2️⃣  Testing model availability...');
     const modelOk = await this.testModelAvailability(testModel, ollamaHost);
     if (!modelOk) {
-      Logger.error('❌ Model availability test failed');
+      this.logger.error('❌ Model availability test failed');
       return false;
     }
 
@@ -311,12 +334,12 @@ export class TestCommand {
     console.log('\n3️⃣  Testing simple prompt generation...');
     const promptOk = await this.testSimplePrompt(ollamaHost, testModel, verbose);
     if (!promptOk) {
-      Logger.error('❌ Simple prompt test failed');
+      this.logger.error('❌ Simple prompt test failed');
       return false;
     }
 
     console.log('\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-    Logger.success('🎉 All tests passed! Your setup is working correctly.');
+    this.logger.success('All tests passed! Your setup is working correctly.');
 
     console.log('');
     console.log('📋 Test summary:');

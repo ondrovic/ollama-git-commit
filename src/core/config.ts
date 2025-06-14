@@ -1,7 +1,9 @@
-import * as fs from 'fs-extra';
+import fsExtra from 'fs-extra';
 import { join, dirname } from 'path';
 import { homedir } from 'os';
 import { Logger } from '../utils/logger';
+import type { OllamaCommitConfig } from '../index';
+import { IConfigManager, ILogger } from './interfaces';
 
 export interface OllamaCommitConfig {
   // Core settings
@@ -31,27 +33,30 @@ export interface OllamaCommitConfig {
   promptTemplate: 'default' | 'conventional' | 'simple' | 'detailed';
 }
 
-export class ConfigManager {
+export class ConfigManager implements IConfigManager {
   private static instance: ConfigManager;
   private config: OllamaCommitConfig;
   private readonly defaultConfigFile: string;
   private readonly globalConfigFile: string;
   private readonly localConfigFile: string;
   private initialized = false;
+  private logger: ILogger;
+  private fs: typeof fsExtra;
 
-  private constructor() {
+  private constructor(logger: ILogger = Logger.getDefault(), fs: typeof fsExtra = fsExtra) {
+    this.logger = logger;
+    this.fs = fs;
     // Define config file locations
     this.defaultConfigFile = join(homedir(), '.config', 'ollama-git-commit', 'config.json');
     this.globalConfigFile = join(homedir(), '.ollama-git-commit.json');
     this.localConfigFile = join(process.cwd(), '.ollama-git-commit.json');
-
     // Initialize with defaults
     this.config = this.getDefaults();
   }
 
-  static getInstance(): ConfigManager {
+  static getInstance(logger: ILogger = Logger.getDefault(), fs: typeof fsExtra = fsExtra): ConfigManager {
     if (!ConfigManager.instance) {
-      ConfigManager.instance = new ConfigManager();
+      ConfigManager.instance = new ConfigManager(logger, fs);
     }
     return ConfigManager.instance;
   }
@@ -95,7 +100,7 @@ export class ConfigManager {
 
   private async loadConfigFile(filePath: string): Promise<Record<string, unknown>> {
     try {
-      const content = await fs.readFile(filePath, 'utf-8');
+      const content = await this.fs.readFile(filePath, 'utf-8');
       const config = JSON.parse(content) as Record<string, unknown>;
       return this.validateAndTransformConfig(config, filePath);
     } catch (err: unknown) {
@@ -104,6 +109,21 @@ export class ConfigManager {
       }
       throw err;
     }
+  }
+
+  // Deep merge helper
+  private deepMerge(target: Record<string, unknown>, source: Record<string, unknown>): Record<string, unknown> {
+    const result = { ...target };
+    for (const key in source) {
+      if (Object.prototype.hasOwnProperty.call(source, key)) {
+        if (source[key] && typeof source[key] === 'object' && !Array.isArray(source[key])) {
+          result[key] = this.deepMerge(result[key] as Record<string, unknown>, source[key] as Record<string, unknown>);
+        } else {
+          result[key] = source[key];
+        }
+      }
+    }
+    return result;
   }
 
   private async loadConfig(): Promise<OllamaCommitConfig> {
@@ -121,19 +141,19 @@ export class ConfigManager {
     // Load default config file
     const defaultConfig = await this.loadConfigFile(this.defaultConfigFile);
     if (defaultConfig) {
-      config = { ...config, ...defaultConfig };
+      config = this.deepMerge(config, defaultConfig);
     }
 
     // Load global config file
     const globalConfig = await this.loadConfigFile(this.globalConfigFile);
     if (globalConfig) {
-      config = { ...config, ...globalConfig };
+      config = this.deepMerge(config, globalConfig);
     }
 
     // Load local config file (highest priority)
     const localConfig = await this.loadConfigFile(this.localConfigFile);
     if (localConfig) {
-      config = { ...config, ...localConfig };
+      config = this.deepMerge(config, localConfig);
     }
 
     // Apply environment variables (highest priority)
@@ -243,10 +263,10 @@ export class ConfigManager {
   async createDefaultConfig(): Promise<void> {
     try {
       const configDir = dirname(this.defaultConfigFile);
-      await fs.ensureDir(configDir);
+      await this.fs.ensureDir(configDir);
 
       const defaultConfig = this.getDefaults();
-      await fs.writeJson(this.defaultConfigFile, defaultConfig, { spaces: 2 });
+      await this.fs.writeJson(this.defaultConfigFile, defaultConfig, { spaces: 2 });
 
       Logger.success(`Configuration file created at: ${this.defaultConfigFile}`);
     } catch (error: unknown) {
@@ -267,9 +287,9 @@ export class ConfigManager {
   }> {
     const active: string[] = [];
 
-    if (await fs.pathExists(this.defaultConfigFile)) active.push(this.defaultConfigFile);
-    if (await fs.pathExists(this.globalConfigFile)) active.push(this.globalConfigFile);
-    if (await fs.pathExists(this.localConfigFile)) active.push(this.localConfigFile);
+    if (await this.fs.pathExists(this.defaultConfigFile)) active.push(this.defaultConfigFile);
+    if (await this.fs.pathExists(this.globalConfigFile)) active.push(this.globalConfigFile);
+    if (await this.fs.pathExists(this.localConfigFile)) active.push(this.localConfigFile);
 
     return {
       default: this.defaultConfigFile,
@@ -389,113 +409,78 @@ export class ConfigManager {
     }
 
     // Helper to determine source
-    const getSource = async (key: string, value: unknown): Promise<string> => {
+    const getSource = async (key: string): Promise<string> => {
       // Check environment variables first (highest priority)
       const envKeyDirect = `OLLAMA_${key.toUpperCase()}`;
-      const envKeyCommit = `OLLAMA_COMMIT_${key.toUpperCase()}`;
-
-      if (process.env[envKeyCommit] !== undefined) {
-        return 'environment variable';
-      }
-      if (process.env[envKeyDirect] !== undefined && (key === 'host')) { // Only check OLLAMA_HOST if the key is 'host'
-          return 'environment variable';
+      if (process.env[envKeyDirect]) {
+        return 'ENV';
       }
 
-      // Check local config (next highest priority)
-      if (projectConfig && projectConfig[key] !== undefined) {
-        return projectConfigPath;
+      // Split the key to handle nested keys (e.g., 'timeouts.connection')
+      const keyParts = key.split('.');
+      let currentProjectConfig = projectConfig;
+      let currentUserConfig = userConfig;
+      let currentDefaultConfig = defaultConfig;
+
+      // Traverse the config objects for nested keys
+      for (const part of keyParts) {
+        if (Object.prototype.hasOwnProperty.call(currentProjectConfig, part)) {
+          currentProjectConfig = currentProjectConfig[part] as Record<string, unknown>;
+        } else {
+          currentProjectConfig = {};
+        }
+        if (Object.prototype.hasOwnProperty.call(currentUserConfig, part)) {
+          currentUserConfig = currentUserConfig[part] as Record<string, unknown>;
+        } else {
+          currentUserConfig = {};
+        }
+        if (Object.prototype.hasOwnProperty.call(currentDefaultConfig, part)) {
+          currentDefaultConfig = currentDefaultConfig[part] as Record<string, unknown>;
+        } else {
+          currentDefaultConfig = {};
+        }
       }
 
-      // Check user global config
-      if (userConfig && userConfig[key] !== undefined) {
-        return userConfigPath;
-      }
-
-      // Check default config file
-      if (defaultConfig && defaultConfig[key] !== undefined) {
-          return defaultConfigPath;
-      }
-
-      // Default built-in
-      return 'default';
-    };
-
-    // Get source for each config value
-    const config = await this.getConfig(); // This `config` object already has the correct merged values
-    sources.model = await getSource('model', config.model);
-    sources.host = await getSource('host', config.host);
-    sources.verbose = await getSource('verbose', config.verbose);
-    sources.interactive = await getSource('interactive', config.interactive);
-    sources.debug = await getSource('debug', config.debug);
-    sources.autoStage = await getSource('autoStage', config.autoStage);
-    sources.autoModel = await getSource('autoModel', config.autoModel);
-    sources.promptFile = await getSource('promptFile', config.promptFile);
-    sources.promptTemplate = await getSource('promptTemplate', config.promptTemplate);
-    sources.useEmojis = await getSource('useEmojis', config.useEmojis);
-
-    // Handle nested timeouts - similar logic
-    const getNestedSource = async (path: string, value: unknown): Promise<string> => {
-      // Check environment variables first (highest priority)
-      const envKey = `OLLAMA_COMMIT_${path.toUpperCase().replace('.', '_')}`;
-      if (process.env[envKey] !== undefined) {
-        return 'environment variable';
-      }
-
-      const parentKey = path.split('.')[0];
-      const childKey = path.split('.')[1];
-
-      if (!parentKey || !childKey) {
-        return 'default';
-      }
-
-      // Helper to check if a config has the nested value
-      const hasNestedKey = (cfg: Record<string, unknown>, pKey: string, cKey: string): boolean => {
-        return cfg[pKey] !== undefined &&
-               typeof cfg[pKey] === 'object' &&
-               cfg[pKey] !== null &&
-               (cfg[pKey] as Record<string, unknown>)[cKey] !== undefined;
-      };
-
-      // Check local config
-      if (projectConfig && hasNestedKey(projectConfig, parentKey, childKey)) {
-        return projectConfigPath;
+      // Check project config
+      if (Object.prototype.hasOwnProperty.call(currentProjectConfig, keyParts[keyParts.length - 1])) {
+        return 'LOCAL';
       }
 
       // Check user config
-      if (userConfig && hasNestedKey(userConfig, parentKey, childKey)) {
-        return userConfigPath;
+      if (Object.prototype.hasOwnProperty.call(currentUserConfig, keyParts[keyParts.length - 1])) {
+        return 'USER';
       }
 
-      // Check default config file
-      if (defaultConfig && hasNestedKey(defaultConfig, parentKey, childKey)) {
-          return defaultConfigPath;
+      // Check default config
+      if (Object.prototype.hasOwnProperty.call(currentDefaultConfig, keyParts[keyParts.length - 1])) {
+        return 'DEFAULT';
       }
 
-      // Default
-      return 'default';
+      // If not found in any config, return DEFAULT
+      return 'DEFAULT';
     };
 
-    sources.timeouts = {
-      connection: await getNestedSource('timeouts.connection', config.timeouts.connection),
-      generation: await getNestedSource('timeouts.generation', config.timeouts.generation),
-      modelPull: await getNestedSource('timeouts.modelPull', config.timeouts.modelPull),
-    };
+    // Populate sources
+    sources.model = await getSource('model');
+    sources.host = await getSource('host');
+    sources.verbose = await getSource('verbose');
+    sources.interactive = await getSource('interactive');
+    sources.debug = await getSource('debug');
+    sources.autoStage = await getSource('autoStage');
+    sources.autoModel = await getSource('autoModel');
+    sources.promptFile = await getSource('promptFile');
+    sources.promptTemplate = await getSource('promptTemplate');
+    sources.useEmojis = await getSource('useEmojis');
+    sources.timeouts.connection = await getSource('timeouts.connection');
+    sources.timeouts.generation = await getSource('timeouts.generation');
+    sources.timeouts.modelPull = await getSource('timeouts.modelPull');
 
     return sources;
   }
 }
 
-// Convenience function for getting config
 export async function getConfig(): Promise<Readonly<OllamaCommitConfig>> {
   const configManager = ConfigManager.getInstance();
   await configManager.initialize();
   return configManager.getConfig();
-}
-
-// Convenience function for getting a specific config value
-export async function getConfigValue<K extends keyof OllamaCommitConfig>(
-  key: K,
-): Promise<OllamaCommitConfig[K]> {
-  const config = await getConfig();
-  return config[key];
 }

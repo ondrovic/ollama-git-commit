@@ -3,8 +3,18 @@ import { formatFileSize } from '../utils/formatFileSize';
 import { getConfig } from '../core/config';
 import type { ModelInfo } from '../index';
 import { normalizeHost } from '../utils/url';
+import { ILogger, IOllamaService } from '../core/interfaces';
+import { OllamaService } from '../core/ollama';
 
 export class ModelsCommand {
+  private logger: ILogger;
+  private ollamaService: IOllamaService;
+
+  constructor(logger: ILogger = Logger.getDefault(), ollamaService?: IOllamaService) {
+    this.logger = logger;
+    this.ollamaService = ollamaService || new OllamaService(this.logger);
+  }
+
   async listModels(host?: string, verbose = false): Promise<void> {
     const config = await getConfig();
     const ollamaHost = normalizeHost(host || config.host);
@@ -40,11 +50,11 @@ export class ModelsCommand {
         console.log(`🌐 Ollama host: ${ollamaHost}`);
       }
     } catch (error: unknown) {
-      Logger.error(`Cannot fetch models from ${ollamaHost}`);
+      this.logger.error(`Cannot fetch models from ${ollamaHost}`);
       if (typeof error === 'object' && error && 'message' in error) {
-        Logger.error(`Error: ${(error as { message: string }).message}`);
+        this.logger.error(`Error: ${(error as { message: string }).message}`);
       } else {
-        Logger.error(`Error: ${String(error)}`);
+        this.logger.error(`Error: ${String(error)}`);
       }
       // Provide helpful troubleshooting
       console.log('');
@@ -84,15 +94,15 @@ export class ModelsCommand {
       const modelNames = data.models.map((m: ModelInfo) => m.name);
 
       if (verbose) {
-        Logger.debug(`Available models: ${modelNames.join(', ')}`);
-        Logger.debug(`Preferred models (in order): ${preferred.join(', ')}`);
+        this.logger.debug(`Available models: ${modelNames.join(', ')}`);
+        this.logger.debug(`Preferred models (in order): ${preferred.join(', ')}`);
       }
 
       // Try to find a preferred model (exact match first)
       for (const pref of preferred) {
         if (modelNames.includes(pref)) {
           if (verbose) {
-            Logger.info(`Auto-selected model (exact match): ${pref}`);
+            this.logger.info(`Auto-selected model (exact match): ${pref}`);
           }
           return pref;
         }
@@ -105,7 +115,7 @@ export class ModelsCommand {
           if (prefBase && (name.toLowerCase().includes(pref.toLowerCase()) ||
               name.toLowerCase().includes(prefBase.toLowerCase()))) {
             if (verbose) {
-              Logger.info(`Auto-selected model (partial match): ${name}`);
+              this.logger.info(`Auto-selected model (partial match): ${name}`);
             }
             return name;
           }
@@ -115,7 +125,7 @@ export class ModelsCommand {
       // If no preferred model found, use the first available
       if (modelNames.length > 0) {
         if (verbose) {
-          Logger.info(`Auto-selected model (first available): ${modelNames[0]}`);
+          this.logger.info(`Auto-selected model (first available): ${modelNames[0]}`);
         }
         return modelNames[0];
       }
@@ -124,9 +134,9 @@ export class ModelsCommand {
     } catch (error: unknown) {
       if (verbose) {
         if (typeof error === 'object' && error && 'message' in error) {
-          Logger.error(`Error getting default model: ${(error as { message: string }).message}`);
+          this.logger.error(`Error getting default model: ${(error as { message: string }).message}`);
         } else {
-          Logger.error(`Error getting default model: ${String(error)}`);
+          this.logger.error(`Error getting default model: ${String(error)}`);
         }
       }
       return null;
@@ -159,7 +169,7 @@ export class ModelsCommand {
     const config = await getConfig();
     const ollamaHost = normalizeHost(host || config.host);
 
-    Logger.error(`Model '${model}' not found on Ollama server`);
+    this.logger.error(`Model '${model}' not found on Ollama server`);
     console.log('');
     console.log('🔧 To fix this issue:');
     console.log(`   1. Install the model: ollama pull ${model}`);

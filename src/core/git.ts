@@ -1,6 +1,7 @@
 import { execSync } from 'child_process';
 import { Logger } from '../utils/logger';
 import type { GitChanges } from '../index';
+import { IGitService, ILogger } from './interfaces';
 
 // Custom error types
 export class GitNoChangesError extends Error {
@@ -24,10 +25,13 @@ export class GitCommandError extends Error {
   }
 }
 
-export class GitService {
+export class GitService implements IGitService {
   private directory: string;
-  constructor(directory: string = process.cwd()) {
+  private logger: ILogger;
+
+  constructor(directory: string = process.cwd(), logger: ILogger = Logger.getDefault()) {
     this.directory = directory;
+    this.logger = logger;
   }
 
   private execCommand(command: string, options: { encoding?: BufferEncoding; cwd?: string } = {}): string {
@@ -50,11 +54,11 @@ export class GitService {
   isGitRepository(): boolean {
     try {
       this.execCommand('git rev-parse --git-dir');
-      Logger.debug(`Git repository check for ${this.directory}: Success`);
+      this.logger.debug(`Git repository check for ${this.directory}: Success`);
       return true;
     } catch (error) {
-      Logger.debug(`Git repository check for ${this.directory}: Failed`);
-      Logger.debug(`Error: ${error}`);
+      this.logger.debug(`Git repository check for ${this.directory}: Failed`);
+      this.logger.debug(`Error: ${error}`);
       return false;
     }
   }
@@ -99,7 +103,7 @@ export class GitService {
       // We have unstaged changes - decide what to do with them
       if (autoStage) {
         if (verbose) {
-          Logger.info('No staged changes found, staging all changes...');
+          this.logger.info('No staged changes found, staging all changes...');
         }
         try {
           this.execCommand('git add -A');
