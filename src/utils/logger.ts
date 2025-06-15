@@ -1,5 +1,5 @@
+import { EMOJIS, SIZE_UNITS } from '../constants/ui';
 import { ILogger } from '../core/interfaces';
-import { SIZE_UNITS, EMOJIS } from '../constants/ui';
 
 export type LogLevel = 'info' | 'warn' | 'error' | 'success' | 'debug';
 export type LogArgs = unknown[];

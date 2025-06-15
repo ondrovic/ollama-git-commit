@@ -7,27 +7,27 @@ async function updateVersion() {
   try {
     // Read package.json
     const packageJson = JSON.parse(
-      await fs.readFile(path.join(process.cwd(), 'package.json'), 'utf-8')
+      await fs.readFile(path.join(process.cwd(), 'package.json'), 'utf-8'),
     );
     const version = packageJson.version;
 
-    // Read cli.ts
-    const cliPath = path.join(process.cwd(), 'src', 'cli.ts');
-    let cliContent = await fs.readFile(cliPath, 'utf-8');
+    // Read metadata.ts
+    const metadataPath = path.join(process.cwd(), 'src', 'constants', 'metadata.ts');
+    let metadataContent = await fs.readFile(metadataPath, 'utf-8');
 
-    // Update version in cli.ts
-    cliContent = cliContent.replace(
-      /\.version\(['"]([^'"]+)['"]\)/,
-      `.version('${version}')`
+    // Update version in metadata.ts
+    metadataContent = metadataContent.replace(
+      /export const VERSION = ['"]([^'"]+)['"]/,
+      `export const VERSION = '${version}'`,
     );
 
-    // Write back to cli.ts
-    await fs.writeFile(cliPath, cliContent);
-    console.log(`Updated version to ${version} in cli.ts`);
+    // Write back to metadata.ts
+    await fs.writeFile(metadataPath, metadataContent);
+    console.log(`Updated version to ${version} in metadata.ts`);
   } catch (error) {
     console.error('Failed to update version:', error);
     process.exit(1);
   }
 }
 
-updateVersion(); 
+updateVersion();

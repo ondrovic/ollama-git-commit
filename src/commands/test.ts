@@ -1,8 +1,8 @@
-import { Logger } from '../utils/logger';
-import { OllamaService } from '../core/ollama';
 import { getConfig } from '../core/config';
-import { normalizeHost } from '../utils/url';
 import { ILogger } from '../core/interfaces';
+import { OllamaService } from '../core/ollama';
+import { Logger } from '../utils/logger';
+import { normalizeHost } from '../utils/url';
 
 export class TestCommand {
   private ollamaService: OllamaService;

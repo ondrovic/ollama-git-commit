@@ -1,7 +1,7 @@
 import { Command } from 'commander';
 import { TestCommand } from '../../../commands/test';
-import { Logger } from '../../../utils/logger';
 import { OllamaService } from '../../../core/ollama';
+import { Logger } from '../../../utils/logger';
 
 export const registerSimplePromptTest = (testCommand: Command) => {
   testCommand

@@ -1,5 +1,5 @@
-import { Logger } from './logger';
 import { createInterface } from 'readline';
+import { Logger } from './logger';
 
 interface PromptOptions {
   message: string;
@@ -218,7 +218,13 @@ process.on('SIGTERM', () => {
   process.exit(0);
 });
 
-// Utility function for simple yes/no prompts
+/**
+ * Prompts the user with a yes/no question and returns their choice.
+ *
+ * @param message - The question to ask the user
+ * @param defaultChoice - The default choice if user doesn't provide input ('y' or 'n')
+ * @returns Promise resolving to true for 'yes' or false for 'no'
+ */
 export async function askYesNo(message: string, defaultChoice: 'y' | 'n' = 'n'): Promise<boolean> {
   try {
     const choice = await InteractivePrompt.prompt({
@@ -237,7 +243,15 @@ export async function askYesNo(message: string, defaultChoice: 'y' | 'n' = 'n'):
   }
 }
 
-// Utility function for commit action prompts
+/**
+ * Prompts the user to choose an action for the commit message.
+ *
+ * @returns Promise resolving to the chosen action:
+ * - 'use': Use the message and copy commit command
+ * - 'copy': Copy message to clipboard
+ * - 'regenerate': Generate a new message
+ * - 'cancel': Cancel the operation
+ */
 export async function askCommitAction(): Promise<'use' | 'copy' | 'regenerate' | 'cancel'> {
   try {
     const choice = await InteractivePrompt.prompt({

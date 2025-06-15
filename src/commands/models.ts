@@ -1,10 +1,10 @@
-import { Logger } from '../utils/logger';
-import { formatFileSize } from '../utils/formatFileSize';
 import { getConfig } from '../core/config';
-import type { ModelInfo } from '../types';
-import { normalizeHost } from '../utils/url';
 import { ILogger, IOllamaService } from '../core/interfaces';
 import { OllamaService } from '../core/ollama';
+import type { ModelInfo } from '../types';
+import { formatFileSize } from '../utils/formatFileSize';
+import { Logger } from '../utils/logger';
+import { normalizeHost } from '../utils/url';
 
 export class ModelsCommand {
   private logger: ILogger;

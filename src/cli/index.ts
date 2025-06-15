@@ -3,12 +3,10 @@
 import { Command } from 'commander';
 import { Logger } from '../utils/logger';
 import { registerCommitCommand } from './commands/commit';
-import { registerTestCommands } from './commands/test';
-import { registerListModelsCommand } from './commands/list-models';
 import { registerConfigCommands } from './commands/config';
-
-// Version info
-export const VERSION = '1.0.0';
+import { registerListModelsCommand } from './commands/list-models';
+import { registerTestCommands } from './commands/test';
+import { VERSION } from '../constants/metadata';
 
 const program = new Command();
 

@@ -1,9 +1,9 @@
+import type { ModelInfo } from '../types';
 import { Logger } from '../utils/logger';
 import { Spinner } from '../utils/spinner';
-import { getConfig } from './config';
-import type { ModelInfo } from '../types';
 import { normalizeHost } from '../utils/url';
-import { IOllamaService, ILogger } from './interfaces';
+import { getConfig } from './config';
+import { ILogger, IOllamaService } from './interfaces';
 
 export class OllamaService implements IOllamaService {
   private config = getConfig();

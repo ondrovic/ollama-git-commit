@@ -32,6 +32,13 @@ const clipboardTools: ClipboardTool[] = [
   },
 ];
 
+/**
+ * Attempts to copy text to the system clipboard using available clipboard tools.
+ * Supports multiple platforms (macOS, Linux X11, Linux Wayland, Windows).
+ *
+ * @param text - The text to copy to clipboard
+ * @throws Will log warnings/errors if no clipboard tool is available
+ */
 export async function copyToClipboard(text: string): Promise<void> {
   if (!text || text.trim().length === 0) {
     Logger.warn('No text to copy to clipboard');
@@ -127,6 +134,11 @@ export async function getClipboardCapabilities(): Promise<string[]> {
   return available;
 }
 
+/**
+ * Checks if the system has clipboard support by testing available clipboard tools.
+ *
+ * @returns Promise resolving to true if any clipboard tool is available
+ */
 export async function hasClipboardSupport(): Promise<boolean> {
   const capabilities = await getClipboardCapabilities();
   return capabilities.length > 0;

@@ -1,8 +1,8 @@
 import { Command } from 'commander';
 import { TestCommand } from '../../../commands/test';
-import { Logger } from '../../../utils/logger';
 import { getConfig } from '../../../core/config';
 import { OllamaService } from '../../../core/ollama';
+import { Logger } from '../../../utils/logger';
 
 export const registerConnectionTest = (testCommand: Command) => {
   testCommand

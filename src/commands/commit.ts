@@ -1,30 +1,17 @@
-import { GitService, GitCommandError, GitNoChangesError, GitRepositoryError } from '../core/git';
+import { homedir } from 'os';
+import { join } from 'path';
+import { getConfig } from '../core/config';
+import { GitCommandError, GitNoChangesError, GitRepositoryError, GitService } from '../core/git';
+import { IGitService, ILogger, IOllamaService, IPromptService } from '../core/interfaces';
 import { OllamaService } from '../core/ollama';
 import { PromptService } from '../core/prompt';
+import type { CommitConfig, CommitOptions } from '../types';
+import { copyToClipboard } from '../utils/clipboard';
+import { askCommitAction } from '../utils/interactive';
 import { Logger } from '../utils/logger';
 import { validateGitRepository } from '../utils/validation';
-import { askCommitAction } from '../utils/interactive';
-import { copyToClipboard } from '../utils/clipboard';
 import { ModelsCommand } from './models';
 import { TestCommand } from './test';
-import type { CommitConfig } from '../types';
-import { getConfig } from '../core/config';
-import { join } from 'path';
-import { homedir } from 'os';
-import { IGitService, IOllamaService, IPromptService, ILogger } from '../core/interfaces';
-
-export interface CommitOptions {
-  directory?: string;
-  model?: string;
-  host?: string;
-  verbose?: boolean;
-  interactive?: boolean;
-  promptFile?: string;
-  debug?: boolean;
-  autoStage?: boolean;
-  autoModel?: boolean;
-  promptTemplate?: string;
-}
 
 export class CommitCommand {
   private modelsCommand: ModelsCommand;

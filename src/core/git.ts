@@ -1,6 +1,6 @@
 import { execSync } from 'child_process';
-import { Logger } from '../utils/logger';
 import type { GitChanges } from '../types';
+import { Logger } from '../utils/logger';
 import { IGitService, ILogger } from './interfaces';
 
 // Custom error types

@@ -1,7 +1,7 @@
 import { Command } from 'commander';
-import * as path from 'path';
-import * as os from 'os';
 import * as fs from 'fs/promises';
+import * as os from 'os';
+import * as path from 'path';
 import { Logger } from '../../../utils/logger';
 
 export const registerCreateCommands = (configCommand: Command) => {

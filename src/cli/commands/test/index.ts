@@ -1,9 +1,9 @@
 import { Command } from 'commander';
+import { registerAllTests } from './all';
+import { registerBenchmarkTest } from './benchmark';
 import { registerConnectionTest } from './connection';
 import { registerModelTest } from './model';
 import { registerSimplePromptTest } from './simple-prompt';
-import { registerAllTests } from './all';
-import { registerBenchmarkTest } from './benchmark';
 
 export const registerTestCommands = (program: Command) => {
   const testCommand = program

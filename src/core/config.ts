@@ -1,10 +1,10 @@
 import fsExtra from 'fs-extra';
-import { join, dirname } from 'path';
 import { homedir } from 'os';
+import { dirname, join } from 'path';
+import { DEFAULT_HOST, DEFAULT_MODEL, DEFAULT_TIMEOUTS } from '../constants/metadata';
+import { ConfigSources, OllamaCommitConfig, type ActiveFile } from '../types';
 import { Logger } from '../utils/logger';
 import { IConfigManager, ILogger } from './interfaces';
-import { OllamaCommitConfig, type ActiveFile, ConfigSources } from '../types';
-import { DEFAULT_MODEL, DEFAULT_HOST, DEFAULT_TIMEOUTS } from '../constants/metadata';
 
 export class ConfigManager implements IConfigManager {
   private static instance: ConfigManager;
@@ -25,6 +25,13 @@ export class ConfigManager implements IConfigManager {
     this.config = this.getDefaults();
   }
 
+  /**
+   * Gets or creates a singleton instance of the ConfigManager.
+   *
+   * @param logger - Optional logger instance (defaults to default Logger)
+   * @param fs - Optional filesystem module (defaults to fs-extra)
+   * @returns The singleton ConfigManager instance
+   */
   static getInstance(
     logger: ILogger = Logger.getDefault(),
     fs: typeof fsExtra = fsExtra,

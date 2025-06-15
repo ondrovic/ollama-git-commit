@@ -1,8 +1,8 @@
-import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'fs';
-import { Logger } from '../utils/logger';
-import { IPromptService, ILogger } from './interfaces';
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'fs';
 import { dirname } from 'path';
 import { PROMPTS } from '../constants/prompts';
+import { Logger } from '../utils/logger';
+import { ILogger, IPromptService } from './interfaces';
 
 export class PromptService implements IPromptService {
   private readonly defaultPrompt = PROMPTS.DEFAULT;

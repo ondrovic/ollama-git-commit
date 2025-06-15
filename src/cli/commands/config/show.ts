@@ -1,7 +1,7 @@
 import { Command } from 'commander';
 import { ConfigManager } from '../../../core/config';
 import { Logger } from '../../../utils/logger';
-import { getConfigSourceInfo, getConfigFileInfo } from '../../utils/get-friendly-source';
+import { getConfigFileInfo, getConfigSourceInfo } from '../../utils/get-friendly-source';
 
 export const registerShowCommands = (configCommand: Command) => {
   configCommand

@@ -1,6 +1,6 @@
 import { execSync } from 'child_process';
-import { Logger } from './logger';
 import { GitRepositoryError } from '../core/git';
+import { Logger } from './logger';
 
 export function validateNodeVersion(): void {
   const requiredVersion = '18.12.0';
@@ -26,6 +26,16 @@ export function validateGitRepository(directory: string = process.cwd()): void {
   }
 }
 
+/**
+ * Validates Git configuration in the specified directory.
+ * Checks for user.name and user.email configuration.
+ *
+ * @param directory - The directory to check Git config in (defaults to current working directory)
+ * @returns Object containing:
+ * - name: Git user.name if configured
+ * - email: Git user.email if configured
+ * - warnings: Array of warning messages for missing configurations
+ */
 export function validateGitConfig(directory: string = process.cwd()): {
   name?: string | undefined;
   email?: string | undefined;
@@ -82,6 +92,14 @@ export function validatePromptFile(filePath: string): { valid: boolean; error?: 
   return { valid: true };
 }
 
+/**
+ * Compares two version strings to check if the current version is compatible with the required version.
+ * Uses semantic versioning comparison (e.g. '1.2.3').
+ *
+ * @param current - The current version string
+ * @param required - The required version string
+ * @returns true if current version is greater than or equal to required version
+ */
 export function isVersionCompatible(current: string, required: string): boolean {
   const currentParts = current.split('.').map(Number);
   const requiredParts = required.split('.').map(Number);

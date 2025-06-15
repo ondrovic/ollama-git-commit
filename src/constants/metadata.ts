@@ -1,4 +1,4 @@
-export const VERSION = '1.0.0';
+export const VERSION = '1.0.1';
 export const APP_NAME = 'ollama-git-commit';
 export const DEFAULT_MODEL = 'llama3.2:latest';
 export const DEFAULT_HOST = 'http://localhost:11434';

@@ -1,5 +1,18 @@
 export type ActiveFile = { type: 'user' | 'local'; path: string; 'in-use': boolean };
 
+export interface CommitOptions {
+  directory?: string;
+  model?: string;
+  host?: string;
+  verbose?: boolean;
+  interactive?: boolean;
+  promptFile?: string;
+  debug?: boolean;
+  autoStage?: boolean;
+  autoModel?: boolean;
+  promptTemplate?: string;
+}
+
 export interface CommitConfig {
   model: string;
   host: string;
