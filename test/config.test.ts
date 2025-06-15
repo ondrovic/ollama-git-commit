@@ -1,4 +1,5 @@
-import { describe, it, expect, beforeEach } from 'bun:test';
+import { beforeEach, describe, expect, it } from 'bun:test';
+import { ENVIRONMENTAL_VARIABLES } from '../src/constants/enviornmental';
 import { ConfigManager } from '../src/core/config';
 
 // Stubbed logger
@@ -31,15 +32,20 @@ const stubFs = {
 
 describe('ConfigManager', () => {
   let configManager: ConfigManager;
+  const originalEnv = process.env;
 
   beforeEach(() => {
     // Reset the singleton so each test gets a fresh instance with the stubbed fs
     // @ts-ignore
     ConfigManager['instance'] = undefined;
     configManager = ConfigManager.getInstance(mockLogger as any, stubFs as any);
+    // Reset environment variables
+    process.env = { ...originalEnv };
   });
 
   it('should initialize and load config with stubbed fs', async () => {
+    // Set the environment variable to match the test expectation
+    process.env[ENVIRONMENTAL_VARIABLES.OLLAMA_HOST] = 'http://mock-host:1234';
     await configManager.initialize();
     const config = await configManager.getConfig();
     expect(config.model).toBe('mock-model');
@@ -67,4 +73,4 @@ describe('ConfigManager', () => {
     expect(debugInfo).toHaveProperty('files');
     expect(debugInfo).toHaveProperty('environment');
   });
-}); 
+});

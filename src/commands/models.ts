@@ -1,3 +1,4 @@
+import { MODELS } from '../constants/models';
 import { getConfig } from '../core/config';
 import { ILogger, IOllamaService } from '../core/interfaces';
 import { OllamaService } from '../core/ollama';
@@ -164,25 +165,7 @@ export class ModelsCommand {
   }
 
   private getPreferredModels(): string[] {
-    // Get preferred models - could be made configurable in the future
-    return [
-      'llama3.2:latest',
-      'llama3.2:3b',
-      'llama3.2:1b',
-      'llama3:latest',
-      'llama3:8b',
-      'codellama:latest',
-      'codellama:7b',
-      'mistral:latest',
-      'mistral:7b',
-      'mistral:7b-instruct',
-      'qwen2.5:latest',
-      'qwen2.5:7b',
-      'deepseek-coder:latest',
-      'deepseek-coder:6.7b',
-      'phi3:latest',
-      'gemma2:latest',
-    ];
+    return Array.from(MODELS.PREFERRED);
   }
 
   async handleModelError(model: string, host?: string): Promise<void> {

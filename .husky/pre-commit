@@ -4,13 +4,18 @@ if [ "$PRE_COMMIT_RUNNING" = "1" ]; then
 fi
 export PRE_COMMIT_RUNNING=1
 
+# Run tests and linting
 bun test
 npx lint-staged
-bun run update-version
 
-# If there are any changes from lint-staged, amend them to the current commit
-if git diff --cached --quiet; then
-  echo "No changes to amend"
-else
-  git commit --amend --no-edit
+# Only run version update if we're not in the middle of a merge
+if ! git rev-parse -q --verify MERGE_HEAD >/dev/null; then
+  bun run update-version
+  
+  # If there are any changes from lint-staged or version update, amend them to the current commit
+  if git diff --cached --quiet; then
+    echo "No changes to amend"
+  else
+    git commit --amend --no-edit
+  fi
 fi

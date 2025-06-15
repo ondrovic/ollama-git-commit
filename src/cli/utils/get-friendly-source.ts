@@ -87,6 +87,7 @@ export const getConfigSourceInfo = (sources: ConfigSources): ConfigSourceInfo =>
     debug: getSourceLabel(sources.debug),
     autoStage: getSourceLabel(sources.autoStage),
     autoModel: getSourceLabel(sources.autoModel),
+    autoCommit: getSourceLabel(sources.autoCommit),
     useEmojis: getSourceLabel(sources.useEmojis),
     timeouts: {
       connection: getSourceLabel(sources.timeouts?.connection),
