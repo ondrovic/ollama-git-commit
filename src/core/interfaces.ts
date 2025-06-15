@@ -6,6 +6,7 @@ export interface IGitService {
   getLastCommitHash(): string;
   getRepositoryRoot(): string;
   isGitRepository(): boolean;
+  execCommand(command: string): string;
 }
 
 export interface IOllamaService {

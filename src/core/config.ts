@@ -61,6 +61,7 @@ export class ConfigManager implements IConfigManager {
       debug: false,
       autoStage: false,
       autoModel: false,
+      autoCommit: false,
 
       // File paths
       promptFile: join(homedir(), '.config', 'ollama-git-commit', 'prompt.txt'),
@@ -202,8 +203,21 @@ export class ConfigManager implements IConfigManager {
       config.autoModel = true;
     }
 
+    if (process.env.OLLAMA_COMMIT_AUTO_COMMIT === 'true') {
+      config.autoCommit = true;
+    }
+
     if (process.env.OLLAMA_COMMIT_PROMPT_FILE) {
       config.promptFile = process.env.OLLAMA_COMMIT_PROMPT_FILE.replace('~', homedir());
+    }
+
+    if (process.env.OLLAMA_COMMIT_PROMPT_TEMPLATE) {
+      const validTemplates = ['default', 'conventional', 'simple', 'detailed'] as const;
+      type ValidTemplate = (typeof validTemplates)[number];
+      const promptTemplate = process.env.OLLAMA_COMMIT_PROMPT_TEMPLATE as ValidTemplate;
+      if (validTemplates.includes(promptTemplate)) {
+        config.promptTemplate = promptTemplate;
+      }
     }
 
     // Timeout environment variables
@@ -310,7 +324,9 @@ export class ConfigManager implements IConfigManager {
           OLLAMA_COMMIT_DEBUG: process.env.OLLAMA_COMMIT_DEBUG,
           OLLAMA_COMMIT_AUTO_STAGE: process.env.OLLAMA_COMMIT_AUTO_STAGE,
           OLLAMA_COMMIT_AUTO_MODEL: process.env.OLLAMA_COMMIT_AUTO_MODEL,
+          OLLAMA_COMMIT_AUTO_COMMIT: process.env.OLLAMA_COMMIT_AUTO_COMMIT,
           OLLAMA_COMMIT_PROMPT_FILE: process.env.OLLAMA_COMMIT_PROMPT_FILE,
+          OLLAMA_COMMIT_PROMPT_TEMPLATE: process.env.OLLAMA_COMMIT_PROMPT_TEMPLATE,
           OLLAMA_COMMIT_TIMEOUT_CONNECTION: process.env.OLLAMA_COMMIT_TIMEOUT_CONNECTION,
           OLLAMA_COMMIT_TIMEOUT_GENERATION: process.env.OLLAMA_COMMIT_TIMEOUT_GENERATION,
         },

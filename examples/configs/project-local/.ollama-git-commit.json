@@ -5,6 +5,7 @@
   "interactive": true,
   "debug": false,
   "autoStage": false,
+  "autoCommit": false,
   "autoModel": false,
   "useEmojis": false,
   "promptTemplate": "default",

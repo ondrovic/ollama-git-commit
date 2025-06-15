@@ -279,6 +279,7 @@ ollama-git-commit --config-debug
   "debug": false,
   "autoStage": false,
   "autoModel": false,
+  "autoCommit": false,
   "useEmojis": true,
   "promptTemplate": "default",
   "timeouts": {
@@ -295,6 +296,7 @@ ollama-git-commit --config-debug
 {
   "model": "deepseek-coder:6.7b",
   "autoStage": true,
+  "autoCommit": true,
   "promptTemplate": "detailed",
   "timeouts": {
     "generation": 180000
@@ -310,6 +312,7 @@ ollama-git-commit --config-debug
   "host": "http://192.168.1.100:11434",
   "verbose": true,
   "useEmojis": false,
+  "autoCommit": false,
   "promptTemplate": "conventional"
 }
 ```
@@ -327,9 +330,11 @@ export OLLAMA_COMMIT_VERBOSE=true
 export OLLAMA_COMMIT_DEBUG=true
 export OLLAMA_COMMIT_AUTO_STAGE=true
 export OLLAMA_COMMIT_AUTO_MODEL=true
+export OLLAMA_COMMIT_AUTO_COMMIT=true
 
 # File paths
 export OLLAMA_COMMIT_PROMPT_FILE=/path/to/custom/prompt.txt
+export OLLAMA_COMMIT_PROMPT_TEMPLATE=simple  # One of: default, conventional, simple, detailed
 
 # Timeouts (in milliseconds)
 export OLLAMA_COMMIT_TIMEOUT_CONNECTION=15000

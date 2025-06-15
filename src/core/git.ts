@@ -34,26 +34,16 @@ export class GitService implements IGitService {
     this.logger = logger;
   }
 
-  private execCommand(
-    command: string,
-    options: { encoding?: BufferEncoding; cwd?: string } = {},
-  ): string {
+  public execCommand(command: string): string {
     try {
-      return execSync(command, {
-        encoding: 'utf8',
-        stdio: ['pipe', 'pipe', 'pipe'],
-        cwd: this.directory,
-        ...options,
-      })
-        .toString()
-        .trim();
+      return execSync(command, { cwd: this.directory }).toString().trim();
     } catch (error: unknown) {
       if (typeof error === 'object' && error && 'message' in error) {
         throw new GitCommandError(
-          `Git command failed: ${command}\n${(error as { message: string }).message}`,
+          `Failed to execute git command: ${(error as { message: string }).message}`,
         );
       } else {
-        throw new GitCommandError(`Git command failed: ${command}\n${String(error)}`);
+        throw new GitCommandError(`Failed to execute git command: ${String(error)}`);
       }
     }
   }
@@ -77,6 +67,16 @@ export class GitService implements IGitService {
 
     let diff = '';
     let staged = true;
+
+    // Run linters first if autoStage is true
+    if (autoStage) {
+      try {
+        // Run lint-staged to fix and stage any linting issues
+        execSync('npx lint-staged', { cwd: this.directory });
+      } catch {
+        this.logger.warn('Linting failed, continuing with commit...');
+      }
+    }
 
     // First check for staged changes
     try {
