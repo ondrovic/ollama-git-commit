@@ -19,12 +19,12 @@ jobs:
 
       - name: Cache Bun dependencies
         id: bun-cache
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         with:
           path: |
-            .bun
+            ~/.bun/install/cache
             node_modules
-          key: ${{ runner.os }}-bun-${{ hashFiles('bun.lockb') }}
+          key: ${{ runner.os }}-bun-${{ hashFiles('bun.lock') }}
           restore-keys: |
             ${{ runner.os }}-bun-
 
@@ -32,6 +32,7 @@ jobs:
         run: ls -la
 
       - name: Install dependencies
+        if: steps.bun-cache.outputs.cache-hit != 'true'
         run: bun install
 
       - name: List directory contents after install
