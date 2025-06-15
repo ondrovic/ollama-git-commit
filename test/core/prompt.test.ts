@@ -2,7 +2,7 @@ import { describe, expect, test, beforeAll, afterAll } from 'bun:test';
 import { PromptService } from '../../src/core/prompt';
 import { Logger } from '../../src/utils/logger';
 import { mockFs } from '../setup';
-import { defaultPrompt, conventionalPrompt, simplePrompt, detailedPrompt } from '../../src/prompts';
+import { PROMPTS } from '../../src/constants/prompts';
 
 describe('PromptService', () => {
   let promptService: PromptService;
@@ -24,29 +24,29 @@ describe('PromptService', () => {
 
   test('default prompt template should match the imported default prompt', () => {
     const templates = promptService.getPromptTemplates();
-    expect(templates.default).toBe(defaultPrompt);
+    expect(templates.default).toBe(PROMPTS.DEFAULT);
   });
 
   test('conventional prompt template should match the imported conventional prompt', () => {
     const templates = promptService.getPromptTemplates();
-    expect(templates.conventional).toBe(conventionalPrompt);
+    expect(templates.conventional).toBe(PROMPTS.CONVENTIONAL);
   });
 
   test('simple prompt template should match the imported simple prompt', () => {
     const templates = promptService.getPromptTemplates();
-    expect(templates.simple).toBe(simplePrompt);
+    expect(templates.simple).toBe(PROMPTS.SIMPLE);
   });
 
   test('detailed prompt template should match the imported detailed prompt', () => {
     const templates = promptService.getPromptTemplates();
-    expect(templates.detailed).toBe(detailedPrompt);
+    expect(templates.detailed).toBe(PROMPTS.DETAILED);
   });
 
   test('createPromptFromTemplate should return the correct template', () => {
-    expect(promptService.createPromptFromTemplate('default')).toBe(defaultPrompt);
-    expect(promptService.createPromptFromTemplate('conventional')).toBe(conventionalPrompt);
-    expect(promptService.createPromptFromTemplate('simple')).toBe(simplePrompt);
-    expect(promptService.createPromptFromTemplate('detailed')).toBe(detailedPrompt);
+    expect(promptService.createPromptFromTemplate('default')).toBe(PROMPTS.DEFAULT);
+    expect(promptService.createPromptFromTemplate('conventional')).toBe(PROMPTS.CONVENTIONAL);
+    expect(promptService.createPromptFromTemplate('simple')).toBe(PROMPTS.SIMPLE);
+    expect(promptService.createPromptFromTemplate('detailed')).toBe(PROMPTS.DETAILED);
   });
 
   test('createPromptFromTemplate should throw error for invalid template', () => {
@@ -54,7 +54,7 @@ describe('PromptService', () => {
   });
 
   test('validatePrompt should validate prompts correctly', () => {
-    const validResult = promptService.validatePrompt(defaultPrompt);
+    const validResult = promptService.validatePrompt(PROMPTS.DEFAULT);
     expect(validResult.valid).toBe(true);
     expect(validResult.errors).toHaveLength(0);
 
@@ -90,4 +90,4 @@ describe('PromptService', () => {
     expect(result).toContain('[... diff truncated');
     expect(result).toContain('Total files changed');
   });
-}); 
+});

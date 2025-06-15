@@ -4,6 +4,7 @@ import { homedir } from 'os';
 import { Logger } from '../utils/logger';
 import { IConfigManager, ILogger } from './interfaces';
 import { OllamaCommitConfig, type ActiveFile, ConfigSources } from '../types';
+import { DEFAULT_MODEL, DEFAULT_HOST, DEFAULT_TIMEOUTS } from '../constants/metadata';
 
 export class ConfigManager implements IConfigManager {
   private static instance: ConfigManager;
@@ -44,8 +45,8 @@ export class ConfigManager implements IConfigManager {
   private getDefaults(): OllamaCommitConfig {
     return {
       // Core settings - these should be the most commonly working defaults
-      model: 'llama3.2:latest', // More widely available than mistral
-      host: process.env.OLLAMA_HOST || 'http://localhost:11434', // Standard Ollama default
+      model: DEFAULT_MODEL,
+      host: process.env.OLLAMA_HOST || DEFAULT_HOST,
 
       // Behavior settings
       verbose: false,
@@ -60,9 +61,9 @@ export class ConfigManager implements IConfigManager {
 
       // Network settings (in milliseconds)
       timeouts: {
-        connection: 10000, // 10 seconds
-        generation: 120000, // 2 minutes
-        modelPull: 300000, // 5 minutes
+        connection: DEFAULT_TIMEOUTS.CONNECTION,
+        generation: DEFAULT_TIMEOUTS.GENERATION,
+        modelPull: DEFAULT_TIMEOUTS.MODEL_PULL,
       },
 
       // UI settings

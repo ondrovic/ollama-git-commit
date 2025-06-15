@@ -2,10 +2,10 @@ import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'fs';
 import { Logger } from '../utils/logger';
 import { IPromptService, ILogger } from './interfaces';
 import { dirname } from 'path';
-import { defaultPrompt, conventionalPrompt, simplePrompt, detailedPrompt } from '../prompts';
+import { PROMPTS } from '../constants/prompts';
 
 export class PromptService implements IPromptService {
-  private readonly defaultPrompt = defaultPrompt;
+  private readonly defaultPrompt = PROMPTS.DEFAULT;
   private logger: ILogger;
 
   constructor(logger: ILogger = Logger.getDefault()) {
@@ -120,10 +120,10 @@ Please analyze these changes and create a meaningful commit message following th
 
   getPromptTemplates(): Record<string, string> {
     return {
-      default: defaultPrompt,
-      conventional: conventionalPrompt,
-      simple: simplePrompt,
-      detailed: detailedPrompt,
+      default: PROMPTS.DEFAULT,
+      conventional: PROMPTS.CONVENTIONAL,
+      simple: PROMPTS.SIMPLE,
+      detailed: PROMPTS.DETAILED,
     };
   }
 

@@ -1,4 +1,5 @@
 import { ILogger } from '../core/interfaces';
+import { SIZE_UNITS, EMOJIS } from '../constants/ui';
 
 export type LogLevel = 'info' | 'warn' | 'error' | 'success' | 'debug';
 export type LogArgs = unknown[];
@@ -35,20 +36,20 @@ export class Logger implements ILogger {
 
   info(message: string, ...args: LogArgs): void {
     if (this.verbose) {
-      console.log(`ℹ️  ${message}`, ...args);
+      console.info(`${EMOJIS.INFO} ${message}`, ...args);
     }
   }
 
   success(message: string, ...args: LogArgs): void {
-    console.log(`✅ ${message}`, ...args);
+    console.log(`${EMOJIS.SUCCESS} ${message}`, ...args);
   }
 
   warn(message: string, ...args: LogArgs): void {
-    console.log(`⚠️  ${message}`, ...args);
+    console.warn(`${EMOJIS.WARNING} ${message}`, ...args);
   }
 
   error(message: string, ...args: LogArgs): void {
-    console.error(`❌ ${message}`, ...args);
+    console.error(`${EMOJIS.ERROR} ${message}`, ...args);
   }
 
   debug(message: string, ...args: LogArgs): void {
@@ -80,16 +81,12 @@ export class Logger implements ILogger {
   }
 
   formatBytes(bytes: number): string {
-    const units = ['B', 'KB', 'MB', 'GB'];
-    let size = bytes;
-    let unitIndex = 0;
-
-    while (size >= 1024 && unitIndex < units.length - 1) {
-      size /= 1024;
-      unitIndex++;
-    }
-
-    return `${size.toFixed(1)} ${units[unitIndex]}`;
+    if (bytes === 0) return '0 B';
+    const k = 1024;
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    const size = bytes / Math.pow(k, i);
+    const formattedSize = size < 10 ? size.toFixed(1) : Math.round(size).toString();
+    return `${formattedSize} ${SIZE_UNITS[i]}`;
   }
 
   formatDuration(ms: number): string {

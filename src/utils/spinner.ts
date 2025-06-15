@@ -1,7 +1,9 @@
+import { SPINNER_FRAMES } from '../constants/ui';
+
 export class Spinner {
   private interval: NodeJS.Timeout | null = null;
   private isSpinning = false;
-  private readonly frames = ['⠋', '⠙', '⠹', '⠸', '⠼', '⠴', '⠦', '⠧', '⠇', '⠏'];
+  private readonly frames = SPINNER_FRAMES;
   private currentFrame = 0;
   private message = '';
 
