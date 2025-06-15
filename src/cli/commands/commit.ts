@@ -14,8 +14,10 @@ export const registerCommitCommand = (program: Command) => {
     .option('-v, --verbose', 'Show detailed output')
     .option('-i, --interactive', 'Interactive mode')
     .option('-p, --prompt-file <file>', 'Custom prompt file')
+    .option('-t, --prompt-template <template>', 'Prompt template to use')
     .option('--debug', 'Enable debug mode')
     .option('--auto-stage', 'Automatically stage changes')
+    .option('--auto-commit', 'Automatically commit changes')
     .option('--auto-model', 'Automatically select model')
     .action(async options => {
       try {
@@ -42,9 +44,11 @@ export const registerCommitCommand = (program: Command) => {
           verbose: options.verbose,
           interactive: options.interactive,
           promptFile: options.promptFile,
+          promptTemplate: options.promptTemplate,
           debug: options.debug,
           autoStage: options.autoStage,
           autoModel: options.autoModel,
+          autoCommit: options.autoCommit,
         });
       } catch (error: unknown) {
         if (options.verbose) {
