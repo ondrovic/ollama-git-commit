@@ -26,6 +26,7 @@ export const registerCreateCommands = (configCommand: Command) => {
           debug: false,
           autoStage: false,
           autoModel: false,
+          autoCommit: false,
           promptFile: path.join(os.homedir(), '.config', 'ollama-git-commit', 'prompt.txt'),
           configFile: userConfigPath,
           timeouts: {
@@ -61,6 +62,7 @@ export const registerCreateCommands = (configCommand: Command) => {
           debug: false,
           autoStage: false,
           autoModel: false,
+          autoCommit: false,
           timeouts: {
             connection: 10000,
             generation: 120000,

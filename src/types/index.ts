@@ -10,6 +10,7 @@ export interface CommitOptions {
   debug?: boolean;
   autoStage?: boolean;
   autoModel?: boolean;
+  autoCommit?: boolean;
   promptTemplate?: string;
 }
 
@@ -22,6 +23,7 @@ export interface CommitConfig {
   debug: boolean;
   autoStage: boolean;
   autoModel: boolean;
+  autoCommit: boolean;
   promptTemplate?: string;
 }
 
@@ -55,6 +57,7 @@ export interface OllamaCommitConfig {
   debug: boolean;
   autoStage: boolean;
   autoModel: boolean;
+  autoCommit: boolean;
 
   // File paths
   promptFile: string;
@@ -95,6 +98,7 @@ export interface ConfigSourceInfo {
   debug: string;
   autoStage: string;
   autoModel: string;
+  autoCommit: string;
   useEmojis: string;
   timeouts: {
     connection: string;

@@ -79,5 +79,14 @@
     "url": "https://github.com/yourusername/ollama-commit/issues"
   },
   "homepage": "https://github.com/yourusername/ollama-commit#readme",
-  "private": true
+  "private": true,
+  "lint-staged": {
+    "*.{ts,tsx}": [
+      "eslint --fix",
+      "prettier --write"
+    ],
+    "*.{json,md}": [
+      "prettier --write"
+    ]
+  }
 }

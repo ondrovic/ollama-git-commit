@@ -231,7 +231,7 @@ export class CommitCommand {
       const message = await generateMessage.call(this);
 
       // Display result and handle user interaction
-      const displayResult = await this.displayCommitResult(message, config.interactive);
+      const displayResult = await this.displayCommitResult(message, config.interactive, config);
 
       if (displayResult === 2) {
         // User requested regeneration - continue loop
@@ -250,7 +250,11 @@ export class CommitCommand {
     }
   }
 
-  private async displayCommitResult(message: string, interactive: boolean): Promise<number> {
+  private async displayCommitResult(
+    message: string,
+    interactive: boolean,
+    config: Required<CommitConfig>,
+  ): Promise<number> {
     console.log('');
     this.logger.success('Generated commit message:');
     console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
@@ -265,11 +269,26 @@ export class CommitCommand {
 
         switch (action) {
           case 'use': {
-            console.log('');
-            console.log('📋 Copy and run this command:');
-            const escapedMessage = message.replace(/"/g, '\\"');
-            console.log(`git commit -m "${escapedMessage}"`);
-            result = 0;
+            if (config.autoCommit) {
+              try {
+                const escapedMessage = message.replace(/"/g, '\\"');
+                this.gitService.execCommand(`git commit -m "${escapedMessage}"`);
+                this.logger.success('Changes committed successfully!');
+                result = 0;
+              } catch (error) {
+                this.logger.error(
+                  'Failed to commit changes:',
+                  error instanceof Error ? error.message : String(error),
+                );
+                result = 1;
+              }
+            } else {
+              console.log('');
+              console.log('📋 Copy and run this command:');
+              const escapedMessage = message.replace(/"/g, '\\"');
+              console.log(`git commit -m "${escapedMessage}"`);
+              result = 0;
+            }
             break;
           }
           case 'copy': {
@@ -300,24 +319,65 @@ export class CommitCommand {
         this.logger.info('Falling back to non-interactive mode');
 
         // Fallback to non-interactive behavior
+        if (config.autoCommit) {
+          try {
+            const escapedMessage = message.replace(/"/g, '\\"');
+            this.gitService.execCommand(`git commit -m "${escapedMessage}"`);
+            this.logger.success('Changes committed successfully!');
+            return 0;
+          } catch (error) {
+            this.logger.error(
+              'Failed to commit changes:',
+              error instanceof Error ? error.message : String(error),
+            );
+            return 1;
+          }
+        } else {
+          console.log('📋 To commit with this message, run:');
+          const escapedMessage = message.replace(/"/g, '\\"');
+          console.log(`git commit -m "${escapedMessage}"`);
+          console.log('');
+          return 0;
+        }
+      }
+    } else {
+      if (config.autoCommit) {
+        try {
+          const escapedMessage = message.replace(/"/g, '\\"');
+          this.gitService.execCommand(`git commit -m "${escapedMessage}"`);
+          this.logger.success('Changes committed successfully!');
+          return 0;
+        } catch (error) {
+          this.logger.error(
+            'Failed to commit changes:',
+            error instanceof Error ? error.message : String(error),
+          );
+          return 1;
+        }
+      } else {
         console.log('📋 To commit with this message, run:');
         const escapedMessage = message.replace(/"/g, '\\"');
         console.log(`git commit -m "${escapedMessage}"`);
         console.log('');
         return 0;
       }
-    } else {
-      console.log('📋 To commit with this message, run:');
-      const escapedMessage = message.replace(/"/g, '\\"');
-      console.log(`git commit -m "${escapedMessage}"`);
-      console.log('');
-      return 0;
     }
   }
 
   private async buildConfig(options: CommitOptions): Promise<Required<CommitConfig>> {
     // Get base config from the config system
     const baseConfig = await getConfig();
+
+    // If autoCommit is true, force autoStage to be true as well
+    const autoStage = options.autoCommit ? true : options.autoStage || baseConfig.autoStage;
+
+    // Validate prompt template if provided
+    const validTemplates = ['default', 'conventional', 'simple', 'detailed'] as const;
+    type ValidTemplate = (typeof validTemplates)[number];
+    const promptTemplate =
+      options.promptTemplate && validTemplates.includes(options.promptTemplate as ValidTemplate)
+        ? options.promptTemplate
+        : baseConfig.promptTemplate;
 
     // Override with CLI options (CLI options take highest priority)
     return {
@@ -330,9 +390,10 @@ export class CommitCommand {
         baseConfig.promptFile ||
         join(homedir(), '.config', 'ollama-git-commit', 'prompt.txt'),
       debug: options.debug || baseConfig.debug,
-      autoStage: options.autoStage || baseConfig.autoStage,
+      autoStage,
       autoModel: options.autoModel || baseConfig.autoModel,
-      promptTemplate: baseConfig.promptTemplate,
+      autoCommit: options.autoCommit || baseConfig.autoCommit,
+      promptTemplate,
     };
   }
 }

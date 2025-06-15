@@ -59,6 +59,7 @@ export const registerShowCommands = (configCommand: Command) => {
         console.log(`   Debug: ${config.debug} (from ${sourceInfo.debug})`);
         console.log(`   Auto Stage: ${config.autoStage} (from ${sourceInfo.autoStage})`);
         console.log(`   Auto Model: ${config.autoModel} (from ${sourceInfo.autoModel})`);
+        console.log(`   Auto Commit: ${config.autoCommit} (from ${sourceInfo.autoCommit})`);
         console.log(`   Use Emojis: ${config.useEmojis} (from ${sourceInfo.useEmojis})`);
         console.log('');
 
