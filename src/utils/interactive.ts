@@ -246,18 +246,26 @@ export async function askYesNo(message: string, defaultChoice: 'y' | 'n' = 'n'):
 /**
  * Prompts the user to choose an action for the commit message.
  *
+ * @param autoCommit - Whether to include the option to commit changes
  * @returns Promise resolving to the chosen action:
  * - 'use': Use the message and copy commit command
  * - 'copy': Copy message to clipboard
  * - 'regenerate': Generate a new message
  * - 'cancel': Cancel the operation
  */
-export async function askCommitAction(): Promise<'use' | 'copy' | 'regenerate' | 'cancel'> {
+export async function askCommitAction(
+  autoCommit = false,
+): Promise<'use' | 'copy' | 'regenerate' | 'cancel'> {
   try {
     const choice = await InteractivePrompt.prompt({
       message: '📋 Available actions:',
       choices: [
-        { key: 'y', description: 'Use this message and copy commit command' },
+        {
+          key: 'y',
+          description: autoCommit
+            ? 'Use this message and commit changes'
+            : 'Use this message and copy commit command',
+        },
         { key: 'c', description: 'Copy message to clipboard (if available)' },
         { key: 'r', description: 'Regenerate message' },
         { key: 'n', description: 'Cancel' },
