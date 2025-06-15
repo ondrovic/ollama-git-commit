@@ -3,13 +3,12 @@ import { join, dirname } from 'path';
 import { homedir } from 'os';
 import { Logger } from '../utils/logger';
 import { IConfigManager, ILogger } from './interfaces';
-import { OllamaCommitConfig, type ActiveFile } from '../types';
+import { OllamaCommitConfig, type ActiveFile, ConfigSources } from '../types';
 
 export class ConfigManager implements IConfigManager {
   private static instance: ConfigManager;
   private config: OllamaCommitConfig;
   private readonly defaultConfigFile: string;
-  private readonly globalConfigFile: string;
   private readonly localConfigFile: string;
   private initialized = false;
   private logger: ILogger;
@@ -20,7 +19,6 @@ export class ConfigManager implements IConfigManager {
     this.fs = fs;
     // Define config file locations
     this.defaultConfigFile = join(homedir(), '.config', 'ollama-git-commit', 'config.json');
-    this.globalConfigFile = join(homedir(), '.ollama-git-commit.json');
     this.localConfigFile = join(process.cwd(), '.ollama-git-commit.json');
     // Initialize with defaults
     this.config = this.getDefaults();
@@ -118,12 +116,6 @@ export class ConfigManager implements IConfigManager {
     const defaultConfig = await this.loadConfigFile(this.defaultConfigFile);
     if (defaultConfig) {
       config = this.deepMerge(config, defaultConfig);
-    }
-
-    // Load global config file
-    const globalConfig = await this.loadConfigFile(this.globalConfigFile);
-    if (globalConfig) {
-      config = this.deepMerge(config, globalConfig);
     }
 
     // Load local config file (highest priority)
@@ -318,42 +310,26 @@ export class ConfigManager implements IConfigManager {
     };
   }
 
-  async getConfigSources(): Promise<{
-    model: string;
-    host: string;
-    verbose: string;
-    interactive: string;
-    debug: string;
-    autoStage: string;
-    autoModel: string;
-    promptFile: string;
-    promptTemplate: string;
-    useEmojis: string;
-    timeouts: {
-      connection: string;
-      generation: string;
-      modelPull: string;
-    };
-  }> {
-    const sources = {
-      model: '',
-      host: '',
-      verbose: '',
-      interactive: '',
-      debug: '',
-      autoStage: '',
-      autoModel: '',
-      promptFile: '',
-      promptTemplate: '',
-      useEmojis: '',
+  async getConfigSources(): Promise<ConfigSources> {
+    const sources: ConfigSources = {
+      model: undefined,
+      host: undefined,
+      verbose: undefined,
+      interactive: undefined,
+      debug: undefined,
+      autoStage: undefined,
+      autoModel: undefined,
+      promptFile: undefined,
+      promptTemplate: undefined,
+      useEmojis: undefined,
       timeouts: {
-        connection: '',
-        generation: '',
-        modelPull: '',
+        connection: undefined,
+        generation: undefined,
+        modelPull: undefined,
       },
     };
 
-    const getSource = async (key: string): Promise<string> => {
+    const getSource = async (key: string): Promise<string | undefined> => {
       const keyParts = key.split('.');
       const lastKey = keyParts[keyParts.length - 1];
       if (!lastKey) return 'built-in';
@@ -382,7 +358,7 @@ export class ConfigManager implements IConfigManager {
 
       // Check configs in order of precedence
       const currentProjectConfig = await this.loadConfigFile(this.localConfigFile);
-      const currentUserConfig = await this.loadConfigFile(this.defaultConfigFile); // Use defaultConfigFile as user config
+      const currentUserConfig = await this.loadConfigFile(this.defaultConfigFile);
 
       if (hasValue(currentProjectConfig, keyParts)) return 'project';
       if (hasValue(currentUserConfig, keyParts)) return 'user';
@@ -399,9 +375,11 @@ export class ConfigManager implements IConfigManager {
     sources.promptFile = await getSource('promptFile');
     sources.promptTemplate = await getSource('promptTemplate');
     sources.useEmojis = await getSource('useEmojis');
-    sources.timeouts.connection = await getSource('timeouts.connection');
-    sources.timeouts.generation = await getSource('timeouts.generation');
-    sources.timeouts.modelPull = await getSource('timeouts.modelPull');
+    if (sources.timeouts) {
+      sources.timeouts.connection = await getSource('timeouts.connection');
+      sources.timeouts.generation = await getSource('timeouts.generation');
+      sources.timeouts.modelPull = await getSource('timeouts.modelPull');
+    }
     return sources;
   }
 }

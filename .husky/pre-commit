@@ -1,1 +1,3 @@
+bun test
+npx lint-staged
 bun run update-version

@@ -1,4 +1,4 @@
-import type { ModelInfo, OllamaCommitConfig, GitChanges } from '../types';
+import type { ModelInfo, OllamaCommitConfig, GitChanges, ConfigSources } from '../types';
 
 export interface IGitService {
   getChanges(verbose: boolean, autoStage: boolean): GitChanges;
@@ -28,29 +28,6 @@ export interface IPromptService {
   createPromptFromTemplate(templateName: string): string;
 }
 
-export interface IConfigManager {
-  initialize(): Promise<void>;
-  get<K extends keyof OllamaCommitConfig>(key: K): OllamaCommitConfig[K];
-  reload(): Promise<void>;
-  getConfigSources(): Promise<{
-    model: string;
-    host: string;
-    verbose: string;
-    interactive: string;
-    debug: string;
-    autoStage: string;
-    autoModel: string;
-    promptFile: string;
-    promptTemplate: string;
-    useEmojis: string;
-    timeouts: {
-      connection: string;
-      generation: string;
-      modelPull: string;
-    };
-  }>;
-}
-
 export interface ILogger {
   setVerbose(enabled: boolean): void;
   setDebug(enabled: boolean): void;
@@ -59,7 +36,7 @@ export interface ILogger {
   info(message: string, ...args: unknown[]): void;
   success(message: string, ...args: unknown[]): void;
   warn(message: string, ...args: unknown[]): void;
-  error(message: string, ...args: unknown[]): void;
+  error(message: string, error?: unknown): void;
   debug(message: string, ...args: unknown[]): void;
   log(
     level: 'info' | 'warn' | 'error' | 'success' | 'debug',
@@ -70,4 +47,11 @@ export interface ILogger {
   group(label: string, fn: () => void): void;
   time(label: string): void;
   timeEnd(label: string): void;
+}
+
+export interface IConfigManager {
+  initialize(): Promise<void>;
+  get<K extends keyof OllamaCommitConfig>(key: K): OllamaCommitConfig[K];
+  reload(): Promise<void>;
+  getConfigSources(): Promise<ConfigSources>;
 }
