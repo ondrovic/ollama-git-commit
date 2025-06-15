@@ -17,17 +17,17 @@ jobs:
       - name: Set up Bun
         uses: oven-sh/setup-bun@v1
 
-      # Cache Bun dependencies for faster installs
       - name: Cache Bun dependencies
         uses: actions/cache@v3
         with:
           path: .bun
           key: ${{ runner.os }}-bun-${{ hashFiles('bun.lockb') }}
+          restore-keys: |
+            ${{ runner.os }}-bun-
 
       - name: Install dependencies
         run: bun install
 
-      # Optional: Lint step (does not fail the build)
       - name: Lint (optional)
         run: bun lint
         continue-on-error: true
