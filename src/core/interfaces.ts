@@ -50,6 +50,11 @@ export interface ILogger {
   timeEnd(label: string): void;
 }
 
+/**
+ * IConfigManager defines the interface for configuration management.
+ * It is implemented by both ConfigManager and MockedConfigManager.
+ * MockedConfigManager is used in tests to isolate tests from real filesystem/network.
+ */
 export interface IConfigManager {
   initialize(): Promise<void>;
   get<K extends keyof OllamaCommitConfig>(key: K): OllamaCommitConfig[K];

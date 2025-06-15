@@ -117,6 +117,7 @@ export interface ConfigSources {
   debug?: string;
   autoStage?: string;
   autoModel?: string;
+  autoCommit?: string;
   useEmojis?: string;
   timeouts?: {
     connection?: string;

@@ -11,7 +11,7 @@ import { VERSION } from '../constants/metadata';
 const program = new Command();
 
 program
-  .name('ollama-commit')
+  .name('ollama-git-commit')
   .description(
     'Enhanced Ollama Git Commit Message Generator - A CLI tool that generates meaningful commit messages using Ollama AI',
   )

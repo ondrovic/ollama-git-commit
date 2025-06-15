@@ -1,4 +1,5 @@
 import { execSync } from 'child_process';
+import { ENVIRONMENTAL_VARIABLES } from '../constants/enviornmental';
 import { GitRepositoryError } from '../core/git';
 import { Logger } from './logger';
 
@@ -171,7 +172,7 @@ export function validateEnvironment(directory: string = process.cwd()): {
   }
 
   // Check for OLLAMA_HOST
-  if (!process.env.OLLAMA_HOST) {
+  if (!process.env[ENVIRONMENTAL_VARIABLES.OLLAMA_HOST]) {
     errors.push('Ollama host is not configured');
   }
 

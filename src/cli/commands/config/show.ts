@@ -2,6 +2,7 @@ import { Command } from 'commander';
 import { ConfigManager } from '../../../core/config';
 import { Logger } from '../../../utils/logger';
 import { getConfigFileInfo, getConfigSourceInfo } from '../../utils/get-friendly-source';
+import { CONFIGURATIONS } from '../../../constants/configurations';
 
 export const registerShowCommands = (configCommand: Command) => {
   configCommand
@@ -40,42 +41,39 @@ export const registerShowCommands = (configCommand: Command) => {
           const prefix = index === 0 ? '   → ' : '     ';
           console.log(`${prefix}${fileInfo.label} - ${fileInfo.path}`);
         });
-        console.log('');
-
         // Core Settings
-        console.log('Core Settings:');
-        console.log(`   Model: ${config.model} (from ${sourceInfo.model})`);
-        console.log(`   Host: ${config.host} (from ${sourceInfo.host})`);
-        console.log(`   Prompt File: ${config.promptFile} (from ${sourceInfo.promptFile})`);
         console.log(
-          `   Prompt Template: ${config.promptTemplate} (from ${sourceInfo.promptTemplate})`,
+          CONFIGURATIONS.MESSAGES.CORE_SETTINGS(
+            config.model,
+            config.host,
+            config.promptFile,
+            config.promptTemplate,
+            sourceInfo,
+          ),
         );
-        console.log('');
 
         // Behavior Settings
-        console.log('Behavior Settings:');
-        console.log(`   Verbose: ${config.verbose} (from ${sourceInfo.verbose})`);
-        console.log(`   Interactive: ${config.interactive} (from ${sourceInfo.interactive})`);
-        console.log(`   Debug: ${config.debug} (from ${sourceInfo.debug})`);
-        console.log(`   Auto Stage: ${config.autoStage} (from ${sourceInfo.autoStage})`);
-        console.log(`   Auto Model: ${config.autoModel} (from ${sourceInfo.autoModel})`);
-        console.log(`   Auto Commit: ${config.autoCommit} (from ${sourceInfo.autoCommit})`);
-        console.log(`   Use Emojis: ${config.useEmojis} (from ${sourceInfo.useEmojis})`);
-        console.log('');
+        console.log(
+          CONFIGURATIONS.MESSAGES.BEHAVIOR_SETTINGS(
+            config.verbose,
+            config.interactive,
+            config.debug,
+            config.autoStage,
+            config.autoModel,
+            config.autoCommit,
+            config.useEmojis,
+            sourceInfo,
+          ),
+        );
 
         // Timeouts
-        console.log('Timeouts (ms):');
         console.log(
-          `   Connection: ${config.timeouts.connection}ms (from ${sourceInfo.timeouts.connection})`,
-        );
-        console.log(
-          `   Generation: ${config.timeouts.generation}ms (from ${sourceInfo.timeouts.generation})`,
-        );
-        console.log(
-          `   Model Pull: ${config.timeouts.modelPull}ms (from ${sourceInfo.timeouts.modelPull})`,
-        );
-        console.log(
-          '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━',
+          CONFIGURATIONS.MESSAGES.TIMEOUTS(
+            config.timeouts.connection,
+            config.timeouts.generation,
+            config.timeouts.modelPull,
+            sourceInfo,
+          ),
         );
       } catch (error) {
         Logger.error('Failed to show configuration:', error);

@@ -73,12 +73,12 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/yourusername/ollama-commit.git"
+    "url": "https://github.com/ondrovic/ollama-git-commit.git"
   },
   "bugs": {
-    "url": "https://github.com/yourusername/ollama-commit/issues"
+    "url": "https://github.com/ondrovic/ollama-git-commit/issues"
   },
-  "homepage": "https://github.com/yourusername/ollama-commit#readme",
+  "homepage": "https://github.com/ondrovic/ollama-git-commit#readme",
   "private": true,
   "lint-staged": {
     "*.{ts,tsx}": [

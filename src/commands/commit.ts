@@ -1,3 +1,4 @@
+import { spawn } from 'child_process';
 import { homedir } from 'os';
 import { join } from 'path';
 import { getConfig } from '../core/config';
@@ -12,7 +13,8 @@ import { Logger } from '../utils/logger';
 import { validateGitRepository } from '../utils/validation';
 import { ModelsCommand } from './models';
 import { TestCommand } from './test';
-import { spawn } from 'child_process';
+
+type ConfigProvider = () => Promise<Required<CommitConfig>>;
 
 export class CommitCommand {
   private modelsCommand: ModelsCommand;
@@ -21,6 +23,7 @@ export class CommitCommand {
   private ollamaService: IOllamaService;
   private promptService: IPromptService;
   private logger: ILogger;
+  private configProvider: ConfigProvider;
 
   constructor(
     private directory: string,
@@ -28,6 +31,7 @@ export class CommitCommand {
     ollamaService?: IOllamaService,
     promptService?: IPromptService,
     logger: ILogger = Logger.getDefault(),
+    configProvider?: ConfigProvider,
   ) {
     this.logger = logger;
     this.gitService = gitService || new GitService(this.directory, this.logger);
@@ -35,6 +39,7 @@ export class CommitCommand {
     this.promptService = promptService || new PromptService(this.logger);
     this.modelsCommand = new ModelsCommand();
     this.testCommand = new TestCommand();
+    this.configProvider = configProvider || (async () => await getConfig());
   }
 
   async execute(options: CommitOptions): Promise<void> {
@@ -386,8 +391,7 @@ export class CommitCommand {
   }
 
   private async buildConfig(options: CommitOptions): Promise<Required<CommitConfig>> {
-    // Get base config from the config system
-    const baseConfig = await getConfig();
+    const baseConfig = await this.configProvider();
 
     // If autoCommit is true, force autoStage to be true as well
     const autoStage = options.autoCommit ? true : options.autoStage || baseConfig.autoStage;

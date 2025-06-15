@@ -1,10 +1,6 @@
-import { describe, expect, test, beforeAll, afterAll, spyOn } from 'bun:test';
+import { beforeAll, describe, expect, spyOn, test } from 'bun:test';
 import { CommitCommand } from '../../src/commands/commit';
-import { GitService } from '../../src/core/git';
-import { OllamaService } from '../../src/core/ollama';
-import { PromptService } from '../../src/core/prompt';
 import { Logger } from '../../src/utils/logger';
-import { mockFs } from '../setup';
 import { mockConfig } from '../setup';
 
 describe('CommitCommand', () => {
@@ -45,12 +41,20 @@ describe('CommitCommand', () => {
       buildCommitPrompt: () => 'test full prompt',
     };
 
+    const mockConfigProvider = async () => ({
+      ...mockConfig,
+      autoCommit: false,
+      autoStage: false,
+      promptTemplate: 'default',
+    });
+
     commitCommand = new CommitCommand(
       '/mock/repo',
       mockGitService,
       mockOllamaService,
       mockPromptService,
       logger,
+      mockConfigProvider,
     );
   });
 
@@ -87,7 +91,7 @@ describe('CommitCommand', () => {
     expect(validConfig.promptTemplate).toBe('simple');
 
     const invalidConfig = await (commitCommand as any).buildConfig(invalidOptions);
-    expect(invalidConfig.promptTemplate).toBe(mockConfig.promptTemplate);
+    expect(invalidConfig.promptTemplate).toBe('default');
   });
 
   test('should execute commit when autoCommit is true', async () => {

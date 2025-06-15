@@ -1,9 +1,15 @@
+import { TROUBLE_SHOOTING } from '@/constants/troubleshooting';
 import { getConfig } from '../core/config';
 import { ILogger } from '../core/interfaces';
 import { OllamaService } from '../core/ollama';
 import { Logger } from '../utils/logger';
 import { normalizeHost } from '../utils/url';
 
+/**
+ * TestCommand is used for manual testing of the Ollama Git Commit Message Generator.
+ * It provides methods to test connection, model availability, and prompt generation.
+ * Note: Automated tests use mocks (MockedConfigManager, mockFs, mockGit, etc.) to isolate tests from real filesystem/network.
+ */
 export class TestCommand {
   private ollamaService: OllamaService;
   private logger: ILogger;
@@ -65,7 +71,7 @@ export class TestCommand {
       }
 
       // Then test model availability
-      const modelOk = await this.testModelAvailability(testModel, ollamaHost);
+      const modelOk = await this.testModelAvailability(testModel, ollamaHost, verbose);
       if (!modelOk) {
         this.logger.error('Model test failed');
         return false;
@@ -207,11 +213,7 @@ export class TestCommand {
           this.logger.error('Model returned error:', data.error);
 
           if (data.error.toString().toLowerCase().includes('not found')) {
-            console.log('');
-            console.log('🔧 Model not found. Try:');
-            console.log(`   ollama pull ${testModel}`);
-            console.log('   ollama-commit --list-models');
-            console.log('   ollama-commit --auto-model -d /path/to/repo');
+            this.logger.info(TROUBLE_SHOOTING.MODEL_NOT_FOUND(testModel));
           }
 
           return false;
@@ -241,9 +243,7 @@ export class TestCommand {
           this.logger.error('Response contains error information');
 
           if (responseText.toLowerCase().includes('not found')) {
-            console.log('');
-            console.log('🔧 Possible model not found. Try:');
-            console.log(`   ollama pull ${testModel}`);
+            this.logger.info(TROUBLE_SHOOTING.MODEL_NOT_FOUND(testModel));
           }
         }
 
@@ -258,13 +258,7 @@ export class TestCommand {
       ) {
         this.logger.error('Request timed out');
         if (verbose) {
-          console.log('');
-          console.log('🔧 Timeout troubleshooting:');
-          console.log(`   • Current timeout: ${timeouts.generation}ms`);
-          console.log('   • Try a smaller model for faster response');
-          console.log('   • Increase timeout in config file:');
-          console.log('     "timeouts": { "generation": 300000 }');
-          console.log('   • Check system resources (CPU/Memory/GPU)');
+          this.logger.info(TROUBLE_SHOOTING.TIMEOUT(timeouts.generation));
         }
       } else if (
         typeof error === 'object' &&
@@ -274,11 +268,7 @@ export class TestCommand {
       ) {
         this.logger.error('Network request failed:', (error as { message: string }).message);
         if (verbose) {
-          console.log('');
-          console.log('🔧 Network troubleshooting:');
-          console.log('   • Verify Ollama is running: ollama serve');
-          console.log('   • Check host configuration: ollama-commit --config-show');
-          console.log('   • Test basic connection: ollama-commit --test');
+          this.logger.info(TROUBLE_SHOOTING.GENERAL);
         }
       } else {
         if (typeof error === 'object' && error && 'message' in error) {
@@ -292,17 +282,18 @@ export class TestCommand {
     }
   }
 
-  async testModelAvailability(model: string, host: string): Promise<boolean> {
+  async testModelAvailability(model: string, host: string, verbose = false): Promise<boolean> {
     try {
       const ollama = new OllamaService(this.logger);
       const available = await ollama.isModelAvailable(host, model);
       if (available) {
         this.logger.success(`Model '${model}' is available`);
       } else {
-        this.logger.warn(`Model '${model}' is not available`);
-        console.log('');
-        console.log('🔧 To install this model:');
-        console.log(`   ollama pull ${model}`);
+        if (!verbose) {
+          this.logger.warn(`Model '${model}' is not available`);
+        } else {
+          this.logger.info(TROUBLE_SHOOTING.MODEL_NOT_FOUND(model));
+        }
       }
       return available;
     } catch (error: unknown) {
@@ -334,7 +325,7 @@ export class TestCommand {
 
     // Test 2: Model availability
     console.log('\n2️⃣  Testing model availability...');
-    const modelOk = await this.testModelAvailability(testModel, ollamaHost);
+    const modelOk = await this.testModelAvailability(testModel, ollamaHost, verbose);
     if (!modelOk) {
       this.logger.error('❌ Model availability test failed');
       return false;
@@ -523,13 +514,7 @@ export class TestCommand {
       ) {
         this.logger.error('Request timed out');
         if (verbose) {
-          console.log('');
-          console.log('🔧 Timeout troubleshooting:');
-          console.log(`   • Current timeout: ${timeouts.generation}ms`);
-          console.log('   • Try a smaller model for faster response');
-          console.log('   • Increase timeout in config file:');
-          console.log('     "timeouts": { "generation": 300000 }');
-          console.log('   • Check system resources (CPU/Memory/GPU)');
+          this.logger.info(TROUBLE_SHOOTING.TIMEOUT(timeouts.generation));
         }
       } else if (
         typeof error === 'object' &&
@@ -539,11 +524,7 @@ export class TestCommand {
       ) {
         this.logger.error('Network request failed:', (error as { message: string }).message);
         if (verbose) {
-          console.log('');
-          console.log('🔧 Network troubleshooting:');
-          console.log('   • Verify Ollama is running: ollama serve');
-          console.log('   • Check host configuration: ollama-commit --config-show');
-          console.log('   • Test basic connection: ollama-commit --test');
+          this.logger.info(TROUBLE_SHOOTING.GENERAL);
         }
       } else {
         if (typeof error === 'object' && error && 'message' in error) {
