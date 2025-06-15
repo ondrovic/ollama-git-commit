@@ -1,5 +1,8 @@
-#!/usr/bin/env sh
-. "$(dirname -- "$0")/_/husky.sh"
+# Prevent infinite loop
+if [ "$PRE_COMMIT_RUNNING" = "1" ]; then
+  exit 0
+fi
+export PRE_COMMIT_RUNNING=1
 
 bun test
 npx lint-staged

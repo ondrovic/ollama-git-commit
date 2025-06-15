@@ -7,11 +7,12 @@ import { OllamaService } from '../core/ollama';
 import { PromptService } from '../core/prompt';
 import type { CommitConfig, CommitOptions } from '../types';
 import { copyToClipboard } from '../utils/clipboard';
-import { askCommitAction } from '../utils/interactive';
+import { askCommitAction, InteractivePrompt } from '../utils/interactive';
 import { Logger } from '../utils/logger';
 import { validateGitRepository } from '../utils/validation';
 import { ModelsCommand } from './models';
 import { TestCommand } from './test';
+import { spawn } from 'child_process';
 
 export class CommitCommand {
   private modelsCommand: ModelsCommand;
@@ -264,7 +265,7 @@ export class CommitCommand {
 
     if (interactive) {
       try {
-        const action = await askCommitAction();
+        const action = await askCommitAction(config.autoCommit);
         let result: number;
 
         switch (action) {
@@ -272,8 +273,28 @@ export class CommitCommand {
             if (config.autoCommit) {
               try {
                 const escapedMessage = message.replace(/"/g, '\\"');
-                this.gitService.execCommand(`git commit -m "${escapedMessage}"`);
-                this.logger.success('Changes committed successfully!');
+                // Ensure cleanup before executing git command
+                InteractivePrompt.cleanup();
+                if (process.env.NODE_ENV === 'test') {
+                  this.gitService.execCommand(`git commit -m "${escapedMessage}"`);
+                  this.logger.success('Changes committed successfully!');
+                } else {
+                  // Run git commit as a detached child process
+                  const child = spawn('git', ['commit', '-m', escapedMessage], {
+                    cwd: this.directory,
+                    stdio: 'inherit',
+                    detached: true,
+                    shell: true,
+                  });
+                  child.on('exit', code => {
+                    if (code === 0) {
+                      this.logger.success('Changes committed successfully!');
+                    } else {
+                      this.logger.error('Failed to commit changes.');
+                    }
+                  });
+                  child.unref();
+                }
                 result = 0;
               } catch (error) {
                 this.logger.error(
