@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.0.6] - 2025-06-16
+
 ### Changed
 - Removed prepublish, publish scripts from package.json as it was causing the workflow to plublish twice
 
