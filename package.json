@@ -29,11 +29,11 @@
     "clean": "rm -rf dist",
     "prepublishOnly": "bun run clean && bun run build && bun run test",
     "release": "bun run scripts/release.ts",
-    "version": "changeset version",
     "update-version": "bun scripts/update-version.ts",
     "stage": "bun scripts/stage.ts",
     "preversion": "bun run test",
-    "postversion": "git push && git push --tags"
+    "postversion": "git push && git push --tags",
+    "publish": "bun run build && npm publish"
   },
   "keywords": [
     "git",
