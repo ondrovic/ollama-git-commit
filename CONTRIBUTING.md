@@ -52,23 +52,37 @@ Thank you for your interest in contributing to Ollama Git Commit! This document 
    git checkout -b fix/your-bugfix-name
    ```
 
-2. Make your changes and commit them:
+2. Make your changes
+
+3. Run the staging script to format, lint, and stage your changes:
 
    ```bash
-   git add .
+   bun stage
+   ```
+
+4. Commit your changes:
+
+   ```bash
    git commit -m "feat: your feature description"
    ```
 
-3. Run tests to ensure everything works:
+5. Run tests to ensure everything works:
 
    ```bash
    bun test
    ```
 
-4. Push your changes and create a pull request:
+6. Push your changes and create a pull request:
    ```bash
    git push origin feature/your-feature-name
    ```
+
+The staging script (`bun stage`) will:
+
+- Update version numbers if needed
+- Format your code
+- Fix any linting issues
+- Stage all files
 
 ## Project Structure
 

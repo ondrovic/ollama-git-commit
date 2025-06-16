@@ -71,6 +71,27 @@ npm link
 
 After linking, the `ollama-git-commit` command should be available in your terminal globally. You might need to open a **new terminal window** for the changes to take effect.
 
+### Development Workflow
+
+When making changes to the codebase, use the following workflow:
+
+1. Make your changes
+2. Run the staging script to format, lint, and stage your changes:
+   ```bash
+   bun stage
+   ```
+3. Commit your changes:
+   ```bash
+   git commit -m "your commit message"
+   ```
+
+The staging script will:
+
+- Update version numbers if needed
+- Format your code
+- Fix any linting issues
+- Stage all files
+
 ### Permanent Global Installation
 
 If you want to install the package globally in a more permanent fashion (e.g., for general system use), using `npm` is currently recommended due to known issues with `bun install -g` on Windows.

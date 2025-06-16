@@ -13,11 +13,12 @@
     "LICENSE"
   ],
   "scripts": {
+    "git:stage": "bun scripts/pre-stage.ts",
     "build": "bun build src/cli.ts --outdir dist --target node --format esm && bun run build:types",
     "build:types": "tsc --emitDeclarationOnly --outDir dist",
     "local:link": "bun run build && npm link",
     "local:unlink": "npm uninstall -g @ondrovic/ollama-git-commit",
-    "dev": "bun --watch src/cli.ts",
+    "dev:watch": "bun --watch src/cli.ts",
     "dev:run": "bun run src/cli.ts",
     "test": "bun test",
     "test:watch": "bun test --watch",
@@ -30,7 +31,7 @@
     "release": "changeset publish",
     "version": "changeset version",
     "update-version": "bun scripts/update-version.ts",
-    "prepare": "husky"
+    "stage": "bun scripts/stage.ts"
   },
   "keywords": [
     "git",
@@ -62,9 +63,7 @@
     "bun": "1.2.16",
     "bun-types": "1.2.16",
     "eslint": "^9.28.0",
-    "husky": "^9.1.7",
     "jiti": "^2.4.2",
-    "lint-staged": "^16.1.0",
     "prettier": "^3.5.3",
     "ts-node": "^10.9.2",
     "typescript": "^5.8.3",
@@ -79,14 +78,5 @@
     "url": "https://github.com/ondrovic/ollama-git-commit/issues"
   },
   "homepage": "https://github.com/ondrovic/ollama-git-commit#readme",
-  "private": true,
-  "lint-staged": {
-    "*.{ts,tsx}": [
-      "eslint --fix",
-      "prettier --write"
-    ],
-    "*.{json,md}": [
-      "prettier --write"
-    ]
-  }
+  "private": true
 }
