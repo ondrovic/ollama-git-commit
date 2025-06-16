@@ -76,10 +76,13 @@ Thank you for your interest in contributing to Ollama Git Commit! This document 
 ollama-git-commit/
 ├── src/
 │   ├── cli/           # CLI command implementations
+│   ├── commands/      # Command implementations
 │   ├── core/          # Core functionality
 │   ├── constants/     # Constants and enums
+│   ├── prompts/       # Prompt templates and utilities
 │   ├── utils/         # Utility functions
-│   └── types/         # TypeScript type definitions
+│   ├── types/         # TypeScript type definitions
+│   └── cli.ts         # CLI entry point
 ├── test/              # Test files
 ├── scripts/           # Build and development scripts
 └── docs/             # Documentation
@@ -154,22 +157,23 @@ export const ENVIRONMENTAL_VARIABLES = {
 
 ### Debug Mode
 
-When adding new debug information:
+When debugging issues, you can use the following commands:
 
-1. Add debug logging in the relevant module
-2. Update the debug output format in `src/cli/utils/get-friendly-source.ts`
-3. Add tests for debug output
-4. Update documentation in `README.md`
+```bash
+# Show detailed configuration
+ollama-git-commit config show
 
-Example:
+# Show debug information
+ollama-git-commit config debug
 
-```typescript
-if (config.debug) {
-  console.debug('Debug:', {
-    newFeature: value,
-    details: moreInfo,
-  });
-}
+# Test connection to Ollama server
+ollama-git-commit test connection
+
+# Test model availability
+ollama-git-commit test model -m mistral:7b-instruct
+
+# Run all tests
+ollama-git-commit test all
 ```
 
 ## Pull Request Process
@@ -204,10 +208,10 @@ bun test --coverage
    ollama-git-commit -d . --debug
    ```
 
-2. Use the `--config-debug` flag for configuration debugging:
+2. Use the config debug command for configuration debugging:
 
    ```bash
-   ollama-git-commit --config-debug
+   ollama-git-commit config debug
    ```
 
 3. Enable verbose output with `-v`:

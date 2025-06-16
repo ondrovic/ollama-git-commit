@@ -148,7 +148,9 @@ Any validation issues will be reported with helpful error messages and suggestio
 3. **Initialize configuration** (recommended):
 
    ```bash
-   ollama-git-commit --config-init
+   ollama-git-commit config create user
+   # or for local configuration
+   ollama-git-commit config create local
    ```
 
 4. **Stage your changes**:
@@ -196,32 +198,34 @@ ollama-git-commit -d . -m codellama
 ollama-git-commit -d . --auto-model
 
 # List all available models
-ollama-git-commit --list-models
+ollama-git-commit list-models
 
 # Test connection to Ollama
-ollama-git-commit --test
+ollama-git-commit test connection
 
 # Test with simple prompt (debug JSON issues)
-ollama-git-commit --test-simple
+ollama-git-commit test simple-prompt
+
+# Run all tests
+ollama-git-commit test all
+
+# Benchmark model performance
+ollama-git-commit test benchmark
 ```
 
 ### Configuration Commands
 
 ```bash
 # Initialize default configuration
-ollama-git-commit --config-init
+ollama-git-commit config create user
+# or for local configuration
+ollama-git-commit config create local
 
 # Show current configuration
-ollama-git-commit --config-show
+ollama-git-commit config show
 
 # Show detailed configuration debug information
-ollama-git-commit --config-debug
-
-# Test clipboard functionality
-ollama-git-commit --debug-clipboard
-
-# Test interactive prompts
-ollama-git-commit --test-interactive
+ollama-git-commit config debug
 ```
 
 ### Advanced Usage
@@ -257,13 +261,15 @@ The tool uses a hierarchical configuration system with the following priority or
 
 ```bash
 # Create default configuration file
-ollama-git-commit --config-init
+ollama-git-commit config create user
+# or for local configuration
+ollama-git-commit config create local
 
 # View current configuration
-ollama-git-commit --config-show
+ollama-git-commit config show
 
 # Debug configuration issues
-ollama-git-commit --config-debug
+ollama-git-commit config debug
 ```
 
 ### Configuration Files
@@ -272,7 +278,7 @@ ollama-git-commit --config-debug
 
 ```json
 {
-  "model": "llama3.2:latest",
+  "model": "mistral:7b-instruct",
   "host": "http://localhost:11434",
   "verbose": false,
   "interactive": true,
@@ -280,7 +286,7 @@ ollama-git-commit --config-debug
   "autoStage": false,
   "autoModel": false,
   "autoCommit": false,
-  "useEmojis": true,
+  "useEmojis": false,
   "promptTemplate": "default",
   "timeouts": {
     "connection": 10000,
@@ -446,7 +452,7 @@ Example: "Fix user authentication bug in login component"
 
 ```bash
 # Check available models
-ollama-git-commit --list-models
+ollama-git-commit list-models
 
 # Install a model
 ollama pull llama3.2
@@ -462,10 +468,10 @@ ollama-git-commit -d . --auto-model
 ollama serve
 
 # Test the connection
-ollama-git-commit --test
+ollama-git-commit test connection
 
 # Check configuration
-ollama-git-commit --config-show
+ollama-git-commit config show
 ```
 
 #### 3. "No changes detected"
@@ -485,7 +491,7 @@ ollama-git-commit -d . --auto-stage
 
 ```bash
 # Test with simple prompt
-ollama-git-commit --test-simple
+ollama-git-commit test simple-prompt
 
 # Try a different model
 ollama-git-commit -d . --auto-model
@@ -498,21 +504,20 @@ ollama-git-commit -d . --debug -v
 
 ```bash
 # Show current configuration
-ollama-git-commit --config-show
+ollama-git-commit config show
 
 # Debug configuration problems
-ollama-git-commit --config-debug
+ollama-git-commit config debug
 
 # Reset to defaults
-ollama-git-commit --config-init
+ollama-git-commit config create user
+# or for local configuration
+ollama-git-commit config create local
 ```
 
 #### 6. Interactive prompts not working
 
 ```bash
-# Test interactive functionality
-ollama-git-commit --test-interactive
-
 # Check runtime compatibility
 # The tool supports both Node.js and Bun
 ```
@@ -706,3 +711,22 @@ bun test
 ```
 
 If you add new features, please use mocks for any external dependencies to keep tests fast and deterministic.
+
+### Test Commands
+
+```bash
+# Test connection to Ollama server
+ollama-git-commit test connection
+
+# Test specific model
+ollama-git-commit test model -m mistral:7b-instruct
+
+# Test simple prompt generation
+ollama-git-commit test simple-prompt
+
+# Run all tests
+ollama-git-commit test all
+
+# Benchmark model performance
+ollama-git-commit test benchmark -m mistral:7b-instruct
+```
