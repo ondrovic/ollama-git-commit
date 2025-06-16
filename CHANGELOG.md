@@ -7,47 +7,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## [> preersion
-> bun run test
-
-bun test v1.2.16 (631e6748)
-
-✅ Generated commit message:
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-test commit message
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-
-📋 Copy and run this command:
-git commit -m "test commit message"
-Available models:
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  📦 model1
-  📦 model2
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-📊 Total: 2 models available
-
-✅ Generated commit message:
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-test commit message
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-✅ Changes committed successfully!
-
-✅ Generated commit message:
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-test commit message
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-📋 To commit with this message, run:
-git commit -m "test commit message"
-
-
-> postversion
-> git push && git push --tags
-
-v1.0.4] - 2025-06-16
-
 ### Added
 - New automated release process with GitHub Actions
 - Single source of truth for version management using npm_package_version
@@ -62,6 +21,7 @@ v1.0.4] - 2025-06-16
 - Manual version syncing between package.json and metadata.ts
 - update-version.ts script (no longer needed)
 - Manual version management from staging process
+- Conflicting npm lifecycle scripts (preversion/postversion)
 
 ### Fixed
 - Version conflicts during NPM publishing
