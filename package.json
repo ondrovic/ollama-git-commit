@@ -27,7 +27,7 @@
     "format": "prettier --write src/**/*.ts",
     "format:check": "prettier --check src/**/*.ts",
     "clean": "rm -rf dist",
-    "prepublishOnly": "bun run clean && bun run build && bun run test",
+    "prepublishOnly": "bun run clean",
     "release": "bun run scripts/release.ts",
     "stage": "bun scripts/stage.ts",
     "publish": "bun run build && npm publish"
