@@ -4,7 +4,7 @@ import { Spinner } from '../utils/spinner';
 import { normalizeHost } from '../utils/url';
 import { getConfig } from './config';
 import { ILogger, IOllamaService } from './interfaces';
-
+import { TROUBLE_SHOOTING } from '@/constants/troubleshooting';
 export class OllamaService implements IOllamaService {
   private config = getConfig();
   private logger: ILogger;
@@ -186,18 +186,8 @@ export class OllamaService implements IOllamaService {
       } else {
         this.logger.error(`Detailed error: ${String(error)}`);
       }
-      // Provide helpful troubleshooting
-      console.log('\n🔧 Troubleshooting steps:');
-      console.log('   1. Check if Ollama is running:');
-      console.log('      ollama serve');
-      console.log('\n   2. Verify the host configuration:');
-      console.log('      ollama-commit --config-show');
-      console.log('\n   3. Try different host formats:');
-      console.log('      http://localhost:11434 (local)');
-      console.log('      http://127.0.0.1:11434 (local IP)');
-      console.log('      http://your-server:11434 (remote)');
-      console.log('\n   4. Check firewall and network:');
-      console.log('      curl http://localhost:11434/api/tags');
+      // Provide helpful troubleshooting steps
+      this.logger.info(TROUBLE_SHOOTING.GENERAL);
       if (
         typeof error === 'object' &&
         error &&

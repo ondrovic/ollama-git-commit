@@ -3,10 +3,12 @@ import { Command } from 'commander';
 import { CommitCommand } from '../src/commands/commit';
 import { ModelsCommand } from '../src/commands/models';
 import { TestCommand } from '../src/commands/test';
+import { ENVIRONMENTAL_VARIABLES } from '../src/constants/enviornmental';
 import { GitService } from '../src/core/git';
 import { OllamaService } from '../src/core/ollama';
 import { PromptService } from '../src/core/prompt';
 import { Logger } from '../src/utils/logger';
+import { mockConfig } from './setup';
 
 // Mock the validation module with conditional logic for OLLAMA_HOST
 mock.module('../src/utils/validation', () => ({
@@ -89,11 +91,13 @@ TestCommand.prototype.testModel = async function (model: string, host: string, d
   return true;
 };
 
-ModelsCommand.prototype.listModels = async function (
-  host?: string,
-  verbose?: boolean,
-): Promise<void> {
-  console.log(['model1', 'model2']);
+ModelsCommand.prototype.listModels = async function (host: string, debug: boolean) {
+  console.log('Available models:');
+  console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+  console.log('  📦 model1');
+  console.log('  📦 model2');
+  console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+  console.log('📊 Total: 2 models available');
 };
 
 // Mock the interactive prompt
@@ -109,6 +113,11 @@ describe('CLI Commands', () => {
     program = new Command();
     logger = new Logger();
     logger.setVerbose(true);
+
+    // Set up test environment
+    if (!process.env[ENVIRONMENTAL_VARIABLES.OLLAMA_HOST]) {
+      process.env[ENVIRONMENTAL_VARIABLES.OLLAMA_HOST] = mockConfig.host;
+    }
   });
 
   test('commit command should generate and apply commit message', async () => {
@@ -136,8 +145,7 @@ describe('CLI Commands', () => {
   });
 
   test('test command should verify model availability', async () => {
-    const testCommand = new TestCommand(logger, mockOllamaService as unknown as OllamaService);
-    // Use the correct method if .execute does not exist
+    const testCommand = new TestCommand(mockOllamaService as unknown as OllamaService, logger);
     const result = await testCommand.testModel('test-model', 'http://localhost:11434', false);
     expect(result).toBe(true);
   });
@@ -145,6 +153,6 @@ describe('CLI Commands', () => {
   test('models command should list available models', async () => {
     const modelsCommand = new ModelsCommand(logger, mockOllamaService as unknown as OllamaService);
     await modelsCommand.listModels('http://localhost:11434', false);
-    // No need to check return value since it's void
+    // No need to expect anything since the method logs to console
   });
 });

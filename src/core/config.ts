@@ -1,10 +1,12 @@
+import { CONFIGURATIONS } from '@/constants/configurations';
 import fsExtra from 'fs-extra';
 import { homedir } from 'os';
 import { dirname, join } from 'path';
-import { CONFIGURATIONS } from '../constants/configurations';
+import { ENVIRONMENTAL_VARIABLES } from '../constants/enviornmental';
 import { ConfigSources, OllamaCommitConfig, type ActiveFile } from '../types';
 import { Logger } from '../utils/logger';
 import { IConfigManager, ILogger } from './interfaces';
+import { VALID_TEMPLATES, type VALID_TEMPLATE } from '../constants/prompts';
 
 export class ConfigManager implements IConfigManager {
   private static instance: ConfigManager;
@@ -50,7 +52,7 @@ export class ConfigManager implements IConfigManager {
   }
 
   private getDefaults(): OllamaCommitConfig {
-    return CONFIGURATIONS.DEFAULT;
+    return CONFIGURATIONS.DEFAULT as OllamaCommitConfig;
   }
 
   private async loadConfigFile(filePath: string): Promise<Record<string, unknown>> {
@@ -148,63 +150,89 @@ export class ConfigManager implements IConfigManager {
 
   private applyEnvironmentVariables(config: OllamaCommitConfig): void {
     // Apply environment variables with OLLAMA_COMMIT_ prefix
-    if (process.env.OLLAMA_HOST) {
-      config.host = process.env.OLLAMA_HOST;
+    if (process.env[ENVIRONMENTAL_VARIABLES.OLLAMA_HOST]) {
+      config.host = process.env[ENVIRONMENTAL_VARIABLES.OLLAMA_HOST] as string;
     }
 
-    if (process.env.OLLAMA_COMMIT_MODEL) {
-      config.model = process.env.OLLAMA_COMMIT_MODEL;
+    if (process.env[ENVIRONMENTAL_VARIABLES.OLLAMA_COMMIT_MODEL]) {
+      config.model = process.env[ENVIRONMENTAL_VARIABLES.OLLAMA_COMMIT_MODEL] as string;
     }
 
-    if (process.env.OLLAMA_COMMIT_HOST) {
-      config.host = process.env.OLLAMA_COMMIT_HOST;
+    if (process.env[ENVIRONMENTAL_VARIABLES.OLLAMA_COMMIT_HOST]) {
+      config.host = process.env[ENVIRONMENTAL_VARIABLES.OLLAMA_COMMIT_HOST] as string;
     }
 
-    if (process.env.OLLAMA_COMMIT_VERBOSE === 'true') {
+    if (process.env[ENVIRONMENTAL_VARIABLES.OLLAMA_COMMIT_VERBOSE] === 'true') {
       config.verbose = true;
     }
 
-    if (process.env.OLLAMA_COMMIT_DEBUG === 'true') {
+    if (process.env[ENVIRONMENTAL_VARIABLES.OLLAMA_COMMIT_DEBUG] === 'true') {
       config.debug = true;
     }
 
-    if (process.env.OLLAMA_COMMIT_AUTO_STAGE === 'true') {
+    if (process.env[ENVIRONMENTAL_VARIABLES.OLLAMA_COMMIT_AUTO_STAGE] === 'true') {
       config.autoStage = true;
     }
 
-    if (process.env.OLLAMA_COMMIT_AUTO_MODEL === 'true') {
+    if (process.env[ENVIRONMENTAL_VARIABLES.OLLAMA_COMMIT_AUTO_MODEL] === 'true') {
       config.autoModel = true;
     }
 
-    if (process.env.OLLAMA_COMMIT_AUTO_COMMIT === 'true') {
+    if (process.env[ENVIRONMENTAL_VARIABLES.OLLAMA_COMMIT_AUTO_COMMIT] === 'true') {
       config.autoCommit = true;
+    } else if (process.env[ENVIRONMENTAL_VARIABLES.OLLAMA_COMMIT_AUTO_COMMIT] === 'false') {
+      config.autoCommit = false;
     }
 
-    if (process.env.OLLAMA_COMMIT_PROMPT_FILE) {
-      config.promptFile = process.env.OLLAMA_COMMIT_PROMPT_FILE.replace('~', homedir());
+    if (process.env[ENVIRONMENTAL_VARIABLES.OLLAMA_COMMIT_PROMPT_FILE]) {
+      config.promptFile = (
+        process.env[ENVIRONMENTAL_VARIABLES.OLLAMA_COMMIT_PROMPT_FILE] as string
+      ).replace('~', homedir());
     }
 
-    if (process.env.OLLAMA_COMMIT_PROMPT_TEMPLATE) {
-      const validTemplates = ['default', 'conventional', 'simple', 'detailed'] as const;
-      type ValidTemplate = (typeof validTemplates)[number];
-      const promptTemplate = process.env.OLLAMA_COMMIT_PROMPT_TEMPLATE as ValidTemplate;
-      if (validTemplates.includes(promptTemplate)) {
+    if (process.env[ENVIRONMENTAL_VARIABLES.OLLAMA_COMMIT_PROMPT_TEMPLATE]) {
+      const promptTemplate = process.env[
+        ENVIRONMENTAL_VARIABLES.OLLAMA_COMMIT_PROMPT_TEMPLATE
+      ] as VALID_TEMPLATE;
+      if (VALID_TEMPLATES.includes(promptTemplate)) {
         config.promptTemplate = promptTemplate;
       }
     }
 
+    if (process.env[ENVIRONMENTAL_VARIABLES.OLLAMA_COMMIT_USE_EMOJIS] === 'true') {
+      config.useEmojis = true;
+    } else if (process.env[ENVIRONMENTAL_VARIABLES.OLLAMA_COMMIT_USE_EMOJIS] === 'false') {
+      config.useEmojis = false;
+    }
+
     // Timeout environment variables
-    if (process.env.OLLAMA_COMMIT_TIMEOUT_CONNECTION) {
-      const timeout = parseInt(process.env.OLLAMA_COMMIT_TIMEOUT_CONNECTION, 10);
+    if (process.env[ENVIRONMENTAL_VARIABLES.OLLAMA_COMMIT_TIME_OUTS_CONNECTION]) {
+      const timeout = parseInt(
+        process.env[ENVIRONMENTAL_VARIABLES.OLLAMA_COMMIT_TIME_OUTS_CONNECTION] as string,
+        10,
+      );
       if (!isNaN(timeout)) {
         config.timeouts.connection = timeout;
       }
     }
 
-    if (process.env.OLLAMA_COMMIT_TIMEOUT_GENERATION) {
-      const timeout = parseInt(process.env.OLLAMA_COMMIT_TIMEOUT_GENERATION, 10);
+    if (process.env[ENVIRONMENTAL_VARIABLES.OLLAMA_COMMIT_TIME_OUTS_GENERATION]) {
+      const timeout = parseInt(
+        process.env[ENVIRONMENTAL_VARIABLES.OLLAMA_COMMIT_TIME_OUTS_GENERATION] as string,
+        10,
+      );
       if (!isNaN(timeout)) {
         config.timeouts.generation = timeout;
+      }
+    }
+
+    if (process.env[ENVIRONMENTAL_VARIABLES.OLLAMA_COMMIT_TIME_OUTS_MODEL_PULL]) {
+      const timeout = parseInt(
+        process.env[ENVIRONMENTAL_VARIABLES.OLLAMA_COMMIT_TIME_OUTS_MODEL_PULL] as string,
+        10,
+      );
+      if (!isNaN(timeout)) {
+        config.timeouts.modelPull = timeout;
       }
     }
   }
@@ -290,41 +318,40 @@ export class ConfigManager implements IConfigManager {
         nodeVersion: process.version,
         cwd: process.cwd(),
         env: {
-          OLLAMA_HOST: process.env.OLLAMA_HOST,
-          OLLAMA_COMMIT_MODEL: process.env.OLLAMA_COMMIT_MODEL,
-          OLLAMA_COMMIT_HOST: process.env.OLLAMA_COMMIT_HOST,
-          OLLAMA_COMMIT_VERBOSE: process.env.OLLAMA_COMMIT_VERBOSE,
-          OLLAMA_COMMIT_DEBUG: process.env.OLLAMA_COMMIT_DEBUG,
-          OLLAMA_COMMIT_AUTO_STAGE: process.env.OLLAMA_COMMIT_AUTO_STAGE,
-          OLLAMA_COMMIT_AUTO_MODEL: process.env.OLLAMA_COMMIT_AUTO_MODEL,
-          OLLAMA_COMMIT_AUTO_COMMIT: process.env.OLLAMA_COMMIT_AUTO_COMMIT,
-          OLLAMA_COMMIT_PROMPT_FILE: process.env.OLLAMA_COMMIT_PROMPT_FILE,
-          OLLAMA_COMMIT_PROMPT_TEMPLATE: process.env.OLLAMA_COMMIT_PROMPT_TEMPLATE,
-          OLLAMA_COMMIT_TIMEOUT_CONNECTION: process.env.OLLAMA_COMMIT_TIMEOUT_CONNECTION,
-          OLLAMA_COMMIT_TIMEOUT_GENERATION: process.env.OLLAMA_COMMIT_TIMEOUT_GENERATION,
+          [ENVIRONMENTAL_VARIABLES.OLLAMA_HOST]: process.env[ENVIRONMENTAL_VARIABLES.OLLAMA_HOST],
+          [ENVIRONMENTAL_VARIABLES.OLLAMA_COMMIT_MODEL]:
+            process.env[ENVIRONMENTAL_VARIABLES.OLLAMA_COMMIT_MODEL],
+          [ENVIRONMENTAL_VARIABLES.OLLAMA_COMMIT_HOST]:
+            process.env[ENVIRONMENTAL_VARIABLES.OLLAMA_COMMIT_HOST],
+          [ENVIRONMENTAL_VARIABLES.OLLAMA_COMMIT_VERBOSE]:
+            process.env[ENVIRONMENTAL_VARIABLES.OLLAMA_COMMIT_VERBOSE],
+          [ENVIRONMENTAL_VARIABLES.OLLAMA_COMMIT_DEBUG]:
+            process.env[ENVIRONMENTAL_VARIABLES.OLLAMA_COMMIT_DEBUG],
+          [ENVIRONMENTAL_VARIABLES.OLLAMA_COMMIT_AUTO_STAGE]:
+            process.env[ENVIRONMENTAL_VARIABLES.OLLAMA_COMMIT_AUTO_STAGE],
+          [ENVIRONMENTAL_VARIABLES.OLLAMA_COMMIT_AUTO_MODEL]:
+            process.env[ENVIRONMENTAL_VARIABLES.OLLAMA_COMMIT_AUTO_MODEL],
+          [ENVIRONMENTAL_VARIABLES.OLLAMA_COMMIT_AUTO_COMMIT]:
+            process.env[ENVIRONMENTAL_VARIABLES.OLLAMA_COMMIT_AUTO_COMMIT],
+          [ENVIRONMENTAL_VARIABLES.OLLAMA_COMMIT_PROMPT_FILE]:
+            process.env[ENVIRONMENTAL_VARIABLES.OLLAMA_COMMIT_PROMPT_FILE],
+          [ENVIRONMENTAL_VARIABLES.OLLAMA_COMMIT_PROMPT_TEMPLATE]:
+            process.env[ENVIRONMENTAL_VARIABLES.OLLAMA_COMMIT_PROMPT_TEMPLATE],
+          [ENVIRONMENTAL_VARIABLES.OLLAMA_COMMIT_USE_EMOJIS]:
+            process.env[ENVIRONMENTAL_VARIABLES.OLLAMA_COMMIT_USE_EMOJIS],
+          [ENVIRONMENTAL_VARIABLES.OLLAMA_COMMIT_TIME_OUTS_CONNECTION]:
+            process.env[ENVIRONMENTAL_VARIABLES.OLLAMA_COMMIT_TIME_OUTS_CONNECTION],
+          [ENVIRONMENTAL_VARIABLES.OLLAMA_COMMIT_TIME_OUTS_GENERATION]:
+            process.env[ENVIRONMENTAL_VARIABLES.OLLAMA_COMMIT_TIME_OUTS_GENERATION],
+          [ENVIRONMENTAL_VARIABLES.OLLAMA_COMMIT_TIME_OUTS_MODEL_PULL]:
+            process.env[ENVIRONMENTAL_VARIABLES.OLLAMA_COMMIT_TIME_OUTS_MODEL_PULL],
         },
       },
     };
   }
 
   async getConfigSources(): Promise<ConfigSources> {
-    const sources: ConfigSources = {
-      model: undefined,
-      host: undefined,
-      verbose: undefined,
-      interactive: undefined,
-      debug: undefined,
-      autoStage: undefined,
-      autoModel: undefined,
-      promptFile: undefined,
-      promptTemplate: undefined,
-      useEmojis: undefined,
-      timeouts: {
-        connection: undefined,
-        generation: undefined,
-        modelPull: undefined,
-      },
-    };
+    const sources: ConfigSources = CONFIGURATIONS.EMPTY;
 
     const getSource = async (key: string): Promise<string | undefined> => {
       const keyParts = key.split('.');
@@ -350,7 +377,7 @@ export class ConfigManager implements IConfigManager {
             return false;
           }
         }
-        return curr !== undefined;
+        return true;
       };
 
       // Check configs in order of precedence
@@ -369,6 +396,7 @@ export class ConfigManager implements IConfigManager {
     sources.debug = await getSource('debug');
     sources.autoStage = await getSource('autoStage');
     sources.autoModel = await getSource('autoModel');
+    sources.autoCommit = await getSource('autoCommit');
     sources.promptFile = await getSource('promptFile');
     sources.promptTemplate = await getSource('promptTemplate');
     sources.useEmojis = await getSource('useEmojis');

@@ -1,3 +1,6 @@
+export const VALID_TEMPLATES = ['default', 'conventional', 'simple', 'detailed'] as const;
+export type VALID_TEMPLATE = (typeof VALID_TEMPLATES)[number];
+
 export const PROMPTS = {
   DEFAULT: `Write concise commit messages:
 - The first line should be a short summary of the changes

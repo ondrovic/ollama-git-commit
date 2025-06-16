@@ -331,14 +331,16 @@ export OLLAMA_COMMIT_DEBUG=true
 export OLLAMA_COMMIT_AUTO_STAGE=true
 export OLLAMA_COMMIT_AUTO_MODEL=true
 export OLLAMA_COMMIT_AUTO_COMMIT=true
+export OLLAMA_COMMIT_USE_EMOJIS=true
 
 # File paths
 export OLLAMA_COMMIT_PROMPT_FILE=/path/to/custom/prompt.txt
 export OLLAMA_COMMIT_PROMPT_TEMPLATE=simple  # One of: default, conventional, simple, detailed
 
 # Timeouts (in milliseconds)
-export OLLAMA_COMMIT_TIMEOUT_CONNECTION=15000
-export OLLAMA_COMMIT_TIMEOUT_GENERATION=180000
+export OLLAMA_COMMIT_TIME_OUTS_CONNECTION=15000
+export OLLAMA_COMMIT_TIME_OUTS_GENERATION=180000
+export OLLAMA_COMMIT_TIME_OUTS_MODEL_PULL=300000
 
 # Add to your shell profile (.bashrc, .zshrc, etc.)
 echo 'export OLLAMA_HOST=http://192.168.1.100:11434' >> ~/.zshrc
@@ -379,104 +381,6 @@ You can set the Ollama host in your config file as well:
 ### Cleaner Output
 
 The CLI now outputs only the commit message text (not the full JSON response from Ollama).
-
-## 📖 Usage
-
-### Basic Commands
-
-```bash
-# Generate commit message for staged changes
-ollama-git-commit -d .
-
-# Non-interactive mode (just display the message)
-ollama-git-commit -d . -n
-
-# Verbose output with detailed information
-ollama-git-commit -d . -v
-
-# Auto-stage all changes if nothing is staged
-ollama-git-commit -d . --auto-stage
-
-# Debug mode with comprehensive logging
-ollama-git-commit -d . --debug
-```
-
-### Model Management
-
-```bash
-# Use specific model
-ollama-git-commit -d . -m codellama
-
-# Auto-select best available model
-ollama-git-commit -d . --auto-model
-
-# List all available models
-ollama-git-commit --list-models
-
-# Test connection to Ollama
-ollama-git-commit --test
-
-# Test with simple prompt (debug JSON issues)
-ollama-git-commit --test-simple
-```
-
-### Configuration Commands
-
-```bash
-# Initialize default configuration
-ollama-git-commit --config-init
-
-# Show current configuration
-ollama-git-commit --config-show
-
-# Show detailed configuration debug information
-ollama-git-commit --config-debug
-
-# Test clipboard functionality
-ollama-git-commit --debug-clipboard
-
-# Test interactive prompts
-ollama-git-commit --test-interactive
-```
-
-### Advanced Usage
-
-```bash
-# Custom Ollama host
-ollama-git-commit -d . -H http://192.168.1.100:11434
-
-# Custom prompt file
-ollama-git-commit -d . -p ~/.config/my-custom-prompt.txt
-
-# Combine multiple options
-ollama-git-commit -d . -v -m llama3.2 --auto-stage --debug
-
-# Non-interactive with custom model
-ollama-git-commit -d . -n -m codellama --auto-stage
-```
-
-## 🔧 CLI Options Reference
-
-| Option               | Short | Description                             | Default      |
-| -------------------- | ----- | --------------------------------------- | ------------ |
-| `--directory`        | `-d`  | Directory to use                        | **Required** |
-| `--model`            | `-m`  | Specify Ollama model                    | From config  |
-| `--host`             | `-H`  | Ollama server URL                       | From config  |
-| `--verbose`          | `-v`  | Show detailed output                    | `false`      |
-| `--non-interactive`  | `-n`  | Skip confirmation prompts               | `false`      |
-| `--prompt`           | `-p`  | Custom prompt file path                 | From config  |
-| `--auto-stage`       |       | Auto-stage changes if nothing staged    | `false`      |
-| `--test`             |       | Test connection to Ollama server        | -            |
-| `--test-simple`      |       | Test with simple prompt for debugging   | -            |
-| `--list-models`      |       | Show all available models               | -            |
-| `--auto-model`       |       | Auto-select best available model        | `false`      |
-| `--debug`            |       | Enable debug mode with detailed logging | `false`      |
-| `--config-init`      |       | Create default configuration file       | -            |
-| `--config-show`      |       | Show current configuration              | -            |
-| `--config-debug`     |       | Show detailed config debug info         | -            |
-| `--debug-clipboard`  |       | Test clipboard functionality            | -            |
-| `--test-interactive` |       | Test interactive prompts                | -            |
-| `--help`             | `-h`  | Show help message                       | -            |
 
 ## 🎨 Custom Prompts
 
@@ -784,3 +688,21 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 ---
 
 **Made with ❤️ by developers, for developers**
+
+### 🧪 Testing & Mocks
+
+All tests are designed to be fast, reliable, and isolated from your real environment:
+
+- **MockedConfigManager**: Used in config-related tests to simulate configuration loading and environment variable overrides without touching real files.
+- **mockFs**: Simulates file system operations (read, write, mkdir, etc.) for Git and prompt-related tests.
+- **mockGit**: Simulates Git commands and responses for integration tests.
+- **Mocked network (fetch)**: API calls to Ollama are intercepted and mocked for predictable results.
+- **No real network or file system access**: All tests run in-memory and do not require a real Ollama server, Git repo, or config files.
+
+To run all tests:
+
+```bash
+bun test
+```
+
+If you add new features, please use mocks for any external dependencies to keep tests fast and deterministic.

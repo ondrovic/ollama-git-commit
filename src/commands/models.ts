@@ -1,4 +1,5 @@
 import { MODELS } from '../constants/models';
+import { TROUBLE_SHOOTING } from '../constants/troubleshooting';
 import { getConfig } from '../core/config';
 import { ILogger, IOllamaService } from '../core/interfaces';
 import { OllamaService } from '../core/ollama';
@@ -68,12 +69,7 @@ export class ModelsCommand {
         this.logger.error(`Error: ${String(error)}`);
       }
       // Provide helpful troubleshooting
-      console.log('');
-      console.log('🔧 Troubleshooting:');
-      console.log('   1. Check if Ollama is running: ollama serve');
-      console.log('   2. Test connection: ollama-commit --test');
-      console.log('   3. Check configuration: ollama-commit --config-show');
-      console.log('   4. Verify host URL format (http://host:port)');
+      this.logger.info(TROUBLE_SHOOTING.GENERAL);
       if (
         typeof error === 'object' &&
         error &&
@@ -165,7 +161,7 @@ export class ModelsCommand {
   }
 
   private getPreferredModels(): string[] {
-    return Array.from(MODELS.PREFERRED);
+    return [...MODELS.PREFERRED] as string[];
   }
 
   async handleModelError(model: string, host?: string): Promise<void> {
@@ -173,11 +169,7 @@ export class ModelsCommand {
     const ollamaHost = normalizeHost(host || config.host);
 
     this.logger.error(`Model '${model}' not found on Ollama server`);
-    console.log('');
-    console.log('🔧 To fix this issue:');
-    console.log(`   1. Install the model: ollama pull ${model}`);
-    console.log('   2. Or choose from available models:');
-    console.log('');
+    this.logger.info(TROUBLE_SHOOTING.MODEL_NOT_FOUND(model));
 
     await this.listModels(ollamaHost, true);
 
@@ -185,23 +177,15 @@ export class ModelsCommand {
     console.log('   3. Or let the script auto-select a model:');
     const autoModel = await this.getDefaultModel(ollamaHost);
     if (autoModel) {
-      console.log(`      💡 Suggested: ollama-commit --model ${autoModel} -d /path/to/repo`);
-      console.log('      💡 Or set in config: ollama-commit --config-show');
+      console.log(`      💡 Suggested: ollama-git-commit --model ${autoModel} -d /path/to/repo`);
+      console.log('      💡 Or set in config: ollama-git-commit --config-show');
     }
 
-    console.log('');
-    console.log('🚀 Popular models for code tasks:');
-    console.log('   ollama pull llama3.2        # Fast, good for most tasks');
-    console.log('   ollama pull codellama       # Specialized for code');
-    console.log('   ollama pull mistral         # Good balance of speed/quality');
-    console.log('   ollama pull qwen2.5:7b      # Excellent for coding');
-    console.log('   ollama pull deepseek-coder  # Great for code understanding');
+    // Popular models
+    console.log(MODELS.POPULAR);
 
-    console.log('');
-    console.log('⚙️  Configuration options:');
-    console.log('   • Set default model: edit ~/.config/ollama-git-commit/config.json');
-    console.log('   • Auto-select best: ollama-commit --auto-model -d /path/to/repo');
-    console.log('   • Project-specific: create .ollama-git-commit.json in your repo');
+    // Configuration options
+    console.log(MODELS.CONFIGURATION);
   }
 
   async validateModel(model: string, host?: string): Promise<boolean> {

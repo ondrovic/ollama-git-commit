@@ -1,5 +1,6 @@
 import * as os from 'os';
 import path from 'path';
+import { ConfigSourceInfo } from '../types';
 import { MODELS } from './models';
 
 export const CONFIGURATIONS = {
@@ -46,7 +47,7 @@ export const CONFIGURATIONS = {
       host: string,
       promptFile: string,
       promptTemplate: string,
-      sourceInfo: any,
+      sourceInfo: ConfigSourceInfo,
     ) => `Core Settings:
         Model: ${model} (from ${sourceInfo.model})
         Host: ${host} (from ${sourceInfo.host})
@@ -61,7 +62,7 @@ export const CONFIGURATIONS = {
       autoModel: boolean,
       autoCommit: boolean,
       useEmojis: boolean,
-      sourceInfo: any,
+      sourceInfo: ConfigSourceInfo,
     ) => `Behavior Settings:
         Verbose: ${verbose} (from ${sourceInfo.verbose})
         Interactive: ${interactive} (from ${sourceInfo.interactive})
@@ -75,7 +76,7 @@ export const CONFIGURATIONS = {
       connection: number,
       generation: number,
       modelPull: number,
-      sourceInfo: any,
+      sourceInfo: ConfigSourceInfo,
     ) => `Timeouts (ms):
         Connection: ${connection}ms (from ${sourceInfo.timeouts.connection})
         Generation: ${generation}ms (from ${sourceInfo.timeouts.generation})
@@ -105,8 +106,5 @@ export const CONFIGURATIONS = {
     },
     useEmojis: true,
     promptTemplate: 'default',
-  },
-  validate: (value: unknown): boolean => {
-    return typeof value === 'boolean';
   },
 } as const;
