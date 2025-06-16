@@ -187,7 +187,7 @@ export class OllamaService implements IOllamaService {
         this.logger.error(`Detailed error: ${String(error)}`);
       }
       // Provide helpful troubleshooting steps
-      this.logger.info(TROUBLE_SHOOTING.GENERAL);
+      console.log(TROUBLE_SHOOTING.GENERAL);
       if (
         typeof error === 'object' &&
         error &&
