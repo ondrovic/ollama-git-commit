@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.0.4] - 2025-06-16
+
 ### Added
 - New automated release process with GitHub Actions
 - Single source of truth for version management using npm_package_version
