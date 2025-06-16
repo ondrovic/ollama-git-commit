@@ -1,7 +1,5 @@
 # 🤖 Ollama Git Commit Message Generator
 
-[![npm version](https://badge.fury.io/js/%40condrovic%2Follama-git-commit.svg)](https://badge.fury.io/js/@condrovic/ollama-git-commit)
-
 A powerful CLI tool that generates meaningful, contextual commit messages using Ollama AI. This modern Node.js/TypeScript implementation fixes git diff parsing issues and provides better error handling, cross-platform compatibility, and a maintainable codebase.
 
 [![npm version](https://img.shields.io/npm/v/@condrovic/ollama-git-commit.svg)](https://www.npmjs.com/package/@condrovic/ollama-git-commit)
