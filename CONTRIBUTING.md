@@ -90,16 +90,25 @@ The staging script (`bun stage`) will:
 ollama-git-commit/
 ├── src/
 │   ├── cli/           # CLI command implementations
-│   ├── commands/      # Command implementations
+│   │   ├── commands/  # Individual command modules
+│   │   ├── utils/     # CLI-specific utilities
+│   │   └── index.ts   # CLI entry point
 │   ├── core/          # Core functionality
+│   │   ├── config.ts  # Configuration management
+│   │   ├── git.ts     # Git operations
+│   │   ├── ollama.ts  # Ollama API client
+│   │   └── prompt.ts  # Prompt management
 │   ├── constants/     # Constants and enums
-│   ├── prompts/       # Prompt templates and utilities
-│   ├── utils/         # Utility functions
 │   ├── types/         # TypeScript type definitions
-│   └── cli.ts         # CLI entry point
+│   └── utils/         # Utility functions
 ├── test/              # Test files
-├── scripts/           # Build and development scripts
-└── docs/             # Documentation
+│   ├── cli/          # CLI tests
+│   ├── core/         # Core functionality tests
+│   ├── mocks/        # Test mocks
+│   └── setup.ts      # Test setup
+├── scripts/          # Build and development scripts
+├── docs/            # Documentation
+└── examples/        # Example configurations and usage
 ```
 
 ## Coding Standards
@@ -128,6 +137,7 @@ ollama-git-commit/
 - Use descriptive test names
 - Follow the AAA pattern (Arrange, Act, Assert)
 - Mock external dependencies
+- Place tests in the corresponding test directory structure
 
 ### Git Commit Messages
 
@@ -237,8 +247,9 @@ bun test --coverage
 
 1. **Windows Path Issues**: Use `path.join()` instead of string concatenation
 2. **Environment Variables**: Always use the `ENVIRONMENTAL_VARIABLES` constant
-3. **Git Operations**: Use the Git utility functions in `src/utils/git.ts`
+3. **Git Operations**: Use the Git utility functions in `src/core/git.ts`
 4. **Configuration**: Use the `ConfigManager` for all config operations
+5. **Testing**: Use the provided test utilities and mocks in `test/mocks/`
 
 ## License
 

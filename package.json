@@ -1,5 +1,5 @@
 {
-  "name": "@ondrovic/ollama-git-commit",
+  "name": "@condrovic/ollama-git-commit",
   "version": "1.0.1",
   "description": "Enhanced Ollama Git Commit Message Generator - A CLI tool that generates meaningful commit messages using Ollama AI",
   "main": "dist/index.js",
@@ -10,13 +10,14 @@
   "files": [
     "dist/**/*",
     "README.md",
-    "LICENSE"
+    "LICENSE",
+    "CHANGELOG.md"
   ],
   "scripts": {
     "build": "bun build src/cli.ts --outdir dist --target node --format esm && bun run build:types",
     "build:types": "tsc --emitDeclarationOnly --outDir dist",
     "local:link": "bun run build && npm link",
-    "local:unlink": "npm uninstall -g @ondrovic/ollama-git-commit",
+    "local:unlink": "npm uninstall -g @condrovic/ollama-git-commit",
     "dev:watch": "bun --watch src/cli.ts",
     "dev:run": "bun run src/cli.ts",
     "test": "bun test",
@@ -27,10 +28,12 @@
     "format:check": "prettier --check src/**/*.ts",
     "clean": "rm -rf dist",
     "prepublishOnly": "bun run clean && bun run build && bun run test",
-    "release": "changeset publish",
+    "release": "bun run scripts/release.ts",
     "version": "changeset version",
     "update-version": "bun scripts/update-version.ts",
-    "stage": "bun scripts/stage.ts"
+    "stage": "bun scripts/stage.ts",
+    "preversion": "bun run test",
+    "postversion": "git push && git push --tags"
   },
   "keywords": [
     "git",
@@ -77,5 +80,8 @@
     "url": "https://github.com/ondrovic/ollama-git-commit/issues"
   },
   "homepage": "https://github.com/ondrovic/ollama-git-commit#readme",
-  "private": true
+  "publishConfig": {
+    "access": "public"
+  },
+  "private": false
 }

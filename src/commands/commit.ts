@@ -1,6 +1,7 @@
 import { spawn } from 'child_process';
 import { homedir } from 'os';
 import { join } from 'path';
+import { VALID_TEMPLATES, type VALID_TEMPLATE } from '../constants/prompts';
 import { getConfig } from '../core/config';
 import { GitCommandError, GitNoChangesError, GitRepositoryError, GitService } from '../core/git';
 import { IGitService, ILogger, IOllamaService, IPromptService } from '../core/interfaces';
@@ -13,7 +14,6 @@ import { Logger } from '../utils/logger';
 import { validateGitRepository } from '../utils/validation';
 import { ModelsCommand } from './models';
 import { TestCommand } from './test';
-import { VALID_TEMPLATES, type VALID_TEMPLATE } from '../constants/prompts';
 
 type ConfigProvider = () => Promise<Required<CommitConfig>>;
 
