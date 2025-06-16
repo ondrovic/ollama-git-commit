@@ -42,7 +42,11 @@ Thank you for your interest in contributing to Ollama Git Commit! This document 
    bun link
    ```
 
-### Development Workflow
+## Release Workflow
+
+We use an automated release process for publishing to NPM. Here's the complete workflow:
+
+### 1. Feature Development
 
 1. Create a new branch for your feature or bugfix:
 
@@ -50,6 +54,8 @@ Thank you for your interest in contributing to Ollama Git Commit! This document 
    git checkout -b feature/your-feature-name
    # or
    git checkout -b fix/your-bugfix-name
+   # or  
+   git checkout -b hotfix/your-hotfix-name
    ```
 
 2. Make your changes
@@ -77,12 +83,50 @@ Thank you for your interest in contributing to Ollama Git Commit! This document 
    git push origin feature/your-feature-name
    ```
 
+### 2. Release Process
+
+After your PR is merged into `main`:
+
+1. **Pull the latest changes:**
+   ```bash
+   git checkout main
+   git pull origin main
+   ```
+
+2. **Run the release command:**
+   ```bash
+   # For patch release (1.0.3 → 1.0.4)
+   bun run release
+
+   # For minor release (1.0.3 → 1.1.0)  
+   bun run release minor
+
+   # For major release (1.0.3 → 2.0.0)
+   bun run release major
+   ```
+
+3. **Automated publishing:**
+   - The release script automatically increments the version in `package.json`
+   - Updates the `CHANGELOG.md`
+   - Creates a git tag (e.g., `v1.0.4`)
+   - Pushes the tag and commits to GitHub
+   - GitHub Actions automatically publishes to NPM
+
+### Version Management
+
+Our project uses a **single source of truth** for version management:
+
+- **`package.json`** contains the authoritative version number
+- **`metadata.ts`** automatically reads the version using `npm_package_version`
+- **No manual version syncing** required between files
+- **Automatic fallback** to package.json during development
+
 The staging script (`bun stage`) will:
 
-- Update version numbers if needed
 - Format your code
 - Fix any linting issues
 - Stage all files
+- *(No longer manages version numbers - this is handled by the release script)*
 
 ## Project Structure
 
@@ -99,6 +143,7 @@ ollama-git-commit/
 │   │   ├── ollama.ts  # Ollama API client
 │   │   └── prompt.ts  # Prompt management
 │   ├── constants/     # Constants and enums
+│   │   └── metadata.ts # Version and app metadata (auto-synced)
 │   ├── types/         # TypeScript type definitions
 │   └── utils/         # Utility functions
 ├── test/              # Test files
@@ -107,6 +152,8 @@ ollama-git-commit/
 │   ├── mocks/        # Test mocks
 │   └── setup.ts      # Test setup
 ├── scripts/          # Build and development scripts
+│   ├── release.ts    # Automated release management
+│   └── stage.ts      # Development staging script
 ├── docs/            # Documentation
 └── examples/        # Example configurations and usage
 ```
@@ -250,6 +297,26 @@ bun test --coverage
 3. **Git Operations**: Use the Git utility functions in `src/core/git.ts`
 4. **Configuration**: Use the `ConfigManager` for all config operations
 5. **Testing**: Use the provided test utilities and mocks in `test/mocks/`
+
+## Release Notes
+
+### Version Management Changes
+
+As of version 1.0.4, we've streamlined our version management:
+
+- **Removed manual version syncing** - No more `update-version.ts` script
+- **Single source of truth** - `package.json` is the only place version is stored
+- **Automatic version detection** - `metadata.ts` uses `npm_package_version` with smart fallbacks
+- **Simplified release process** - One command handles everything
+
+### Automated Publishing
+
+The project uses GitHub Actions for automated NPM publishing:
+
+- **Triggered by git tags** - When you run `bun run release`, a tag is created and pushed
+- **Automatic validation** - Ensures version doesn't already exist on NPM
+- **Build and test** - Runs full test suite before publishing
+- **Zero manual intervention** - Everything happens automatically
 
 ## License
 

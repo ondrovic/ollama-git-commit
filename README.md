@@ -9,25 +9,39 @@ A powerful CLI tool that generates meaningful, contextual commit messages using 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Run Bun Tests](https://github.com/ondrovic/ollama-git-commit/actions/workflows/test.yml/badge.svg)](https://github.com/ondrovic/ollama-git-commit/actions/workflows/test.yml)
 
-## 🚦 Continuous Integration (CI)
+## 🚦 Continuous Integration & Automated Publishing
 
-This project uses **GitHub Actions** to automatically run the test suite on every push and pull request to any branch.
+This project uses **GitHub Actions** for automated testing and NPM publishing:
 
-- The workflow is defined in `.github/workflows/test.yml`
-- All branches are tested automatically
-- Tests are run using [Bun](https://bun.sh/) for fast and modern JavaScript/TypeScript execution
-- Comprehensive test coverage for all new features and changes
+### Automated Testing
+- The test workflow is defined in `.github/workflows/test.yml`
+- All branches are tested automatically on push and pull requests
+- Tests are run using [Bun](https://bun.sh/) for fast execution
+- Comprehensive test coverage for all features
+
+### Automated NPM Publishing
+- The publish workflow is defined in `.github/workflows/publish.yml`
+- **Triggered automatically** when a git tag is pushed (e.g., `v1.0.4`)
+- **Validates** that the version doesn't already exist on NPM
+- **Builds and tests** the package before publishing
+- **Publishes to NPM** with zero manual intervention
 
 **How it works:**
 
-- On every push or PR, GitHub Actions will:
+- **For Testing**: On every push or PR, GitHub Actions will:
   1. Check out the code
-  2. Set up Bun
+  2. Set up Bun and Node.js
   3. Install dependencies (`bun install`)
-  4. Run the test suite (`bun test`)
+  4. Run the full test suite (`bun test`)
   5. Run linting and type checking
 
-You can view the status of your tests in the "Actions" tab of your GitHub repository.
+- **For Publishing**: When you run `bun run release`:
+  1. Version is incremented in `package.json`
+  2. Git tag is created and pushed
+  3. GitHub Actions automatically triggers
+  4. Package is built, tested, and published to NPM
+
+You can view the status of all workflows in the "Actions" tab of the GitHub repository.
 
 ## ✨ Features
 
@@ -48,8 +62,19 @@ You can view the status of your tests in the "Actions" tab of your GitHub reposi
 - 🧪 **Testing Suite**: Comprehensive test coverage with mocks and utilities
 - 🔍 **Debug Tools**: Advanced debugging commands for configuration and connection issues
 - 📝 **Documentation**: Detailed guides for installation, configuration, and troubleshooting
+- 🚀 **Automated Publishing**: Streamlined release process with automatic NPM publishing
 
 ## 🚀 Installation
+
+### From NPM (Recommended for Users)
+
+```bash
+# Install globally from NPM
+npm install -g @condrovic/ollama-git-commit
+
+# Or use with npx (no installation required)
+npx @condrovic/ollama-git-commit -d .
+```
 
 ### Global Installation for Development
 
@@ -63,40 +88,77 @@ bun run build
 
 Then, from the root of this project, choose one of the following:
 
-**Using Bun (may have issues on Windows):**
-
-```bash
-bun link
-```
-
 **Using npm (recommended for cross-platform reliability):**
 
 ```bash
 npm link
 ```
 
+**Using Bun (may have issues on Windows):**
+
+```bash
+bun link
+```
+
 After linking, the `ollama-git-commit` command should be available in your terminal globally. You might need to open a **new terminal window** for the changes to take effect.
 
 ### Development Workflow
 
-When making changes to the codebase, use the following workflow:
+When contributing to the project, use the following workflow:
 
-1. Make your changes
-2. Run the staging script to format, lint, and stage your changes:
+1. **Create a feature branch:**
+   ```bash
+   git checkout -b feature/your-feature-name
+   ```
+
+2. **Make your changes**
+
+3. **Run the staging script** to format, lint, and stage your changes:
    ```bash
    bun stage
    ```
-3. Commit your changes:
+
+4. **Commit your changes:**
    ```bash
-   git commit -m "your commit message"
+   git commit -m "feat: your feature description"
    ```
+
+5. **Create a pull request**
+
+### Release Workflow (For Maintainers)
+
+After changes are merged into `main`:
+
+1. **Pull the latest changes:**
+   ```bash
+   git checkout main
+   git pull origin main
+   ```
+
+2. **Run the release command:**
+   ```bash
+   # For patch release (1.0.3 → 1.0.4)
+   bun run release
+   
+   # For minor release (1.0.3 → 1.1.0)
+   bun run release minor
+   
+   # For major release (1.0.3 → 2.0.0)
+   bun run release major
+   ```
+
+3. **Automated publishing happens:**
+   - Version is incremented in `package.json`
+   - `CHANGELOG.md` is updated
+   - Git tag is created and pushed
+   - GitHub Actions automatically publishes to NPM
 
 The staging script will:
 
-- Update version numbers if needed
-- Format your code
-- Fix any linting issues
-- Stage all files
+- Format your code with Prettier
+- Fix linting issues with ESLint
+- Stage all files for commit
+- *(Version management is handled automatically by the release process)*
 
 ### Permanent Global Installation
 
@@ -115,7 +177,7 @@ To remove the global installation of `ollama-git-commit`, use the command corres
 ```bash
 npm unlink # If run from the project directory
 # OR (for full uninstallation)
-npm uninstall -g @ondrovic/ollama-git-commit
+npm uninstall -g @condrovic/ollama-git-commit
 ```
 
 **If you used `bun link` or `bun install -g .`:**
@@ -123,7 +185,7 @@ npm uninstall -g @ondrovic/ollama-git-commit
 ```bash
 bun unlink # If run from the project directory
 # OR (for full uninstallation)
-bun uninstall -g @ondrovic/ollama-git-commit
+bun uninstall -g @condrovic/ollama-git-commit
 ```
 
 **Troubleshooting Uninstallation (especially on Windows):**
@@ -158,13 +220,19 @@ Any validation issues will be reported with helpful error messages and suggestio
 
 ## 🎯 Quick Start
 
-1. **Make sure Ollama is running**:
+1. **Install the package:**
+
+   ```bash
+   npm install -g @condrovic/ollama-git-commit
+   ```
+
+2. **Make sure Ollama is running:**
 
    ```bash
    ollama serve
    ```
 
-2. **Install a model** (if you haven't already):
+3. **Install a model** (if you haven't already):
 
    ```bash
    ollama pull llama3.2
@@ -172,7 +240,7 @@ Any validation issues will be reported with helpful error messages and suggestio
    ollama pull codellama
    ```
 
-3. **Initialize configuration** (recommended):
+4. **Initialize configuration** (recommended):
 
    ```bash
    ollama-git-commit config create user
@@ -180,19 +248,19 @@ Any validation issues will be reported with helpful error messages and suggestio
    ollama-git-commit config create local
    ```
 
-4. **Stage your changes**:
+5. **Stage your changes:**
 
    ```bash
    git add .
    ```
 
-5. **Generate commit message**:
+6. **Generate commit message:**
 
    ```bash
    ollama-git-commit -d .
    ```
 
-6. **Follow the interactive prompts** to review, regenerate, or copy your commit message!
+7. **Follow the interactive prompts** to review, regenerate, or copy your commit message!
 
 ## 📖 Usage
 
@@ -309,6 +377,25 @@ Create a `~/.ollama-git-commit.json` file:
 }
 ```
 
+## 🔧 Version Management
+
+This project uses a **streamlined version management system**:
+
+### Single Source of Truth
+- **`package.json`** contains the authoritative version number
+- **`src/constants/metadata.ts`** automatically reads the version using `npm_package_version`
+- **No manual syncing** required between files
+
+### How It Works
+- **When installed from NPM**: The tool uses `process.env.npm_package_version` (always accurate)
+- **During development**: Falls back to reading from local `package.json` 
+- **Version detection is automatic** and requires no manual intervention
+
+### For Contributors
+- **No version management required** in your PRs
+- **Release process is automated** via `bun run release`
+- **Focus on features** instead of version bookkeeping
+
 ## 📚 Documentation
 
 For more detailed information, check out our documentation:
@@ -319,7 +406,22 @@ For more detailed information, check out our documentation:
 
 ## 🤝 Contributing
 
-We welcome contributions! Please see our [Contributing Guide](CONTRIBUTING.md) for details.
+We welcome contributions! Please see our [Contributing Guide](CONTRIBUTING.md) for details on:
+
+- Development setup and workflow
+- Our automated release process
+- Code standards and testing requirements
+- Pull request guidelines
+
+### Quick Contributing Steps:
+
+1. Fork the repository
+2. Create a feature branch (`git checkout -b feature/amazing-feature`)
+3. Make your changes
+4. Run `bun stage` to format and lint
+5. Commit your changes (`git commit -m 'feat: add amazing feature'`)
+6. Push to the branch (`git push origin feature/amazing-feature`)
+7. Open a Pull Request
 
 ## 📝 License
 
@@ -333,6 +435,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ## 🔗 Links
 
+- [NPM Package](https://www.npmjs.com/package/@condrovic/ollama-git-commit)
 - [Ollama Documentation](https://ollama.ai/docs)
 - [Node.js Downloads](https://nodejs.org/)
 - [Bun Installation](https://bun.sh/docs/installation)

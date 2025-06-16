@@ -7,9 +7,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## [1.0.1] - 2025-06-16
+### Added
+- New automated release process with GitHub Actions
+- Single source of truth for version management using npm_package_version
+- Streamlined release workflow with `bun run release` command
 
-## [1.0.1] - 2025-06-16
+### Changed
+- Updated version management to use npm_package_version with fallback
+- Simplified staging script (no longer handles version updates)
+- Updated documentation for new release workflow
+
+### Removed
+- Manual version syncing between package.json and metadata.ts
+- update-version.ts script (no longer needed)
+- Manual version management from staging process
+
+### Fixed
+- Version conflicts during NPM publishing
+- Automated publishing workflow in GitHub Actions
+
+## [1.0.3] - 2025-06-16
+
+## [1.0.2] - 2025-06-16
 
 ### Added
 
