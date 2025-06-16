@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+- Updated pacakge.json to remove extra prepublish steps
+- Updated package.json to add pacakge.json to files
+- Updated metadata for better error handling
+- Updated publsh.yml for single publish
+
+### Removed
+- Duplicate and invalid badge in README.md
+
 ## [1.0.4] - 2025-06-16
 
 ### Added
