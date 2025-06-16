@@ -17,75 +17,115 @@ function getPackageVersion(): string {
 }
 
 function incrementVersion(type: 'patch' | 'minor' | 'major' = 'patch'): string {
-  console.log(`Incrementing ${type} version...`);
+  console.log(`🔄 Incrementing ${type} version...`);
   
-  // Use npm version to increment
-  const result = execSync(`npm version ${type} --no-git-tag-version`).toString().trim();
-  
-  // npm version returns the new version with 'v' prefix, remove it
-  const newVersion = result.replace('v', '');
-  console.log(`Version updated to: ${newVersion}`);
-  
-  return newVersion;
+  try {
+    // Use npm version to increment
+    const result = execSync(`npm version ${type} --no-git-tag-version`, { stdio: 'pipe' }).toString().trim();
+    
+    // npm version returns the new version with 'v' prefix, remove it
+    const newVersion = result.replace('v', '');
+    console.log(`✅ Version updated to: ${newVersion}`);
+    
+    return newVersion;
+  } catch (error) {
+    console.error('❌ Failed to increment version:', error);
+    throw error;
+  }
 }
 
 function updateChangelog(version: string): void {
-  const changelogPath = join(process.cwd(), 'CHANGELOG.md');
-  const changelog = readFileSync(changelogPath, 'utf-8');
+  console.log(`📝 Updating CHANGELOG.md for version ${version}...`);
   
-  // Get current date in YYYY-MM-DD format
-  const today = new Date().toISOString().split('T')[0];
-  
-  // Replace [Unreleased] with new version
-  const updatedChangelog = changelog.replace(
-    '## [Unreleased]',
-    `## [Unreleased]\n\n## [${version}] - ${today}`
-  );
-  
-  writeFileSync(changelogPath, updatedChangelog);
+  try {
+    const changelogPath = join(process.cwd(), 'CHANGELOG.md');
+    const changelog = readFileSync(changelogPath, 'utf-8');
+    
+    // Get current date in YYYY-MM-DD format
+    const today = new Date().toISOString().split('T')[0];
+    
+    // Replace [Unreleased] with new version
+    const updatedChangelog = changelog.replace(
+      '## [Unreleased]',
+      `## [Unreleased]\n\n## [${version}] - ${today}`
+    );
+    
+    writeFileSync(changelogPath, updatedChangelog);
+    console.log(`✅ CHANGELOG.md updated`);
+  } catch (error) {
+    console.error('❌ Failed to update CHANGELOG.md:', error);
+    throw error;
+  }
 }
 
 function createAndPushTag(version: string): void {
   const tag = `v${version}`;
   
-  // Update CHANGELOG.md
-  updateChangelog(version);
+  console.log(`🏷️ Creating and pushing tag ${tag}...`);
   
-  // Stage version changes (no need to sync metadata.ts anymore!)
-  execSync('git add package.json CHANGELOG.md');
-  execSync(`git commit -m "chore: release version ${version}"`);
-  
-  // Create and push tag
-  execSync(`git tag ${tag}`);
-  execSync(`git push origin ${tag}`);
-  execSync('git push origin main');
+  try {
+    // Update CHANGELOG.md
+    updateChangelog(version);
+    
+    // Stage version changes
+    console.log(`📦 Staging package.json and CHANGELOG.md...`);
+    execSync('git add package.json CHANGELOG.md', { stdio: 'inherit' });
+    
+    // Commit changes
+    console.log(`💾 Committing version ${version}...`);
+    execSync(`git commit -m "chore: release version ${version}"`, { stdio: 'inherit' });
+    
+    // Create tag
+    console.log(`🏷️ Creating tag ${tag}...`);
+    execSync(`git tag ${tag}`, { stdio: 'inherit' });
+    
+    // Push tag first
+    console.log(`🚀 Pushing tag ${tag}...`);
+    execSync(`git push origin ${tag}`, { stdio: 'inherit' });
+    
+    // Push commits
+    console.log(`🚀 Pushing commits to main...`);
+    execSync('git push origin main', { stdio: 'inherit' });
+    
+    console.log(`✅ Successfully created and pushed tag ${tag}`);
+  } catch (error) {
+    console.error('❌ Failed to create/push tag:', error);
+    throw error;
+  }
 }
 
 function main() {
+  console.log('🚀 Starting release process...');
+  
   // Get version type from command line argument (default: patch)
   const versionType = (process.argv[2] as 'patch' | 'minor' | 'major') || 'patch';
   
   if (!['patch', 'minor', 'major'].includes(versionType)) {
-    console.error('Error: Version type must be patch, minor, or major');
+    console.error('❌ Error: Version type must be patch, minor, or major');
     console.log('Usage: bun run release [patch|minor|major]');
     process.exit(1);
   }
 
+  console.log(`📋 Release type: ${versionType}`);
+
   // Check if we're on main branch
   const currentBranch = getCurrentBranch();
+  console.log(`🌿 Current branch: ${currentBranch}`);
+  
   if (currentBranch !== 'main') {
-    console.error('Error: You must be on the main branch to create a release');
+    console.error('❌ Error: You must be on the main branch to create a release');
     process.exit(1);
   }
 
   // Check for uncommitted changes
   if (hasUncommittedChanges()) {
-    console.error('Error: You have uncommitted changes. Please commit or stash them first.');
+    console.error('❌ Error: You have uncommitted changes. Please commit or stash them first.');
+    console.log('💡 Run: git status');
     process.exit(1);
   }
 
   const currentVersion = getPackageVersion();
-  console.log(`Current version: ${currentVersion}`);
+  console.log(`📦 Current version: ${currentVersion}`);
 
   try {
     // Increment version in package.json
@@ -94,10 +134,14 @@ function main() {
     // Create tag and push
     createAndPushTag(newVersion);
     
-    console.log(`✅ Successfully created and pushed tag v${newVersion}`);
+    console.log(`🎉 Successfully released version ${newVersion}!`);
     console.log('🚀 The GitHub Actions workflow will now handle the NPM publish process.');
   } catch (error) {
-    console.error('❌ Error during release:', error);
+    console.error('💥 Release failed:', error);
+    console.log('\n🔍 Debug info:');
+    console.log('- Check git status:', 'git status');
+    console.log('- Check git remote:', 'git remote -v');
+    console.log('- Check git config:', 'git config user.name && git config user.email');
     process.exit(1);
   }
 }
