@@ -1,6 +1,6 @@
 {
   "name": "@condrovic/ollama-git-commit",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "description": "Enhanced Ollama Git Commit Message Generator - A CLI tool that generates meaningful commit messages using Ollama AI",
   "main": "dist/index.js",
   "type": "module",
