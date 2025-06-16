@@ -29,7 +29,6 @@
     "clean": "rm -rf dist",
     "prepublishOnly": "bun run clean && bun run build && bun run test",
     "release": "bun run scripts/release.ts",
-    "update-version": "bun scripts/update-version.ts",
     "stage": "bun scripts/stage.ts",
     "preversion": "bun run test",
     "postversion": "git push && git push --tags",

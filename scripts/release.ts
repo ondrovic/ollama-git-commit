@@ -16,6 +16,19 @@ function getPackageVersion(): string {
   return packageJson.version;
 }
 
+function incrementVersion(type: 'patch' | 'minor' | 'major' = 'patch'): string {
+  console.log(`Incrementing ${type} version...`);
+  
+  // Use npm version to increment
+  const result = execSync(`npm version ${type} --no-git-tag-version`).toString().trim();
+  
+  // npm version returns the new version with 'v' prefix, remove it
+  const newVersion = result.replace('v', '');
+  console.log(`Version updated to: ${newVersion}`);
+  
+  return newVersion;
+}
+
 function updateChangelog(version: string): void {
   const changelogPath = join(process.cwd(), 'CHANGELOG.md');
   const changelog = readFileSync(changelogPath, 'utf-8');
@@ -38,9 +51,9 @@ function createAndPushTag(version: string): void {
   // Update CHANGELOG.md
   updateChangelog(version);
   
-  // Commit CHANGELOG.md changes
-  execSync('git add CHANGELOG.md');
-  execSync(`git commit -m "chore: update CHANGELOG.md for version ${version}"`);
+  // Stage version changes (no need to sync metadata.ts anymore!)
+  execSync('git add package.json CHANGELOG.md');
+  execSync(`git commit -m "chore: release version ${version}"`);
   
   // Create and push tag
   execSync(`git tag ${tag}`);
@@ -49,6 +62,15 @@ function createAndPushTag(version: string): void {
 }
 
 function main() {
+  // Get version type from command line argument (default: patch)
+  const versionType = (process.argv[2] as 'patch' | 'minor' | 'major') || 'patch';
+  
+  if (!['patch', 'minor', 'major'].includes(versionType)) {
+    console.error('Error: Version type must be patch, minor, or major');
+    console.log('Usage: bun run release [patch|minor|major]');
+    process.exit(1);
+  }
+
   // Check if we're on main branch
   const currentBranch = getCurrentBranch();
   if (currentBranch !== 'main') {
@@ -62,18 +84,22 @@ function main() {
     process.exit(1);
   }
 
-  // Get version from package.json
-  const version = getPackageVersion();
-  console.log(`Creating release for version ${version}`);
+  const currentVersion = getPackageVersion();
+  console.log(`Current version: ${currentVersion}`);
 
   try {
-    createAndPushTag(version);
-    console.log(`Successfully created and pushed tag v${version}`);
-    console.log('The GitHub Actions workflow will now handle the NPM publish process.');
+    // Increment version in package.json
+    const newVersion = incrementVersion(versionType);
+    
+    // Create tag and push
+    createAndPushTag(newVersion);
+    
+    console.log(`✅ Successfully created and pushed tag v${newVersion}`);
+    console.log('🚀 The GitHub Actions workflow will now handle the NPM publish process.');
   } catch (error) {
-    console.error('Error creating or pushing tag:', error);
+    console.error('❌ Error during release:', error);
     process.exit(1);
   }
 }
 
-main(); 
+main();

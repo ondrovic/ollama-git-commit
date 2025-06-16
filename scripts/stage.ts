@@ -14,9 +14,6 @@ try {
   console.log('🔍 Running linting with auto-fix...');
   execSync('bun lint:fix', { stdio: 'inherit' });
   
-  console.log('📦 Running version update...');
-  execSync('bun update-version', { stdio: 'inherit' });
-  
   console.log('📝 Staging all files...');
   execSync('git add -A', { stdio: 'inherit' });
 
