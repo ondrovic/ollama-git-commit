@@ -70,7 +70,7 @@ jobs:
       - name: Run tests
         run: bun run test
 
-      - name: Publish to NPM
+      - name: Publish to NPM (single publish)
         run: npm publish
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
