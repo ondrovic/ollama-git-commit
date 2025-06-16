@@ -1,4 +1,6 @@
 import { execSync } from 'child_process';
+import { ENVIRONMENTAL_VARIABLES } from '../constants/enviornmental';
+import { GitRepositoryError } from '../core/git';
 import { Logger } from './logger';
 
 export function validateNodeVersion(): void {
@@ -6,7 +8,9 @@ export function validateNodeVersion(): void {
   const currentVersion = process.version.slice(1); // Remove 'v' prefix
 
   if (!isVersionCompatible(currentVersion, requiredVersion)) {
-    Logger.error(`Node.js version ${requiredVersion} or higher is required. Current version: ${currentVersion}`);
+    Logger.error(
+      `Node.js version ${requiredVersion} or higher is required. Current version: ${currentVersion}`,
+    );
     Logger.error('Please upgrade Node.js: https://nodejs.org/');
     process.exit(1);
   }
@@ -15,18 +19,29 @@ export function validateNodeVersion(): void {
 }
 
 export function validateGitRepository(directory: string = process.cwd()): void {
-   console.log(directory)
   try {
     execSync('git rev-parse --git-dir', { stdio: 'pipe', cwd: directory });
     Logger.debug('Git repository detected ✓');
   } catch {
-    Logger.error('Not a git repository');
-    Logger.error('Please run this command from within a git repository');
-    process.exit(1);
+    throw new GitRepositoryError('Not a git repository');
   }
 }
 
-export function validateGitConfig(directory: string = process.cwd()): { name?: string | undefined; email?: string | undefined; warnings: string[] } {
+/**
+ * Validates Git configuration in the specified directory.
+ * Checks for user.name and user.email configuration.
+ *
+ * @param directory - The directory to check Git config in (defaults to current working directory)
+ * @returns Object containing:
+ * - name: Git user.name if configured
+ * - email: Git user.email if configured
+ * - warnings: Array of warning messages for missing configurations
+ */
+export function validateGitConfig(directory: string = process.cwd()): {
+  name?: string | undefined;
+  email?: string | undefined;
+  warnings: string[];
+} {
   const warnings: string[] = [];
   let name: string | undefined;
   let email: string | undefined;
@@ -34,13 +49,17 @@ export function validateGitConfig(directory: string = process.cwd()): { name?: s
   try {
     name = execSync('git config user.name', { encoding: 'utf8', cwd: directory }).trim();
   } catch {
-    warnings.push('Git user.name is not configured. Run: git config --global user.name "Your Name"');
+    warnings.push(
+      'Git user.name is not configured. Run: git config --global user.name "Your Name"',
+    );
   }
 
   try {
     email = execSync('git config user.email', { encoding: 'utf8', cwd: directory }).trim();
   } catch {
-    warnings.push('Git user.email is not configured. Run: git config --global user.email "your.email@example.com"');
+    warnings.push(
+      'Git user.email is not configured. Run: git config --global user.email "your.email@example.com"',
+    );
   }
 
   return { name, email, warnings };
@@ -74,6 +93,14 @@ export function validatePromptFile(filePath: string): { valid: boolean; error?: 
   return { valid: true };
 }
 
+/**
+ * Compares two version strings to check if the current version is compatible with the required version.
+ * Uses semantic versioning comparison (e.g. '1.2.3').
+ *
+ * @param current - The current version string
+ * @param required - The required version string
+ * @returns true if current version is greater than or equal to required version
+ */
 export function isVersionCompatible(current: string, required: string): boolean {
   const currentParts = current.split('.').map(Number);
   const requiredParts = required.split('.').map(Number);
@@ -93,15 +120,23 @@ export function isVersionCompatible(current: string, required: string): boolean 
   return true; // Equal versions
 }
 
-export function validateEnvironment(directory: string = process.cwd()): { valid: boolean; errors: string[]; warnings: string[] } {
+export function validateEnvironment(directory: string = process.cwd()): {
+  valid: boolean;
+  errors: string[];
+  warnings: string[];
+} {
   const errors: string[] = [];
   const warnings: string[] = [];
 
   // Check Node.js version
   try {
     validateNodeVersion();
-  } catch (error: any) {
-    errors.push(error.message);
+  } catch (error: unknown) {
+    if (typeof error === 'object' && error && 'message' in error) {
+      errors.push(`Node.js validation failed: ${(error as { message: string }).message}`);
+    } else {
+      errors.push(`Node.js validation failed: ${String(error)}`);
+    }
   }
 
   // Check Git availability
@@ -114,8 +149,12 @@ export function validateEnvironment(directory: string = process.cwd()): { valid:
   // Check if in git repository
   try {
     validateGitRepository(directory);
-  } catch (error: any) {
-    errors.push(error.message);
+  } catch (error: unknown) {
+    if (typeof error === 'object' && error && 'message' in error) {
+      errors.push((error as { message: string }).message);
+    } else {
+      errors.push(String(error));
+    }
   }
 
   // Check Git configuration
@@ -132,6 +171,11 @@ export function validateEnvironment(directory: string = process.cwd()): { valid:
     warnings.push('HTTP client not available');
   }
 
+  // Check for OLLAMA_HOST
+  if (!process.env[ENVIRONMENTAL_VARIABLES.OLLAMA_HOST]) {
+    errors.push('Ollama host is not configured');
+  }
+
   return {
     valid: errors.length === 0,
     errors,
@@ -139,13 +183,13 @@ export function validateEnvironment(directory: string = process.cwd()): { valid:
   };
 }
 
-export function sanitizeInput(input: string, maxLength: number = 1000): string {
+export function sanitizeInput(input: string, maxLength = 1000): string {
   // Remove null bytes and control characters except newlines and tabs
-  let sanitized = input.replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, '');
-  
+  let sanitized = input.replace(/[^\x20-\x7E\n\t]/g, '');
+
   // Limit length
   if (sanitized.length > maxLength) {
-    sanitized = sanitized.substring(0, maxLength) + '...';
+    sanitized = `${sanitized.substring(0, maxLength)}...`;
   }
 
   return sanitized;

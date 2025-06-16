@@ -1,0 +1,17 @@
+#!/usr/bin/env sh
+
+echo "Running pre-stage checks..."
+
+# Run version update
+bun update-version
+
+# Run formatting
+bun format
+
+# Run linting with auto-fix
+bun lint:fix
+
+# Stage all files
+git add -A
+
+echo "Pre-stage checks completed!" 

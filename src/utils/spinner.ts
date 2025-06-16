@@ -1,11 +1,13 @@
+import { SPINNER_FRAMES } from '../constants/ui';
+
 export class Spinner {
   private interval: NodeJS.Timeout | null = null;
   private isSpinning = false;
-  private readonly frames = ['⠋', '⠙', '⠹', '⠸', '⠼', '⠴', '⠦', '⠧', '⠇', '⠏'];
+  private readonly frames = SPINNER_FRAMES;
   private currentFrame = 0;
   private message = '';
 
-  start(message: string = 'Loading'): void {
+  start(message = 'Loading'): void {
     if (this.isSpinning) {
       this.stop();
     }
@@ -80,7 +82,10 @@ export class Spinner {
 }
 
 export class MultiSpinner {
-  private spinners: Map<string, { spinner: Spinner; status: 'spinning' | 'success' | 'error' | 'warning' }> = new Map();
+  private spinners: Map<
+    string,
+    { spinner: Spinner; status: 'spinning' | 'success' | 'error' | 'warning' }
+  > = new Map();
   private completed = 0;
   private total = 0;
 
@@ -88,7 +93,7 @@ export class MultiSpinner {
     const spinner = new Spinner();
     this.spinners.set(id, { spinner, status: 'spinning' });
     this.total++;
-    
+
     spinner.start(message);
   }
 

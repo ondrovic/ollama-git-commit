@@ -1,6 +1,7 @@
 import { execSync } from 'child_process';
+import type { GitChanges } from '../types';
 import { Logger } from '../utils/logger';
-import type { GitChanges } from '../index';
+import { IGitService, ILogger } from './interfaces';
 
 // Custom error types
 export class GitNoChangesError extends Error {
@@ -24,30 +25,37 @@ export class GitCommandError extends Error {
   }
 }
 
-export class GitService {
+export class GitService implements IGitService {
   private directory: string;
-  constructor(directory: string = process.cwd()) {
+  private logger: ILogger;
+
+  constructor(directory: string = process.cwd(), logger: ILogger = Logger.getDefault()) {
     this.directory = directory;
+    this.logger = logger;
   }
 
-  private execCommand(command: string, options: { encoding?: BufferEncoding; cwd?: string } = {}): string {
+  public execCommand(command: string): string {
     try {
-      return execSync(command, {
-        encoding: 'utf8',
-        stdio: ['pipe', 'pipe', 'pipe'],
-        cwd: this.directory,
-        ...options,
-      }).toString().trim();
-    } catch (error: any) {
-      throw new GitCommandError(`Git command failed: ${command}\n${error.message}`);
+      return execSync(command, { cwd: this.directory }).toString().trim();
+    } catch (error: unknown) {
+      if (typeof error === 'object' && error && 'message' in error) {
+        throw new GitCommandError(
+          `Failed to execute git command: ${(error as { message: string }).message}`,
+        );
+      } else {
+        throw new GitCommandError(`Failed to execute git command: ${String(error)}`);
+      }
     }
   }
 
   isGitRepository(): boolean {
     try {
       this.execCommand('git rev-parse --git-dir');
+      this.logger.debug(`Git repository check for ${this.directory}: Success`);
       return true;
-    } catch {
+    } catch (error) {
+      this.logger.debug(`Git repository check for ${this.directory}: Failed`);
+      this.logger.debug(`Error: ${error}`);
       return false;
     }
   }
@@ -60,11 +68,27 @@ export class GitService {
     let diff = '';
     let staged = true;
 
+    // Run linters first if autoStage is true
+    if (autoStage) {
+      try {
+        // Run lint-staged to fix and stage any linting issues
+        execSync('npx lint-staged', { cwd: this.directory });
+      } catch {
+        this.logger.warn('Linting failed, continuing with commit...');
+      }
+    }
+
     // First check for staged changes
     try {
       diff = this.execCommand('git diff --cached');
-    } catch (error: any) {
-      throw new GitCommandError(`Failed to get staged changes: ${error.message}`);
+    } catch (error: unknown) {
+      if (typeof error === 'object' && error && 'message' in error) {
+        throw new GitCommandError(
+          `Failed to get staged changes: ${(error as { message: string }).message}`,
+        );
+      } else {
+        throw new GitCommandError(`Failed to get staged changes: ${String(error)}`);
+      }
     }
 
     if (!diff.trim()) {
@@ -72,8 +96,14 @@ export class GitService {
       let unstagedDiff = '';
       try {
         unstagedDiff = this.execCommand('git diff');
-      } catch (error: any) {
-        throw new GitCommandError(`Failed to check unstaged changes: ${error.message}`);
+      } catch (error: unknown) {
+        if (typeof error === 'object' && error && 'message' in error) {
+          throw new GitCommandError(
+            `Failed to check unstaged changes: ${(error as { message: string }).message}`,
+          );
+        } else {
+          throw new GitCommandError(`Failed to check unstaged changes: ${String(error)}`);
+        }
       }
 
       if (!unstagedDiff.trim()) {
@@ -84,21 +114,27 @@ export class GitService {
       // We have unstaged changes - decide what to do with them
       if (autoStage) {
         if (verbose) {
-          Logger.info('No staged changes found, staging all changes...');
+          this.logger.info('No staged changes found, staging all changes...');
         }
         try {
           this.execCommand('git add -A');
           diff = this.execCommand('git diff --cached');
           staged = true;
-        } catch (error: any) {
-          throw new GitCommandError(`Failed to stage changes: ${error.message}`);
+        } catch (error: unknown) {
+          if (typeof error === 'object' && error && 'message' in error) {
+            throw new GitCommandError(
+              `Failed to stage changes: ${(error as { message: string }).message}`,
+            );
+          } else {
+            throw new GitCommandError(`Failed to stage changes: ${String(error)}`);
+          }
         }
       } else {
         diff = unstagedDiff;
         staged = false;
         if (verbose) {
           Logger.info('Using unstaged changes for commit message generation');
-          Logger.warn('Note: You\'ll need to stage these changes before committing');
+          Logger.warn("Note: You'll need to stage these changes before committing");
         }
       }
     } else if (verbose) {
@@ -112,7 +148,7 @@ export class GitService {
 
     // Get stats
     const stats = this.getChangeStats(staged);
-    
+
     if (verbose && stats.files > 0) {
       Logger.info('Change Statistics:');
       console.log(`   Files changed: ${stats.files}`);
@@ -127,22 +163,26 @@ export class GitService {
     return { diff, staged, stats, filesInfo };
   }
 
-  private getChangeStats(staged: boolean): { files: number; insertions: number; deletions: number } {
+  private getChangeStats(staged: boolean): {
+    files: number;
+    insertions: number;
+    deletions: number;
+  } {
     const stats = { files: 0, insertions: 0, deletions: 0 };
-    
+
     try {
       const statsCommand = staged ? 'git diff --cached --stat' : 'git diff --stat';
       const statsOutput = this.execCommand(statsCommand);
-      
+
       if (statsOutput) {
         const lines = statsOutput.split('\n');
         stats.files = Math.max(0, lines.length - 1);
-        
+
         const summaryLine = lines[lines.length - 1];
         if (summaryLine) {
           const insertMatch = summaryLine.match(/(\d+) insertion/);
           const deleteMatch = summaryLine.match(/(\d+) deletion/);
-          
+
           stats.insertions = insertMatch?.[1] ? parseInt(insertMatch[1], 10) : 0;
           stats.deletions = deleteMatch?.[1] ? parseInt(deleteMatch[1], 10) : 0;
         }
@@ -158,7 +198,7 @@ export class GitService {
     try {
       const command = staged ? 'git diff --cached --name-status' : 'git diff --name-status';
       const output = this.execCommand(command);
-      
+
       if (!output.trim()) {
         return '📁 0 files changed';
       }
@@ -169,15 +209,25 @@ export class GitService {
       lines.forEach(line => {
         const [status, ...pathParts] = line.split('\t');
         const path = pathParts.join('\t'); // Handle paths with tabs
-        
+
         let action = 'modified';
         if (status) {
           switch (status.charAt(0)) {
-            case 'A': action = 'added'; break;
-            case 'D': action = 'deleted'; break;
-            case 'M': action = 'modified'; break;
-            case 'R': action = 'renamed'; break;
-            case 'C': action = 'copied'; break;
+            case 'A':
+              action = 'added';
+              break;
+            case 'D':
+              action = 'deleted';
+              break;
+            case 'M':
+              action = 'modified';
+              break;
+            case 'R':
+              action = 'renamed';
+              break;
+            case 'C':
+              action = 'copied';
+              break;
           }
         }
 
@@ -187,12 +237,14 @@ export class GitService {
           try {
             const fileCommand = staged ? `git diff --cached "${path}"` : `git diff "${path}"`;
             const fileDiff = this.execCommand(fileCommand);
-            
+
             if (fileDiff) {
               const additions = (fileDiff.match(/^\+/gm) || []).length;
-              const deletions = (fileDiff.match(/^\-/gm) || []).length;
-              const functionsAdded = (fileDiff.match(/^\+.*(function|def |const |let |var |interface |class )/gm) || []).length;
-              
+              const deletions = (fileDiff.match(/^-/gm) || []).length;
+              const functionsAdded = (
+                fileDiff.match(/^\+.*(function|def |const |let |var |interface |class )/gm) || []
+              ).length;
+
               changeSummary = `(+${additions} -${deletions}`;
               if (functionsAdded > 0) {
                 changeSummary += `, ${functionsAdded} new functions/vars`;
@@ -211,12 +263,13 @@ export class GitService {
           try {
             const fileCommand = staged ? `git diff --cached "${path}"` : `git diff "${path}"`;
             const fileDiff = this.execCommand(fileCommand);
-            
+
             if (fileDiff) {
-              const keyChanges = fileDiff.split('\n')
+              const keyChanges = fileDiff
+                .split('\n')
                 .filter(line => line.startsWith('+') && !line.startsWith('+++'))
                 .slice(0, 3);
-              
+
               if (keyChanges.length > 0) {
                 detailedInfo += '   Key additions:\n';
                 keyChanges.forEach(line => {
@@ -231,8 +284,12 @@ export class GitService {
       });
 
       return `📁 ${lines.length} files changed:\n${detailedInfo}`;
-    } catch (error: any) {
-      return `📁 Unable to analyze file changes: ${error.message}`;
+    } catch (error: unknown) {
+      if (typeof error === 'object' && error && 'message' in error) {
+        return `📁 Unable to analyze file changes: ${(error as { message: string }).message}`;
+      } else {
+        return `📁 Unable to analyze file changes: ${String(error)}`;
+      }
     }
   }
 

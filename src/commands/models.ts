@@ -1,18 +1,30 @@
-import { Logger } from '../utils/logger';
+import { MODELS } from '../constants/models';
+import { TROUBLE_SHOOTING } from '../constants/troubleshooting';
+import { getConfig } from '../core/config';
+import { ILogger, IOllamaService } from '../core/interfaces';
+import { OllamaService } from '../core/ollama';
+import type { ModelInfo } from '../types';
 import { formatFileSize } from '../utils/formatFileSize';
-import type { ModelInfo } from '../index';
+import { Logger } from '../utils/logger';
+import { normalizeHost } from '../utils/url';
 
 export class ModelsCommand {
-  async listModels(host?: string, verbose: boolean = false): Promise<void> {
-    const ollamaHost = host || process.env.OLLAMA_HOST || 'http://192.168.0.3:11434';
-    
-    if (verbose) {
-      Logger.info(`Fetching available models from ${ollamaHost}...`);
-    }
+  private logger: ILogger;
+  private ollamaService: IOllamaService;
+
+  constructor(logger: ILogger = Logger.getDefault(), ollamaService?: IOllamaService) {
+    this.logger = logger;
+    this.ollamaService = ollamaService || new OllamaService(this.logger);
+  }
+
+  async listModels(host?: string, verbose = false): Promise<void> {
+    const config = await getConfig();
+    const ollamaHost = normalizeHost(host || config.host);
+    const timeouts = config.timeouts;
 
     try {
       const response = await fetch(`${ollamaHost}/api/tags`, {
-        signal: AbortSignal.timeout(15000),
+        signal: AbortSignal.timeout(timeouts.connection),
       });
 
       if (!response.ok) {
@@ -20,30 +32,63 @@ export class ModelsCommand {
       }
 
       const data = await response.json();
-
-      if (data.models && Array.isArray(data.models)) {
-        console.log('Available models:');
-        data.models.forEach((model: ModelInfo) => {
-          // const size = model.size ? `(${(model.size / (1024 * 1024)).toFixed(1)} MB)` : '';
-          const size = model.size ? formatFileSize(model.size) : 'n/a';
-          const family = model.details?.family ? ` [${model.details.family}]` : '';
-          console.log(`  - ${model.name} ${size}${family}`);
-        });
-      } else {
-        console.log('No models found');
+      if (!data.models || !Array.isArray(data.models)) {
+        throw new Error('Invalid response from Ollama server');
       }
-    } catch (error: any) {
-      Logger.error(`Cannot fetch models from ${ollamaHost}`);
-      Logger.error(`Error: ${error.message}`);
+
+      // Pretty output: table with model name, size, family, and star for current model
+      if (verbose) {
+        console.log(
+          '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━',
+        );
+        console.log(`🔧 Current configured model: ${config.model}`);
+        console.log(`🌐 Ollama host: ${config.host}`);
+        console.log(
+          '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━',
+        );
+      } else {
+        console.log(
+          '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━',
+        );
+      }
+      console.log('Available models:');
+      console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+      data.models.forEach((model: ModelInfo) => {
+        const size = model.size ? formatFileSize(model.size) : 'n/a';
+        const family = model.details?.family ? ` [${model.details.family}]` : '';
+        const currentModel = model.name === config.model ? ' ⭐ (current)' : '';
+        console.log(`  📦 ${model.name} ${size}${family}${currentModel}`);
+      });
+      console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+      console.log(`📊 Total: ${data.models.length} models available`);
+    } catch (error: unknown) {
+      this.logger.error(`Cannot fetch models from ${ollamaHost}`);
+      if (typeof error === 'object' && error && 'message' in error) {
+        this.logger.error(`Error: ${(error as { message: string }).message}`);
+      } else {
+        this.logger.error(`Error: ${String(error)}`);
+      }
+      // Provide helpful troubleshooting
+      this.logger.info(TROUBLE_SHOOTING.GENERAL);
+      if (
+        typeof error === 'object' &&
+        error &&
+        'name' in error &&
+        (error as { name: string }).name === 'TimeoutError'
+      ) {
+        console.log('   5. Increase timeout in config file');
+      }
     }
   }
 
-  async getDefaultModel(host?: string, verbose: boolean = false): Promise<string | null> {
-    const ollamaHost = host || process.env.OLLAMA_HOST || 'http://192.168.0.3:11434';
-    
+  async getDefaultModel(host?: string, verbose = false): Promise<string | null> {
+    const config = await getConfig();
+    const ollamaHost = normalizeHost(host || config.host);
+    const timeouts = config.timeouts;
+
     try {
       const response = await fetch(`${ollamaHost}/api/tags`, {
-        signal: AbortSignal.timeout(15000),
+        signal: AbortSignal.timeout(timeouts.connection),
       });
 
       if (!response.ok) {
@@ -56,17 +101,36 @@ export class ModelsCommand {
         return null;
       }
 
-      const preferred = ['mistral:7b-instruct','llama3:latest', 'llama3.2', 'llama2', 'codellama', 'mistral', 'qwen'];
+      // Get preferred models from config or use sensible defaults
+      const preferred = this.getPreferredModels();
       const modelNames = data.models.map((m: ModelInfo) => m.name);
 
-      // Try to find a preferred model
+      if (verbose) {
+        this.logger.debug(`Available models: ${modelNames.join(', ')}`);
+        this.logger.debug(`Preferred models (in order): ${preferred.join(', ')}`);
+      }
+
+      // Try to find a preferred model (exact match first)
+      for (const pref of preferred) {
+        if (modelNames.includes(pref)) {
+          if (verbose) {
+            this.logger.info(`Auto-selected model (exact match): ${pref}`);
+          }
+          return pref;
+        }
+      }
+
+      // Try partial matches
       for (const pref of preferred) {
         for (const name of modelNames) {
           const prefBase = pref.split(':')[0];
-          if (prefBase && (name.toLowerCase().includes(pref.toLowerCase()) || 
-              name.toLowerCase().includes(prefBase.toLowerCase()))) {
+          if (
+            prefBase &&
+            (name.toLowerCase().includes(pref.toLowerCase()) ||
+              name.toLowerCase().includes(prefBase.toLowerCase()))
+          ) {
             if (verbose) {
-              Logger.info(`Auto-selected model: ${name}`);
+              this.logger.info(`Auto-selected model (partial match): ${name}`);
             }
             return name;
           }
@@ -76,29 +140,36 @@ export class ModelsCommand {
       // If no preferred model found, use the first available
       if (modelNames.length > 0) {
         if (verbose) {
-          Logger.info(`Auto-selected model: ${modelNames[0]}`);
+          this.logger.info(`Auto-selected model (first available): ${modelNames[0]}`);
         }
         return modelNames[0];
       }
 
       return null;
-    } catch (error: any) {
+    } catch (error: unknown) {
       if (verbose) {
-        Logger.error(`Error getting default model: ${error.message}`);
+        if (typeof error === 'object' && error && 'message' in error) {
+          this.logger.error(
+            `Error getting default model: ${(error as { message: string }).message}`,
+          );
+        } else {
+          this.logger.error(`Error getting default model: ${String(error)}`);
+        }
       }
       return null;
     }
   }
 
+  private getPreferredModels(): string[] {
+    return [...MODELS.PREFERRED] as string[];
+  }
+
   async handleModelError(model: string, host?: string): Promise<void> {
-    const ollamaHost = host || process.env.OLLAMA_HOST || 'http://192.168.0.3:11434';
-    
-    Logger.error(`Model '${model}' not found on Ollama server`);
-    console.log('');
-    console.log('🔧 To fix this issue:');
-    console.log(`   1. Install the model: ollama pull ${model}`);
-    console.log('   2. Or choose from available models:');
-    console.log('');
+    const config = await getConfig();
+    const ollamaHost = normalizeHost(host || config.host);
+
+    this.logger.error(`Model '${model}' not found on Ollama server`);
+    this.logger.info(TROUBLE_SHOOTING.MODEL_NOT_FOUND(model));
 
     await this.listModels(ollamaHost, true);
 
@@ -106,13 +177,157 @@ export class ModelsCommand {
     console.log('   3. Or let the script auto-select a model:');
     const autoModel = await this.getDefaultModel(ollamaHost);
     if (autoModel) {
-      console.log(`      Suggested: ollama-commit --model ${autoModel}`);
+      console.log(`      💡 Suggested: ollama-git-commit --model ${autoModel} -d /path/to/repo`);
+      console.log('      💡 Or set in config: ollama-git-commit --config-show');
     }
 
-    console.log('');
-    console.log('💡 Popular models for code tasks:');
-    console.log('   ollama pull llama3.2');
-    console.log('   ollama pull codellama');
-    console.log('   ollama pull mistral');
+    // Popular models
+    console.log(MODELS.POPULAR);
+
+    // Configuration options
+    console.log(MODELS.CONFIGURATION);
+  }
+
+  async validateModel(model: string, host?: string): Promise<boolean> {
+    const config = await getConfig();
+    const ollamaHost = normalizeHost(host || config.host);
+    const timeouts = config.timeouts;
+
+    try {
+      const response = await fetch(`${ollamaHost}/api/tags`, {
+        signal: AbortSignal.timeout(timeouts.connection),
+      });
+
+      if (!response.ok) {
+        return false;
+      }
+
+      const data = await response.json();
+
+      if (!data.models || !Array.isArray(data.models)) {
+        return false;
+      }
+
+      return data.models.some((m: ModelInfo) => m.name === model);
+    } catch {
+      return false;
+    }
+  }
+
+  async getModelInfo(model: string, host?: string): Promise<ModelInfo | null> {
+    const config = await getConfig();
+    const ollamaHost = normalizeHost(host || config.host);
+    const timeouts = config.timeouts;
+
+    try {
+      const response = await fetch(`${ollamaHost}/api/tags`, {
+        signal: AbortSignal.timeout(timeouts.connection),
+      });
+
+      if (!response.ok) {
+        return null;
+      }
+
+      const data = await response.json();
+
+      if (!data.models || !Array.isArray(data.models)) {
+        return null;
+      }
+
+      return data.models.find((m: ModelInfo) => m.name === model) || null;
+    } catch {
+      return null;
+    }
+  }
+
+  async suggestModel(
+    useCase: 'speed' | 'quality' | 'balanced' = 'balanced',
+    host?: string,
+  ): Promise<string | null> {
+    const config = await getConfig();
+    const ollamaHost = normalizeHost(host || config.host);
+
+    try {
+      const response = await fetch(`${ollamaHost}/api/tags`, {
+        signal: AbortSignal.timeout(config.timeouts.connection),
+      });
+
+      if (!response.ok) {
+        return null;
+      }
+
+      const data = await response.json();
+
+      if (!data.models || !Array.isArray(data.models)) {
+        return null;
+      }
+
+      const availableModels = data.models.map((m: ModelInfo) => m.name);
+
+      // Model recommendations based on use case
+      const recommendations = {
+        speed: ['llama3.2:1b', 'phi3:mini', 'gemma2:2b', 'qwen2.5:1.5b'],
+        quality: ['llama3.2:70b', 'codellama:34b', 'qwen2.5:72b', 'mistral:8x7b'],
+        balanced: ['llama3.2:latest', 'llama3.2:8b', 'codellama:7b', 'qwen2.5:7b', 'mistral:7b'],
+      };
+
+      // Find the first available model for the use case
+      for (const model of recommendations[useCase]) {
+        if (availableModels.includes(model)) {
+          return model;
+        }
+      }
+
+      // Fallback to any available model
+      return availableModels[0] || null;
+    } catch {
+      return null;
+    }
+  }
+
+  async getModelStats(
+    host?: string,
+  ): Promise<{ total: number; byFamily: Record<string, number>; totalSize: number }> {
+    const config = await getConfig();
+    const ollamaHost = normalizeHost(host || config.host);
+    const timeouts = config.timeouts;
+
+    const stats = {
+      total: 0,
+      byFamily: {} as Record<string, number>,
+      totalSize: 0,
+    };
+
+    try {
+      const response = await fetch(`${ollamaHost}/api/tags`, {
+        signal: AbortSignal.timeout(timeouts.connection),
+      });
+
+      if (!response.ok) {
+        return stats;
+      }
+
+      const data = await response.json();
+
+      if (!data.models || !Array.isArray(data.models)) {
+        return stats;
+      }
+
+      stats.total = data.models.length;
+
+      data.models.forEach((model: ModelInfo) => {
+        if (model.details?.family) {
+          stats.byFamily[model.details.family] = (stats.byFamily[model.details.family] || 0) + 1;
+        }
+
+        if (model.size) {
+          stats.totalSize += model.size;
+        }
+      });
+
+      return stats;
+    } catch {
+      return stats;
+    }
   }
 }

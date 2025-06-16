@@ -9,29 +9,36 @@ interface ClipboardTool {
 }
 
 const clipboardTools: ClipboardTool[] = [
-  { 
-    cmd: 'pbcopy', 
+  {
+    cmd: 'pbcopy',
     name: 'macOS',
-    test: async () => process.platform === 'darwin'
+    test: async () => process.platform === 'darwin',
   },
-  { 
-    cmd: 'xclip', 
-    args: ['-selection', 'clipboard'], 
+  {
+    cmd: 'xclip',
+    args: ['-selection', 'clipboard'],
     name: 'Linux (X11)',
-    test: async () => process.platform === 'linux' && process.env.DISPLAY !== undefined
+    test: async () => process.platform === 'linux' && process.env.DISPLAY !== undefined,
   },
-  { 
-    cmd: 'wl-copy', 
+  {
+    cmd: 'wl-copy',
     name: 'Linux (Wayland)',
-    test: async () => process.platform === 'linux' && process.env.WAYLAND_DISPLAY !== undefined
+    test: async () => process.platform === 'linux' && process.env.WAYLAND_DISPLAY !== undefined,
   },
-  { 
-    cmd: 'clip', 
+  {
+    cmd: 'clip',
     name: 'Windows',
-    test: async () => process.platform === 'win32'
+    test: async () => process.platform === 'win32',
   },
 ];
 
+/**
+ * Attempts to copy text to the system clipboard using available clipboard tools.
+ * Supports multiple platforms (macOS, Linux X11, Linux Wayland, Windows).
+ *
+ * @param text - The text to copy to clipboard
+ * @throws Will log warnings/errors if no clipboard tool is available
+ */
 export async function copyToClipboard(text: string): Promise<void> {
   if (!text || text.trim().length === 0) {
     Logger.warn('No text to copy to clipboard');
@@ -61,24 +68,24 @@ export async function copyToClipboard(text: string): Promise<void> {
 }
 
 async function tryClipboardTool(tool: ClipboardTool, text: string): Promise<boolean> {
-  return new Promise((resolve) => {
+  return new Promise(resolve => {
     try {
-      const proc = spawn(tool.cmd, tool.args || [], { 
-        stdio: ['pipe', 'pipe', 'pipe'] 
+      const proc = spawn(tool.cmd, tool.args || [], {
+        stdio: ['pipe', 'pipe', 'pipe'],
       });
 
       let errorOutput = '';
 
-      proc.stderr.on('data', (data) => {
+      proc.stderr.on('data', data => {
         errorOutput += data.toString();
       });
 
-      proc.on('error', (error) => {
+      proc.on('error', error => {
         Logger.debug(`${tool.cmd} error: ${error.message}`);
         resolve(false);
       });
 
-      proc.on('close', (code) => {
+      proc.on('close', code => {
         if (code === 0) {
           resolve(true);
         } else {
@@ -101,7 +108,6 @@ async function tryClipboardTool(tool: ClipboardTool, text: string): Promise<bool
       // Write the text to the process
       proc.stdin.write(text);
       proc.stdin.end();
-
     } catch (error) {
       Logger.debug(`Exception with ${tool.cmd}: ${error}`);
       resolve(false);
@@ -128,6 +134,11 @@ export async function getClipboardCapabilities(): Promise<string[]> {
   return available;
 }
 
+/**
+ * Checks if the system has clipboard support by testing available clipboard tools.
+ *
+ * @returns Promise resolving to true if any clipboard tool is available
+ */
 export async function hasClipboardSupport(): Promise<boolean> {
   const capabilities = await getClipboardCapabilities();
   return capabilities.length > 0;

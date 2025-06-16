@@ -1,53 +1,64 @@
-type LogLevel = 'info' | 'warn' | 'error' | 'success' | 'debug';
+import { EMOJIS, SIZE_UNITS } from '../constants/ui';
+import { ILogger } from '../core/interfaces';
 
-export class Logger {
-  private static verbose = false;
-  private static debugMode = false;
+export type LogLevel = 'info' | 'warn' | 'error' | 'success' | 'debug';
+export type LogArgs = unknown[];
 
-  static setVerbose(enabled: boolean): void {
+export class Logger implements ILogger {
+  private verbose = false;
+  private debugMode = false;
+
+  // Static default instance for global use
+  private static defaultInstance: Logger = new Logger();
+
+  static getDefault(): Logger {
+    return Logger.defaultInstance;
+  }
+
+  setVerbose(enabled: boolean): void {
     this.verbose = enabled;
   }
 
-  static setDebug(enabled: boolean): void {
+  setDebug(enabled: boolean): void {
     this.debugMode = enabled;
     if (enabled) {
       this.verbose = true;
     }
   }
 
-  static isVerbose(): boolean {
+  isVerbose(): boolean {
     return this.verbose;
   }
 
-  static isDebug(): boolean {
+  isDebug(): boolean {
     return this.debugMode;
   }
 
-  static info(message: string, ...args: any[]): void {
+  info(message: string, ...args: LogArgs): void {
     if (this.verbose) {
-      console.log(`🔍 ${message}`, ...args);
+      console.info(`${EMOJIS.INFO} ${message}`, ...args);
     }
   }
 
-  static success(message: string, ...args: any[]): void {
-    console.log(`✅ ${message}`, ...args);
+  success(message: string, ...args: LogArgs): void {
+    console.log(`${EMOJIS.SUCCESS} ${message}`, ...args);
   }
 
-  static warn(message: string, ...args: any[]): void {
-    console.log(`⚠️  ${message}`, ...args);
+  warn(message: string, ...args: LogArgs): void {
+    console.warn(`${EMOJIS.WARNING} ${message}`, ...args);
   }
 
-  static error(message: string, ...args: any[]): void {
-    console.error(`❌ ${message}`, ...args);
+  error(message: string, ...args: LogArgs): void {
+    console.error(`${EMOJIS.ERROR} ${message}`, ...args);
   }
 
-  static debug(message: string, ...args: any[]): void {
+  debug(message: string, ...args: LogArgs): void {
     if (this.debugMode) {
       console.log(`🐛 ${message}`, ...args);
     }
   }
 
-  static log(level: LogLevel, message: string, ...args: any[]): void {
+  log(level: LogLevel, message: string, ...args: LogArgs): void {
     switch (level) {
       case 'info':
         this.info(message, ...args);
@@ -69,41 +80,37 @@ export class Logger {
     }
   }
 
-  static formatBytes(bytes: number): string {
-    const units = ['B', 'KB', 'MB', 'GB'];
-    let size = bytes;
-    let unitIndex = 0;
-
-    while (size >= 1024 && unitIndex < units.length - 1) {
-      size /= 1024;
-      unitIndex++;
-    }
-
-    return `${size.toFixed(1)} ${units[unitIndex]}`;
+  formatBytes(bytes: number): string {
+    if (bytes === 0) return '0 B';
+    const k = 1024;
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    const size = bytes / Math.pow(k, i);
+    const formattedSize = size < 10 ? size.toFixed(1) : Math.round(size).toString();
+    return `${formattedSize} ${SIZE_UNITS[i]}`;
   }
 
-  static formatDuration(ms: number): string {
+  formatDuration(ms: number): string {
     if (ms < 1000) {
       return `${ms}ms`;
     }
-    
+
     const seconds = Math.floor(ms / 1000);
     const minutes = Math.floor(seconds / 60);
-    
+
     if (minutes > 0) {
       return `${minutes}m ${seconds % 60}s`;
     }
-    
+
     return `${seconds}s`;
   }
 
-  static table(data: Record<string, any>[]): void {
+  table(data: Record<string, unknown>[]): void {
     if (this.verbose) {
       console.table(data);
     }
   }
 
-  static group(label: string, fn: () => void): void {
+  group(label: string, fn: () => void): void {
     if (this.verbose) {
       console.group(`📋 ${label}`);
       fn();
@@ -113,15 +120,65 @@ export class Logger {
     }
   }
 
-  static time(label: string): void {
+  time(label: string): void {
     if (this.debugMode) {
       console.time(label);
     }
   }
 
-  static timeEnd(label: string): void {
+  timeEnd(label: string): void {
     if (this.debugMode) {
       console.timeEnd(label);
     }
+  }
+
+  // --- Static proxies for backward compatibility ---
+  static setVerbose(enabled: boolean): void {
+    Logger.getDefault().setVerbose(enabled);
+  }
+  static setDebug(enabled: boolean): void {
+    Logger.getDefault().setDebug(enabled);
+  }
+  static isVerbose(): boolean {
+    return Logger.getDefault().isVerbose();
+  }
+  static isDebug(): boolean {
+    return Logger.getDefault().isDebug();
+  }
+  static info(message: string, ...args: LogArgs): void {
+    Logger.getDefault().info(message, ...args);
+  }
+  static success(message: string, ...args: LogArgs): void {
+    Logger.getDefault().success(message, ...args);
+  }
+  static warn(message: string, ...args: LogArgs): void {
+    Logger.getDefault().warn(message, ...args);
+  }
+  static error(message: string, ...args: LogArgs): void {
+    Logger.getDefault().error(message, ...args);
+  }
+  static debug(message: string, ...args: LogArgs): void {
+    Logger.getDefault().debug(message, ...args);
+  }
+  static log(level: LogLevel, message: string, ...args: LogArgs): void {
+    Logger.getDefault().log(level, message, ...args);
+  }
+  static formatBytes(bytes: number): string {
+    return Logger.getDefault().formatBytes(bytes);
+  }
+  static formatDuration(ms: number): string {
+    return Logger.getDefault().formatDuration(ms);
+  }
+  static table(data: Record<string, unknown>[]): void {
+    Logger.getDefault().table(data);
+  }
+  static group(label: string, fn: () => void): void {
+    Logger.getDefault().group(label, fn);
+  }
+  static time(label: string): void {
+    Logger.getDefault().time(label);
+  }
+  static timeEnd(label: string): void {
+    Logger.getDefault().timeEnd(label);
   }
 }

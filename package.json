@@ -1,32 +1,39 @@
 {
-  "name": "@ondrovic/ollama-git-commit",
-  "version": "1.0.0",
+  "name": "@condrovic/ollama-git-commit",
+  "version": "1.0.1",
   "description": "Enhanced Ollama Git Commit Message Generator - A CLI tool that generates meaningful commit messages using Ollama AI",
   "main": "dist/index.js",
   "type": "module",
   "bin": {
-    "ollama-git-commit": "./dist/cli.js"
+    "ollama-git-commit": "dist/cli.js"
   },
   "files": [
     "dist/**/*",
     "README.md",
-    "LICENSE"
+    "LICENSE",
+    "CHANGELOG.md"
   ],
   "scripts": {
     "build": "bun build src/cli.ts --outdir dist --target node --format esm && bun run build:types",
     "build:types": "tsc --emitDeclarationOnly --outDir dist",
-    "dev": "bun --watch src/cli.ts",
-    "dev:noWatch": "bun src/cli.ts",
+    "local:link": "bun run build && npm link",
+    "local:unlink": "npm uninstall -g @condrovic/ollama-git-commit",
+    "dev:watch": "bun --watch src/cli.ts",
+    "dev:run": "bun run src/cli.ts",
     "test": "bun test",
     "test:watch": "bun test --watch",
-    "lint": "eslint src/**/*.ts",
-    "lint:fix": "eslint src/**/*.ts --fix",
+    "lint": "eslint",
+    "lint:fix": "eslint --fix",
     "format": "prettier --write src/**/*.ts",
     "format:check": "prettier --check src/**/*.ts",
     "clean": "rm -rf dist",
     "prepublishOnly": "bun run clean && bun run build && bun run test",
-    "release": "changeset publish",
-    "version": "changeset version"
+    "release": "bun run scripts/release.ts",
+    "version": "changeset version",
+    "update-version": "bun scripts/update-version.ts",
+    "stage": "bun scripts/stage.ts",
+    "preversion": "bun run test",
+    "postversion": "git push && git push --tags"
   },
   "keywords": [
     "git",
@@ -48,24 +55,33 @@
     "node": ">=18.12.0"
   },
   "dependencies": {
-    "@types/node": "^24.0.1"
+    "@types/node": "^24.0.1",
+    "commander": "^14.0.0",
+    "fs-extra": "^11.3.0"
   },
   "devDependencies": {
-    "@typescript-eslint/eslint-plugin": "^8.34.0",
-    "@typescript-eslint/parser": "^8.34.0",
-    "bun": "latest",
-    "bun-types": "latest",
+    "@types/eslint": "^9.6.1",
+    "@types/fs-extra": "^11.0.4",
+    "bun": "1.2.16",
+    "bun-types": "1.2.16",
     "eslint": "^9.28.0",
+    "jiti": "^2.4.2",
     "prettier": "^3.5.3",
     "ts-node": "^10.9.2",
-    "typescript": "^5.8.3"
+    "typescript": "^5.8.3",
+    "typescript-eslint": "^8.34.0",
+    "@types/bun": "latest"
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/yourusername/ollama-commit.git"
+    "url": "git+https://github.com/ondrovic/ollama-git-commit.git"
   },
   "bugs": {
-    "url": "https://github.com/yourusername/ollama-commit/issues"
+    "url": "https://github.com/ondrovic/ollama-git-commit/issues"
   },
-  "homepage": "https://github.com/yourusername/ollama-commit#readme"
+  "homepage": "https://github.com/ondrovic/ollama-git-commit#readme",
+  "publishConfig": {
+    "access": "public"
+  },
+  "private": false
 }

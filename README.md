@@ -1,11 +1,33 @@
 # 🤖 Ollama Git Commit Message Generator
 
+[![npm version](https://badge.fury.io/js/%40condrovic%2Follama-git-commit.svg)](https://badge.fury.io/js/@condrovic/ollama-git-commit)
+
 A powerful CLI tool that generates meaningful, contextual commit messages using Ollama AI. This modern Node.js/TypeScript implementation fixes git diff parsing issues and provides better error handling, cross-platform compatibility, and a maintainable codebase.
 
-[![npm version](https://badge.fury.io/js/ollama-git-commit.svg)](https://badge.fury.io/js/ollama-git-commit)
 [![Node.js Version](https://img.shields.io/badge/node-%3E%3D18.12.0-brightgreen.svg)](https://nodejs.org/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.0+-blue.svg)](https://www.typescriptlang.org/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Run Bun Tests](https://github.com/ondrovic/ollama-git-commit/actions/workflows/test.yml/badge.svg)](https://github.com/ondrovic/ollama-git-commit/actions/workflows/test.yml)
+
+## 🚦 Continuous Integration (CI)
+
+This project uses **GitHub Actions** to automatically run the test suite on every push and pull request to any branch.
+
+- The workflow is defined in `.github/workflows/test.yml`
+- All branches are tested automatically
+- Tests are run using [Bun](https://bun.sh/) for fast and modern JavaScript/TypeScript execution
+- Comprehensive test coverage for all new features and changes
+
+**How it works:**
+
+- On every push or PR, GitHub Actions will:
+  1. Check out the code
+  2. Set up Bun
+  3. Install dependencies (`bun install`)
+  4. Run the test suite (`bun test`)
+  5. Run linting and type checking
+
+You can view the status of your tests in the "Actions" tab of your GitHub repository.
 
 ## ✨ Features
 
@@ -16,85 +38,161 @@ A powerful CLI tool that generates meaningful, contextual commit messages using 
 - 📋 **Clipboard Support**: Copy messages to clipboard across platforms (macOS, Linux, Windows)
 - 🐛 **Debug Mode**: Comprehensive troubleshooting and verbose output
 - 🎨 **Emoji-Rich**: Fun, expressive commit messages with emojis
+- 🎨 **Emoji Control**: Choose whether commit messages include emojis using the `useEmojis` config option
 - ⚡ **Fast**: Optimized git diff parsing and API calls
-- 🔧 **Robust**: Proper error handling and recovery mechanisms
+- 🔧 **Robust**: Enhanced error handling and validation mechanisms
 - 🎭 **Template System**: Multiple prompt templates (conventional, simple, detailed)
+- ⚙️ **Flexible Configuration**: Hierarchical config system with environment variables, project-local, and user-global settings
+- 🔒 **Security**: Input sanitization and path validation for enhanced security
+- 🛡️ **Environment Validation**: Comprehensive checks for Node.js, Git, and Ollama setup
+- 🧪 **Testing Suite**: Comprehensive test coverage with mocks and utilities
+- 🔍 **Debug Tools**: Advanced debugging commands for configuration and connection issues
+- 📝 **Documentation**: Detailed guides for installation, configuration, and troubleshooting
 
 ## 🚀 Installation
+
+### Global Installation for Development
+
+For local development and testing, `bun link` can be used to symlink the package globally. However, due to known issues with `bun link` on some Windows environments, `npm link` is often a more reliable alternative.
+
+First, make sure you have built the project:
+
+```bash
+bun run build
+```
+
+Then, from the root of this project, choose one of the following:
+
+**Using Bun (may have issues on Windows):**
+
+```bash
+bun link
+```
+
+**Using npm (recommended for cross-platform reliability):**
+
+```bash
+npm link
+```
+
+After linking, the `ollama-git-commit` command should be available in your terminal globally. You might need to open a **new terminal window** for the changes to take effect.
+
+### Development Workflow
+
+When making changes to the codebase, use the following workflow:
+
+1. Make your changes
+2. Run the staging script to format, lint, and stage your changes:
+   ```bash
+   bun stage
+   ```
+3. Commit your changes:
+   ```bash
+   git commit -m "your commit message"
+   ```
+
+The staging script will:
+
+- Update version numbers if needed
+- Format your code
+- Fix any linting issues
+- Stage all files
+
+### Permanent Global Installation
+
+If you want to install the package globally in a more permanent fashion (e.g., for general system use), using `npm` is currently recommended due to known issues with `bun install -g` on Windows.
+
+```bash
+npm install -g .
+```
+
+### Uninstallation
+
+To remove the global installation of `ollama-git-commit`, use the command corresponding to how you installed it. You should run these commands from the root of the `ollama-git-commit` project directory if you used `npm link` or `bun link`.
+
+**If you used `npm link` or `npm install -g .`:**
+
+```bash
+npm unlink # If run from the project directory
+# OR (for full uninstallation)
+npm uninstall -g @ondrovic/ollama-git-commit
+```
+
+**If you used `bun link` or `bun install -g .`:**
+
+```bash
+bun unlink # If run from the project directory
+# OR (for full uninstallation)
+bun uninstall -g @ondrovic/ollama-git-commit
+```
+
+**Troubleshooting Uninstallation (especially on Windows):**
+
+If the above commands report success but `ollama-git-commit` is still available, it's likely due to lingering executable files or issues with how your environment manages global packages. You can find where the command is being executed from using:
+
+```bash
+where.exe ollama-git-commit
+```
+
+If this command returns a path (e.g., `C:\path\to\ollama-git-commit.cmd`), you may need to manually delete the associated files (`.cmd`, `.ps1`, or the executable itself) from that directory. Restarting your terminal after deletion is often required for changes to take effect.
 
 ### Prerequisites
 
 - **Node.js 18.12+** (we recommend using the latest LTS version)
 - **[Ollama](https://ollama.ai)** running locally or remotely
 - **Git repository** (must be run within a git repository)
-> **⚠️ Windows Users**: This tool has limited Windows support. For the best experience, please use WSL (Windows Subsystem for Linux) or Git Bash. Some Git operations may fail on native Windows Command Prompt/PowerShell.
+- **Git user configuration** (name and email) for proper commit attribution
 
-### Using Bun (Recommended)
-![Pending](https://img.shields.io/badge/⏳-Pending-yellow)
-```bash
-# Install globally with bun
-bun install -g ollama-git-commit
+### Environment Validation
 
-# Or add to your project
-bun add ollama-git-commit
-```
+The tool performs comprehensive environment validation to ensure all prerequisites are met:
 
-### Using npm/yarn/pnpm
-![Pending](https://img.shields.io/badge/⏳-Pending-yellow)
+- Node.js version compatibility check
+- Git installation and repository validation
+- Git user configuration verification
+- Ollama host accessibility
+- HTTP client availability
+- Input sanitization and path validation
 
-```bash
-# Install globally
-npm install -g ollama-git-commit
-# or
-yarn global add ollama-git-commit
-# or
-pnpm add -g ollama-git-commit
-
-# Or add to your project
-npm install ollama-git-commit
-# or
-yarn add ollama-git-commit
-# or
-pnpm add ollama-git-commit
-```
-
-### Development Installation
-![Preferred](https://img.shields.io/badge/Method-Preferred-blue)
-```bash
-git clone https://github.com/ondrovic/ollama-git-commit.git
-cd ollama-git-commit
-bun install
-bun run build
-npm link
-```
-
-> **Windows Development Note**: Currently, development on Windows requires WSL (Windows Subsystem for Linux). Native Windows support is in progress but not fully implemented. Please use WSL for the best development experience.
+Any validation issues will be reported with helpful error messages and suggestions for resolution.
 
 ## 🎯 Quick Start
 
 1. **Make sure Ollama is running**:
+
    ```bash
    ollama serve
    ```
 
 2. **Install a model** (if you haven't already):
+
    ```bash
    ollama pull llama3.2
    # or
    ollama pull codellama
    ```
 
-3. **Stage your changes**:
+3. **Initialize configuration** (recommended):
+
+   ```bash
+   ollama-git-commit config create user
+   # or for local configuration
+   ollama-git-commit config create local
+   ```
+
+4. **Stage your changes**:
+
    ```bash
    git add .
    ```
 
-4. **Generate commit message**:
+5. **Generate commit message**:
+
    ```bash
-   ollama-git-commit
+   ollama-git-commit -d .
    ```
 
-5. **Follow the interactive prompts** to review, regenerate, or copy your commit message!
+6. **Follow the interactive prompts** to review, regenerate, or copy your commit message!
 
 ## 📖 Usage
 
@@ -102,345 +200,128 @@ npm link
 
 ```bash
 # Generate commit message for staged changes
-ollama-git-commit
+ollama-git-commit -d .
 
 # Non-interactive mode (just display the message)
-ollama-git-commit -n
+ollama-git-commit -d . -n
 
 # Verbose output with detailed information
-ollama-git-commit -v
+ollama-git-commit -d . -v
 
 # Auto-stage all changes if nothing is staged
-ollama-git-commit --auto-stage
+ollama-git-commit -d . --auto-stage
 
 # Debug mode with comprehensive logging
-ollama-git-commit --debug
+ollama-git-commit -d . --debug
 ```
 
 ### Model Management
 
 ```bash
 # Use specific model
-ollama-git-commit -m codellama
+ollama-git-commit -d . -m codellama
 
 # Auto-select best available model
-ollama-git-commit --auto-model
+ollama-git-commit -d . --auto-model
 
 # List all available models
-ollama-git-commit --list-models
+ollama-git-commit list-models
 
 # Test connection to Ollama
-ollama-git-commit --test
+ollama-git-commit test connection
 
 # Test with simple prompt (debug JSON issues)
-ollama-git-commit --test-simple
+ollama-git-commit test simple-prompt
+
+# Run all tests
+ollama-git-commit test all
+
+# Benchmark model performance
+ollama-git-commit test benchmark
 ```
 
-### Advanced Usage
+### Configuration Commands
 
 ```bash
-# Custom Ollama host
-ollama-git-commit -H http://192.168.1.100:11434
+# Initialize default configuration
+ollama-git-commit config create user
+# or for local configuration
+ollama-git-commit config create local
 
-# Custom prompt file
-ollama-git-commit -p ~/.config/my-custom-prompt.txt
+# Show current configuration
+ollama-git-commit config show
 
-# Combine multiple options
-ollama-git-commit -v -m llama3.2 --auto-stage --debug
+# Show detailed configuration debug information
+ollama-git-commit config debug
 
-# Non-interactive with custom model
-ollama-git-commit -n -m codellama --auto-stage
+# Remove configuration
+ollama-git-commit config remove user
+# or
+ollama-git-commit config remove local
 ```
 
-## ⚙️ Configuration
+### Configuration Sources
+
+The tool supports multiple configuration sources in the following order of precedence:
+
+1. Command-line arguments
+2. Environment variables
+3. Project-local configuration (`.ollama-git-commit.json`)
+4. User-global configuration (`~/.ollama-git-commit.json`)
+5. Default values
 
 ### Environment Variables
 
-```bash
-# Set default Ollama host (overrides default)
-export OLLAMA_HOST=http://192.168.1.100:11434
-
-# Add to your shell profile (.bashrc, .zshrc, etc.)
-echo 'export OLLAMA_HOST=http://192.168.1.100:11434' >> ~/.zshrc
-```
-
-### Custom Prompts
-
-The tool automatically creates a default prompt file at `~/.config/prompts/ollama-git-commit-prompt.txt`. You can customize this file or create your own:
+You can configure the tool using environment variables:
 
 ```bash
-# Edit the default prompt
-nano ~/.config/prompts/ollama-git-commit-prompt.txt
+# Set Ollama host
+export OLLAMA_HOST=http://localhost:11434
 
-# Use a custom prompt file
-ollama-git-commit -p /path/to/your/custom-prompt.txt
+# Set default model
+export OLLAMA_MODEL=codellama
+
+# Disable emojis
+export OLLAMA_USE_EMOJIS=false
 ```
 
-#### Example Custom Prompt (Conventional Commits)
+### Project-Local Configuration
 
-```text
-Generate conventional commit messages following the format: type(scope): description
+Create a `.ollama-git-commit.json` file in your project root:
 
-Types: feat, fix, docs, style, refactor, test, chore, perf, ci, build, revert
-
-Rules:
-- Use lowercase for type and description
-- Keep description under 72 characters
-- Add body with bullet points for multiple changes
-- Be specific about what changed and why
-- Use present tense
-
-Format:
-type(scope): short description
-
-- detailed change 1
-- detailed change 2
+```json
+{
+  "model": "codellama",
+  "useEmojis": true,
+  "promptTemplate": "conventional"
+}
 ```
 
-#### Example Custom Prompt (Simple & Clean)
+### User-Global Configuration
 
-```text
-Create simple, clear commit messages:
+Create a `~/.ollama-git-commit.json` file:
 
-- Start with a verb (add, fix, update, remove, etc.)
-- Mention what files or features were changed
-- Keep it concise but informative
-- Use normal capitalization
-- No emojis or special formatting
-
-Example: "Fix user authentication bug in login component"
+```json
+{
+  "model": "llama2",
+  "useEmojis": true,
+  "promptTemplate": "detailed"
+}
 ```
 
-## 🔧 CLI Options Reference
+## 📚 Documentation
 
-| Option | Short | Description | Default |
-|--------|-------|-------------|---------|
-| `--model` | `-m` | Specify Ollama model | `mistral:7b-instruct` |
-| `--host` | `-H` | Ollama server URL | `$OLLAMA_HOST` or `http://192.168.0.3:11434` |
-| `--verbose` | `-v` | Show detailed output | `false` |
-| `--non-interactive` | `-n` | Skip confirmation prompts | `false` |
-| `--prompt` | `-p` | Custom prompt file path | `~/.config/prompts/ollama-git-commit-prompt.txt` |
-| `--auto-stage` | | Auto-stage changes if nothing staged | `false` |
-| `--test` | | Test connection to Ollama server | - |
-| `--test-simple` | | Test with simple prompt for debugging | - |
-| `--list-models` | | Show all available models | - |
-| `--auto-model` | | Auto-select best available model | `false` |
-| `--debug` | | Enable debug mode with detailed logging | `false` |
-| `--help` | `-h` | Show help message | - |
+For more detailed information, check out our documentation:
 
-## 🐛 Troubleshooting
-
-### Common Issues & Solutions
-
-#### 1. "Model not found" error
-```bash
-# Check available models
-ollama-git-commit --list-models
-
-# Install a model
-ollama pull llama3.2
-
-# Or let the tool auto-select
-ollama-git-commit --auto-model
-```
-
-#### 2. "Connection refused" error
-```bash
-# Make sure Ollama is running
-ollama serve
-
-# Test the connection
-ollama-git-commit --test
-
-# Check if Ollama is on a different host/port
-ollama-git-commit -H http://localhost:11434 --test
-```
-
-#### 3. "No changes detected"
-```bash
-# Check git status
-git status
-
-# Stage your changes
-git add .
-
-# Or auto-stage with the tool
-ollama-git-commit --auto-stage
-```
-
-#### 4. Empty or invalid responses
-```bash
-# Test with simple prompt
-ollama-git-commit --test-simple
-
-# Try a different model
-ollama-git-commit --auto-model
-
-# Enable debug mode for detailed logs
-ollama-git-commit --debug -v
-```
-
-#### 5. Git diff parsing issues
-```bash
-# Enable debug mode to see git parsing details
-ollama-git-commit --debug
-
-# Check if you're in a git repository
-git status
-
-# Verify file encodings if you have international characters
-git config --global core.quotepath false
-```
-
-#### 6. Windows-specific issues
-```bash
-# If you encounter pathspec errors on Windows:
-# Make sure you're using a recent version of Git
-git --version
-
-# Try using WSL instead of native Windows
-# Or use Git Bash instead of Command Prompt/PowerShell
-
-### Debug Mode
-
-For comprehensive troubleshooting, enable debug mode:
-
-```bash
-ollama-git-commit --debug -v
-```
-
-This shows:
-- Configuration details
-- Git repository status
-- Available models
-- API request/response details
-- JSON parsing information
-- File change analysis
-- Error stack traces
-
-### Performance Tips
-
-1. **Large repositories**: The tool automatically truncates large diffs
-2. **Slow responses**: Try smaller models like `llama3.2:1b`
-3. **Network issues**: Use `--test` to verify connectivity
-4. **Memory usage**: Use `--verbose` to monitor processing
-
-## 🌟 Example Output
-
-```bash
-$ ollama-git-commit -v
-
-🔍 Configuration:
-   Model: llama3:latest
-   Host: http://192.168.0.3:11434
-   Interactive: true
-
-📁 Using staged changes for commit message generation
-📊 Change Statistics:
-   Files changed: 3
-   Insertions: 42
-   Deletions: 8
-
-📁 3 files changed:
-📄 src/components/Button.tsx (modified) (+15 -3, 2 new functions/vars)
-📄 src/styles/theme.css (modified) (+20 -5)
-📄 README.md (modified) (+7 -0)
-
-🤖 Generating commit message with llama3:latest...
-✅ Response received
-
-✨ Generated commit message:
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-🎨 feat(ui): Add theme support and improve Button component
-
-- Enhanced Button component with new variant props and accessibility features
-- Added comprehensive theme system with dark/light mode support  
-- Updated documentation with component usage examples
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-📋 Available actions:
-   [y] Use this message and copy commit command
-   [c] Copy message to clipboard (if available)
-   [r] Regenerate message
-   [n] Cancel
-
-What would you like to do? [y/c/r/n]: y
-
-📋 Copy and run this command:
-git commit -m "🎨 feat(ui): Add theme support and improve Button component
-
-- Enhanced Button component with new variant props and accessibility features
-- Added comprehensive theme system with dark/light mode support  
-- Updated documentation with component usage examples"
-```
-
-## 🔄 Differences from Shell Script
-
-This Node.js version significantly improves upon the original shell script:
-
-### ✅ **Improvements**
-
-1. **Better Git Diff Parsing**: Proper handling of binary files, unicode characters, and large diffs
-2. **Cross-Platform Compatibility**: Native Windows, macOS, and Linux support
-3. **Enhanced Error Handling**: More descriptive error messages and recovery options
-4. **Robust JSON Processing**: Proper JSON parsing with escaping and validation
-5. **Memory Efficiency**: Streams large diffs instead of loading everything into memory
-6. **Type Safety**: Full TypeScript implementation with strict typing
-7. **Modular Architecture**: Clean separation of concerns and testable components
-8. **Modern JavaScript**: ES modules, async/await, and modern Node.js features
-9. **Comprehensive Testing**: Full test suite with proper mocking and fixtures
-10. **Better Performance**: Optimized for speed and resource usage
-
-### 🔧 **Technical Improvements**
-
-- **Unicode Support**: Handles international characters correctly
-- **Async Operations**: Non-blocking API calls and file operations  
-- **Proper Escaping**: Safe handling of special characters in commit messages
-- **Timeout Handling**: Proper request timeouts and cancellation
-- **Progress Indicators**: Visual feedback during long operations
-- **Clipboard Integration**: Cross-platform clipboard support
-- **Configuration Management**: Flexible configuration with environment variables
+- [Installation Guide](docs/installation.md)
+- [Configuration Guide](docs/configuration.md)
+- [Troubleshooting Guide](docs/troubleshooting.md)
 
 ## 🤝 Contributing
 
 We welcome contributions! Please see our [Contributing Guide](CONTRIBUTING.md) for details.
 
-### Development Setup
-
-```bash
-# Clone the repository
-git clone https://github.com/yourusername/ollama-git-commit.git
-cd ollama-git-commit
-
-# Install dependencies
-bun install
-
-# Run in development mode
-bun run dev
-
-# Run tests
-bun test
-
-# Build for production
-bun run build
-
-# Lint and format
-bun run lint
-bun run format
-```
-
-### Project Structure
-
-```
-src/
-├── cli.ts              # CLI entry point
-├── index.ts            # Library exports  
-├── commands/           # Command implementations
-├── core/              # Core business logic
-└── utils/             # Utility functions
-```
-
-## 📄 License
+## 📝 License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
@@ -455,9 +336,46 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 - [Ollama Documentation](https://ollama.ai/docs)
 - [Node.js Downloads](https://nodejs.org/)
 - [Bun Installation](https://bun.sh/docs/installation)
-- [Report Issues](https://github.com/yourusername/ollama-git-commit/issues)
-- [Feature Requests](https://github.com/yourusername/ollama-git-commit/discussions)
+- [Report Issues](https://github.com/ondrovic/ollama-git-commit/issues)
+- [Feature Requests](https://github.com/ondrovic/ollama-git-commit/discussions)
 
 ---
 
 **Made with ❤️ by developers, for developers**
+
+### 🧪 Testing & Mocks
+
+All tests are designed to be fast, reliable, and isolated from your real environment:
+
+- **MockedConfigManager**: Used in config-related tests to simulate configuration loading and environment variable overrides without touching real files.
+- **mockFs**: Simulates file system operations (read, write, mkdir, etc.) for Git and prompt-related tests.
+- **mockGit**: Simulates Git commands and responses for integration tests.
+- **Mocked network (fetch)**: API calls to Ollama are intercepted and mocked for predictable results.
+- **No real network or file system access**: All tests run in-memory and do not require a real Ollama server, Git repo, or config files.
+
+To run all tests:
+
+```bash
+bun test
+```
+
+If you add new features, please use mocks for any external dependencies to keep tests fast and deterministic.
+
+### Test Commands
+
+```bash
+# Test connection to Ollama server
+ollama-git-commit test connection
+
+# Test specific model
+ollama-git-commit test model -m mistral:7b-instruct
+
+# Test simple prompt generation
+ollama-git-commit test simple-prompt
+
+# Run all tests
+ollama-git-commit test all
+
+# Benchmark model performance
+ollama-git-commit test benchmark -m mistral:7b-instruct
+```

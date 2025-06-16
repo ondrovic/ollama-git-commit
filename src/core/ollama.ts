@@ -1,53 +1,71 @@
+import type { ModelInfo } from '../types';
 import { Logger } from '../utils/logger';
 import { Spinner } from '../utils/spinner';
-import { ModelsCommand } from '../commands/models';
-import type { OllamaResponse } from '../index';
+import { normalizeHost } from '../utils/url';
+import { getConfig } from './config';
+import { ILogger, IOllamaService } from './interfaces';
+import { TROUBLE_SHOOTING } from '@/constants/troubleshooting';
+export class OllamaService implements IOllamaService {
+  private config = getConfig();
+  private logger: ILogger;
+  private spinner: Spinner;
 
-export class OllamaService {
-  private modelsCommand: ModelsCommand;
-
-  constructor() {
-    this.modelsCommand = new ModelsCommand();
+  constructor(logger: ILogger = Logger.getDefault(), spinner: Spinner = new Spinner()) {
+    this.logger = logger;
+    this.spinner = spinner;
   }
 
   async generateCommitMessage(
-    model: string,
+    _model: string,
     host: string,
     prompt: string,
-    verbose: boolean
+    verbose = false,
   ): Promise<string> {
+    const config = await this.config;
+
+    const formattedHost = normalizeHost(host);
+
     if (verbose) {
-      Logger.info(`Generating commit message with ${model}...`);
-      Logger.info(`Ollama host: ${host}`);
-      Logger.info(`Prompt length: ${prompt.length} characters`);
+      this.logger.info(`Generating commit message with ${_model}...`);
+      this.logger.info(`Ollama host: ${formattedHost}`);
+      this.logger.info(`Prompt length: ${prompt.length} characters`);
     }
 
     // Show spinner for non-verbose mode
-    const spinner = new Spinner();
     if (!verbose) {
-      spinner.start('🤖 Generating commit message');
+      this.spinner.start('🤖 Generating commit message');
     }
 
     try {
       const payload = {
-        model,
+        model: _model,
         prompt,
         stream: false,
       };
 
       if (verbose) {
-        Logger.debug(`JSON payload size: ${JSON.stringify(payload).length} bytes`);
+        this.logger.debug(`JSON payload size: ${JSON.stringify(payload).length} bytes`);
       }
 
-      const response = await fetch(`${host}/api/generate`, {
+      const url = `${formattedHost}/api/generate`;
+      const headers = { 'Content-Type': 'application/json' };
+      const body = JSON.stringify(payload);
+
+      if (verbose) {
+        this.logger.debug(`Full URL: ${url}`);
+        this.logger.debug(`Headers: ${JSON.stringify(headers)}`);
+        this.logger.debug(`Payload: ${body}`);
+      }
+
+      const response = await fetch(url, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
-        signal: AbortSignal.timeout(120000), // 2 minute timeout
+        headers,
+        body,
+        signal: AbortSignal.timeout(config.timeouts.generation),
       });
 
       if (!verbose) {
-        spinner.stop();
+        this.spinner.stop();
       }
 
       if (!response.ok) {
@@ -57,191 +75,249 @@ export class OllamaService {
       const responseText = await response.text();
 
       if (verbose) {
-        Logger.success(`Response received (${responseText.length} characters)`);
-        Logger.debug(`First 200 chars of response: ${responseText.substring(0, 200)}...`);
+        this.logger.success(`Response received (${responseText.length} characters)`);
+        this.logger.debug(`First 200 chars of response: ${responseText.substring(0, 200)}...`);
       }
 
       if (!responseText.trim()) {
         throw new Error('❌ Empty response from Ollama');
       }
 
-      return responseText;
-    } catch (error: any) {
-      if (!verbose) {
-        spinner.stop();
-      }
+      // Parse the JSON response
+      const responseData = JSON.parse(responseText);
 
-      if (error.name === 'TimeoutError') {
-        throw new Error('❌ Request timed out - Ollama may be busy or the model is too large');
-      }
-
-      throw new Error(`❌ Failed to connect to Ollama: ${error.message}`);
-    }
-  }
-
-  // parseResponse(response: string, verbose: boolean, model: string, host: string): string {
-  //   try {
-  //     const data: OllamaResponse = JSON.parse(response);
-
-  //     if (data.error) {
-  //       const errorStr = data.error.toString();
-  //       if (errorStr.toLowerCase().includes('not found')) {
-  //         this.modelsCommand.handleModelError(model, host);
-  //         throw new Error('Model not found');
-  //       } else {
-  //         throw new Error(`Ollama error: ${data.error}`);
-  //       }
-  //     }
-
-  //     if (!data.response) {
-  //       throw new Error('No response field in JSON');
-  //     }
-
-  //     const message = data.response.trim();
-  //     if (!message) {
-  //       throw new Error('Empty response from model');
-  //     }
-
-  //     return message;
-  //   } catch (error: any) {
-  //     if (error.message === 'Model not found') {
-  //       throw error;
-  //     }
-
-  //     // Try to extract useful error information from malformed JSON
-  //     if (response.includes('error') && response.includes('not found')) {
-  //       this.modelsCommand.handleModelError(model, host);
-  //       throw new Error('Model not found');
-  //     }
-
-  //     Logger.error(`Failed to parse response: ${error.message}`);
-  //     if (verbose) {
-  //       Logger.error(`Raw response (first 500 chars): ${response.substring(0, 500)}`);
-  //     } else {
-  //       Logger.info('Use --verbose flag for full response details');
-  //     }
-  //     throw new Error('Failed to parse Ollama response');
-  //   }
-  // }
-
-  parseResponse(response: string, verbose: boolean, model: string, host: string): string {
-    try {
-      const data: OllamaResponse = JSON.parse(response);
-
-      if (data.error) {
-        const errorStr = data.error.toString();
-        if (errorStr.toLowerCase().includes('not found')) {
-          this.modelsCommand.handleModelError(model, host);
-          throw new Error('Model not found');
-        } else {
-          throw new Error(`Ollama error: ${data.error}`);
-        }
-      }
-
-      if (!data.response) {
-        throw new Error('No response field in JSON');
-      }
-
-      let message = data.response.trim();
-
-      // Remove emojis using regex
-      message = this.removeEmojis(message);
+      // Extract just the message from the response
+      let message = responseData.response?.trim() || '';
 
       if (!message) {
         throw new Error('Empty response from model');
       }
 
+      // Only remove emojis if useEmojis is false
+      if (!config.useEmojis) {
+        message = this.removeEmojis(message);
+      }
+
+      // clean the message
+      message = this.cleanMessage(message);
+
       return message;
-    } catch (error: any) {
-      if (error.message === 'Model not found') {
-        throw error;
+    } catch (error: unknown) {
+      if (!verbose) {
+        this.spinner.stop();
       }
 
-      // Try to extract useful error information from malformed JSON
-      if (response.includes('error') && response.includes('not found')) {
-        this.modelsCommand.handleModelError(model, host);
-        throw new Error('Model not found');
+      if (
+        typeof error === 'object' &&
+        error &&
+        'name' in error &&
+        (error as { name: string }).name === 'TimeoutError'
+      ) {
+        throw new Error('❌ Request timed out - Ollama may be busy or the model is too large');
       }
 
-      Logger.error(`Failed to parse response: ${error.message}`);
-      if (verbose) {
-        Logger.error(`Raw response (first 500 chars): ${response.substring(0, 500)}`);
+      if (typeof error === 'object' && error && 'message' in error) {
+        throw new Error(
+          `❌ Failed to connect to Ollama: ${(error as { message: string }).message}`,
+        );
       } else {
-        Logger.info('Use --verbose flag for full response details');
+        throw new Error(`❌ Failed to connect to Ollama: ${String(error)}`);
       }
-      throw new Error('Failed to parse Ollama response');
     }
   }
 
   private removeEmojis(text: string): string {
-    // Remove emojis but preserve line breaks and formatting
-    return text.replace(/[\u{1F600}-\u{1F64F}]|[\u{1F300}-\u{1F5FF}]|[\u{1F680}-\u{1F6FF}]|[\u{1F1E0}-\u{1F1FF}]|[\u{2600}-\u{26FF}]|[\u{2700}-\u{27BF}]|[\u{1F900}-\u{1F9FF}]|[\u{1FA70}-\u{1FAFF}]|[\u{1F004}]|[\u{1F0CF}]|[\u{1F170}-\u{1F251}]/gu, '')
+    // More comprehensive emoji and symbol removal
+    return text
+      .replace(/[\p{Emoji}\u{1F3FB}-\u{1F3FF}\u{1F9B0}-\u{1F9B3}]/gu, '') // Remove emojis and skin tone modifiers
+      .replace(/[\u{2600}-\u{26FF}\u{2700}-\u{27BF}]/gu, '') // Remove additional symbols
+      .replace(/️/g, '') // Remove variation selector (invisible character that follows some emojis)
       .replace(/^\s+|\s+$/gm, '') // Trim whitespace from each line
       .replace(/\n\s*\n/g, '\n') // Remove empty lines
       .trim();
   }
 
-  async testConnection(host: string): Promise<boolean> {
+  private cleanMessage(text: string): string {
+    // properly format the message
+    return text
+      .replace(/`/g, "'") // replace ` with '
+      .replace(/"/g, "'") // replace " with '
+      .replace(/'''/g, '') // Remove triple single quotes
+      .replace(/\(\s*[^)]*\s*\)/g, '') // Remove parentheses with any content and spaces
+      .replace(/\.([A-Z])/g, '. $1') // Add space after period before capital letter
+      .replace(/\s+,/g, ',') // Remove spaces before commas
+      .replace(/,{2,}/g, ',') // Replace multiple consecutive commas with single comma
+      .replace(/,+\s*(and|or)\s*/g, ' and ') // Replace ",,,,, and" with just " and"
+      .replace(/lines,+\s*(and|$)/g, 'lines') // Remove trailing commas after "lines"
+      .replace(/on\s+lines\s*,*\s*and\s*$/gm, '') // Remove incomplete "on lines,,, and" phrases
+      .replace(/-\s{2,}/g, '- ') // Replace multiple dashes with a single dash
+      .replace(/\s+/g, ' ') // Replace multiple spaces with a single space
+      .replace(/([a-z])([A-Z])/g, '$1 $2') // Add space between camelCase words
+      .replace(/^\s+|\s+$/gm, '') // Trim whitespace from each line
+      .replace(/\n\s*\n/g, '\n') // Remove empty lines
+      .replace(/([^\n])-\s+/g, '$1\n- ') // Ensure single line breaks after dashes
+      .trimEnd(); // trim end
+  }
+
+  async testConnection(host?: string, verbose = false): Promise<boolean> {
+    const config = await this.config;
+    const ollamaHost = normalizeHost(host || config.host);
+    const timeouts = config.timeouts;
+
+    if (verbose) {
+      this.logger.info(`Testing Ollama connection to ${ollamaHost}`);
+      this.logger.debug(`Connection timeout: ${timeouts.connection}ms`);
+    }
+
     try {
-      const response = await fetch(`${host}/api/tags`, {
-        signal: AbortSignal.timeout(10000),
+      const response = await fetch(`${ollamaHost}/api/tags`, {
+        signal: AbortSignal.timeout(timeouts.connection),
       });
 
-      return response.ok;
-    } catch {
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
+
+      return true;
+    } catch (error: unknown) {
+      this.logger.error(`Cannot connect to Ollama at ${ollamaHost}`);
+      if (typeof error === 'object' && error && 'message' in error) {
+        this.logger.error(`Detailed error: ${(error as { message: string }).message}`);
+      } else {
+        this.logger.error(`Detailed error: ${String(error)}`);
+      }
+      // Provide helpful troubleshooting steps
+      console.log(TROUBLE_SHOOTING.GENERAL);
+      if (
+        typeof error === 'object' &&
+        error &&
+        'name' in error &&
+        (error as { name: string }).name === 'TimeoutError'
+      ) {
+        console.log('\n   5. Increase timeout in config file');
+      }
       return false;
     }
   }
 
   async isModelAvailable(host: string, model: string): Promise<boolean> {
+    const config = await this.config;
+    const formattedHost = normalizeHost(host || config.host);
+
     try {
-      const response = await fetch(`${host}/api/tags`, {
-        signal: AbortSignal.timeout(10000),
+      const response = await fetch(`${formattedHost}/api/tags`, {
+        signal: AbortSignal.timeout(config.timeouts.connection),
       });
 
       if (!response.ok) {
-        return false;
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
       }
 
       const data = await response.json();
-      if (!data.models || !Array.isArray(data.models)) {
-        return false;
-      }
 
-      return data.models.some((m: any) => m.name === model);
-    } catch {
+      return data.models.some((m: ModelInfo) => m.name === model);
+    } catch (error: unknown) {
+      if (typeof error === 'object' && error && 'message' in error) {
+        if ((error as { message: string }).message.includes('not found')) {
+          this.logger.error(
+            `Ollama server not found at ${formattedHost}. Please ensure Ollama is running.`,
+          );
+        } else {
+          this.logger.error(
+            `Error checking model availability: ${(error as { message: string }).message}`,
+          );
+        }
+      } else {
+        this.logger.error(`Error checking model availability: ${String(error)}`);
+      }
       return false;
     }
   }
 
-  async pullModel(host: string, model: string): Promise<boolean> {
-    try {
-      Logger.info(`Pulling model ${model}...`);
+  async pullModel(_model: string, _host?: string): Promise<void> {
+    const config = await this.config;
+    const formattedHost = normalizeHost(_host || config.host);
 
-      const response = await fetch(`${host}/api/pull`, {
+    this.logger.info(`⏳ Pulling model: ${_model} from ${formattedHost}`);
+
+    try {
+      const response = await fetch(`${formattedHost}/api/pull`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name: model }),
-        signal: AbortSignal.timeout(300000), // 5 minute timeout for pulling
+        body: JSON.stringify({ name: _model, stream: true }),
+        signal: AbortSignal.timeout(config.timeouts.modelPull),
       });
 
-      return response.ok;
-    } catch (error: any) {
-      Logger.error(`Failed to pull model: ${error.message}`);
-      return false;
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`HTTP ${response.status}: ${response.statusText}. Details: ${errorText}`);
+      }
+
+      // TODO: Implement progress tracking for streaming response
+      // For now, just consume the stream
+      const reader = (response.body as ReadableStream<Uint8Array>).getReader();
+      while (true) {
+        const { done } = await reader.read();
+        if (done) break;
+      }
+
+      this.logger.success(`✅ Model '${_model}' pulled successfully.`);
+    } catch (error: unknown) {
+      this.logger.error(`❌ Failed to pull model '${_model}':`);
+      if (typeof error === 'object' && error && 'message' in error) {
+        this.logger.error(`Error: ${(error as { message: string }).message}`);
+      } else {
+        this.logger.error(`Error: ${String(error)}`);
+      }
+      throw error;
     }
   }
 
-  formatModelSize(bytes: number): string {
-    const units = ['B', 'KB', 'MB', 'GB', 'TB'];
-    let size = bytes;
-    let unitIndex = 0;
+  // Linter: unused arguments are intentionally prefixed with _
+  async validateModel(_model: string, _host?: string): Promise<void> {
+    const config = await this.config;
+    const formattedHost = normalizeHost(_host || config.host);
 
-    while (size >= 1024 && unitIndex < units.length - 1) {
-      size /= 1024;
-      unitIndex++;
+    try {
+      const response = await fetch(`${formattedHost}/api/tags`, {
+        signal: AbortSignal.timeout(config.timeouts.connection),
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
+
+      const data = await response.json();
+
+      if (!data.models.some((m: ModelInfo) => m.name === _model)) {
+        throw new Error(`Model '${_model}' not found on Ollama server`);
+      }
+    } catch (error: unknown) {
+      if (typeof error === 'object' && error && 'message' in error) {
+        throw new Error(`Model validation failed: ${(error as { message: string }).message}`);
+      } else {
+        throw new Error(`Model validation failed: ${String(error)}`);
+      }
     }
+  }
 
-    return `${size.toFixed(1)} ${units[unitIndex]}`;
+  private buildPrompt(_diff: string): string {
+    // Placeholder for actual prompt building logic
+    // For now, just return the diff as-is
+    return _diff;
+  }
+
+  async getModels(host: string): Promise<ModelInfo[]> {
+    try {
+      const response = await fetch(`${normalizeHost(host)}/api/tags`);
+      if (!response.ok) {
+        throw new Error(`Failed to fetch models: ${response.statusText}`);
+      }
+      const data = await response.json();
+      return data.models || [];
+    } catch (error) {
+      this.logger.error('Failed to fetch models:', error);
+      return [];
+    }
   }
 }
