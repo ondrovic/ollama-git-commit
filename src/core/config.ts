@@ -52,34 +52,7 @@ export class ConfigManager implements IConfigManager {
   }
 
   private getDefaults(): OllamaCommitConfig {
-    return {
-      // Core settings - these should be the most commonly working defaults
-      model: DEFAULT_MODEL,
-      host: process.env[ENVIRONMENTAL_VARIABLES.OLLAMA_HOST] || DEFAULT_HOST,
-
-      // Behavior settings
-      verbose: false,
-      interactive: true,
-      debug: false,
-      autoStage: false,
-      autoModel: false,
-      autoCommit: false,
-
-      // File paths
-      promptFile: join(homedir(), '.config', 'ollama-git-commit', 'prompt.txt'),
-      configFile: this.defaultConfigFile,
-
-      // Network settings (in milliseconds)
-      timeouts: {
-        connection: DEFAULT_TIMEOUTS.CONNECTION,
-        generation: DEFAULT_TIMEOUTS.GENERATION,
-        modelPull: DEFAULT_TIMEOUTS.MODEL_PULL,
-      },
-
-      // UI settings
-      useEmojis: true,
-      promptTemplate: 'default',
-    };
+    return CONFIGURATIONS.DEFAULT as OllamaCommitConfig;
   }
 
   private async loadConfigFile(filePath: string): Promise<Record<string, unknown>> {
