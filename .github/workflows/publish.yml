@@ -64,8 +64,27 @@ jobs:
             echo "✅ Version $VERSION is available for publishing"
           fi
 
+      - name: Generate version file
+        run: bun run prebuild
+
+      - name: Verify version file was created
+        run: |
+          if [ ! -f "src/generated/version.ts" ]; then
+            echo "❌ Version file was not generated"
+            exit 1
+          fi
+          echo "✅ Version file created:"
+          cat src/generated/version.ts
+
       - name: Build package
         run: bun run build
+
+      - name: Verify build output
+        run: |
+          echo "📦 Build output:"
+          ls -la dist/
+          echo "📁 Generated files:"
+          ls -la src/generated/
 
       - name: Run tests
         run: bun run test

@@ -39,6 +39,18 @@ jobs:
       - name: List directory contents after install
         run: ls -la
 
+      - name: Generate version file for testing
+        run: bun run prebuild
+
+      - name: Verify version file
+        run: |
+          if [ -f "src/generated/version.ts" ]; then
+            echo "✅ Version file created for testing"
+            cat src/generated/version.ts
+          else
+            echo "❌ Version file not created"
+          fi
+
       - name: Lint (optional)
         run: bun lint
         continue-on-error: true

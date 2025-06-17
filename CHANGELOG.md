@@ -6,6 +6,34 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
+### Added
+
+- Build-time version generation system to eliminate hardcoded version fallbacks
+- Version file auto-generation script (scripts/generate-version.ts)
+- Enhanced CI/CD workflows with version file generation and verification steps
+- Comprehensive version validation in both test and publish workflows
+- Local build testing in release script to ensure version consistency
+
+### Changed
+
+- Refactored version detection in metadata.ts to use generated version file with development fallback
+- Updated package.json to include prebuild script for automatic version generation
+- Enhanced GitHub Actions workflows to generate and verify version files before building
+- Improved error handling in version detection with clearer error messages
+- Updated npm package files to include generated version files (src/generated/**/*)
+- Enhanced release script with version file regeneration and build testing
+
+### Fixed
+
+- Version mismatch between development (bun dev:run -V), npx execution, and global installation
+- Eliminated hardcoded version fallbacks that could become outdated
+- Resolved version detection failures in production environments
+
+### Technical Details
+
+- Added src/generated/version.ts build artifact (excluded from git, included in npm package)
+- Updated .gitignore to exclude generated files from version control
+- Enhanced build process to ensure version consistency across all deployment methods
 
 ## [1.0.7] - 2025-06-17
 ### Changed
