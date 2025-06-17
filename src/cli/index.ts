@@ -1,5 +1,3 @@
-#!/usr/bin/env bun
-
 import { Command } from 'commander';
 import { Logger } from '../utils/logger';
 import { registerCommitCommand } from './commands/commit';

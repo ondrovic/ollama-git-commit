@@ -6,6 +6,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
+### Changed
+- metadata.ts - simplified getVersion
+- test.yml - added tags to ignore since the publish wokdlow runs tests
+- cli - made node compatiable
+
+### Removed
+- cli.ts - removed #!/usr/bin/env bun
+- src\cli\index.ts - remvoed #!/usr/bin/env bun
 
 ## [1.0.6] - 2025-06-16
 

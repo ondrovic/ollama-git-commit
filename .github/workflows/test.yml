@@ -3,6 +3,7 @@ name: Run Bun Tests
 on:
   push:
     branches: ['**']
+    tags-ignore: ['**']  # Exclude all tags since publish workflow handles tagged releases
   pull_request:
     branches: ['**']
 

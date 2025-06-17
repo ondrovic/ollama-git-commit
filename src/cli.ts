@@ -1,4 +1,3 @@
-#!/usr/bin/env bun
+#!/usr/bin/env node
 
 import './cli/index';
-// test commen will remove lated
