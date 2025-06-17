@@ -9,12 +9,14 @@
   },
   "files": [
     "dist/**/*",
+    "src/generated/**/*",
     "package.json",
     "README.md",
     "LICENSE",
     "CHANGELOG.md"
   ],
   "scripts": {
+    "prebuild": "bun run scripts/generate-version.ts",
     "build": "bun build src/cli.ts --outdir dist --target node --format esm && bun run build:types",
     "build:types": "tsc --emitDeclarationOnly --outDir dist",
     "local:link": "bun run build && npm link",

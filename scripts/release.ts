@@ -34,6 +34,19 @@ function incrementVersion(type: 'patch' | 'minor' | 'major' = 'patch'): string {
   }
 }
 
+function regenerateVersionFile(): void {
+  console.log(`🔄 Regenerating version file...`);
+  
+  try {
+    // Run the prebuild script to regenerate the version file
+    execSync('bun run prebuild', { stdio: 'inherit' });
+    console.log(`✅ Version file regenerated`);
+  } catch (error) {
+    console.error('❌ Failed to regenerate version file:', error);
+    console.log('💡 This is not critical for release, as CI/CD will regenerate it');
+  }
+}
+
 function updateChangelog(version: string): void {
   console.log(`📝 Updating CHANGELOG.md for version ${version}...`);
   
@@ -58,6 +71,19 @@ function updateChangelog(version: string): void {
   }
 }
 
+function testBuild(): void {
+  console.log(`🧪 Testing build process...`);
+  
+  try {
+    // Clean and build to ensure everything works
+    execSync('bun run clean && bun run build', { stdio: 'inherit' });
+    console.log(`✅ Build test successful`);
+  } catch (error) {
+    console.error('❌ Build test failed:', error);
+    throw error;
+  }
+}
+
 function createAndPushTag(version: string): void {
   const tag = `v${version}`;
   
@@ -67,7 +93,13 @@ function createAndPushTag(version: string): void {
     // Update CHANGELOG.md
     updateChangelog(version);
     
-    // Stage version changes
+    // Regenerate version file for local testing
+    regenerateVersionFile();
+    
+    // Test the build process
+    testBuild();
+    
+    // Stage version changes (note: we don't stage the generated version file)
     console.log(`📦 Staging package.json and CHANGELOG.md...`);
     execSync('git add package.json CHANGELOG.md', { stdio: 'inherit' });
     
@@ -136,6 +168,7 @@ function main() {
     
     console.log(`🎉 Successfully released version ${newVersion}!`);
     console.log('🚀 The GitHub Actions workflow will now handle the NPM publish process.');
+    console.log('📦 Local build test completed - CI/CD will regenerate version file for production.');
   } catch (error) {
     console.error('💥 Release failed:', error);
     console.log('\n🔍 Debug info:');

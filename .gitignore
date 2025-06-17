@@ -114,3 +114,6 @@ test-repo/
 
 # Local project config file
 .ollama-git-commit.json
+
+# Generated files
+src/generated/
