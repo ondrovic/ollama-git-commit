@@ -1,48 +1,50 @@
-import { readFileSync } from 'fs-extra';
-import { join, dirname } from 'path';
-import { fileURLToPath } from 'url';
-import { CONFIGURATIONS } from './configurations';
-import { MODELS } from './models';
+#!/usr/bin/env bun
+import { execSync } from 'child_process';
+import { readFileSync } from 'fs';
 
-function getVersion(): string {
-  const __dirname = dirname(fileURLToPath(import.meta.url));
-  const isLocalDev = process.versions.bun || process.env.NODE_ENV === 'development';
+try {
+  // Get version from package.json
+  const packageJson = JSON.parse(readFileSync('package.json', 'utf-8'));
+  const version = packageJson.version;
 
-  try {
-    // Try to read the generated version file first
-    const possibleVersionPaths = [
-      join(__dirname, '../generated/version.ts'), // Development
-      join(__dirname, '../generated/version.js'), // Production build
-    ];
-
-    for (const versionPath of possibleVersionPaths) {
-      try {
-        const versionContent = readFileSync(versionPath, 'utf-8');
-        // Extract version using regex since it's a simple export
-        const versionMatch = versionContent.match(/export const VERSION = '([^']+)'/);
-        if (versionMatch && versionMatch[1]) {
-          const generatedVersion = versionMatch[1];
-          return isLocalDev ? `${generatedVersion}-dev` : generatedVersion;
-        }
-      } catch {
-        // Try next path
-        continue;
-      }
-    }
-
-    // Fallback: read directly from package.json (development mode)
-    const packageJsonPath = join(__dirname, '../../package.json');
-    const packageJson = JSON.parse(readFileSync(packageJsonPath, 'utf-8'));
-    return `${packageJson.version}-dev`;
-  } catch (error) {
-    throw new Error(
-      `Unable to determine version: ${error instanceof Error ? error.message : 'Unknown error'}. Please run "bun run prebuild" to generate version file.`,
-    );
+  if (!version) {
+    throw new Error('No version found in package.json');
   }
-}
 
-export const VERSION = getVersion();
-export const APP_NAME = 'ollama-git-commit';
-export const DEFAULT_MODEL = MODELS.DEFAULT;
-export const DEFAULT_HOST = CONFIGURATIONS.DEFAULT.host;
-export const DEFAULT_TIMEOUTS = CONFIGURATIONS.DEFAULT.timeouts;
+  console.log(`🚀 Building with version: ${version}`);
+
+  // Build with version injection using Bun's define feature
+  const result = await Bun.build({
+    entrypoints: ['./src/cli.ts'],
+    outdir: './dist',
+    target: 'node',
+    format: 'esm',
+    define: {
+      __VERSION__: JSON.stringify(version),
+    },
+  });
+
+  if (!result.success) {
+    console.error('❌ Build failed:');
+    for (const message of result.logs) {
+      console.error(message);
+    }
+    process.exit(1);
+  }
+  if (result.outputs[0]) {
+    console.log('✅ Build completed successfully');
+    console.log(`📦 Generated: dist/cli.js (${Math.round(result.outputs[0].size / 1024)}KB)`);
+  } else {
+    console.log('✅ Build completed successfully');
+    console.log('📦 Generated: dist/cli.js (0KB)');
+  }
+
+  // Generate TypeScript declarations
+  console.log('🔧 Generating TypeScript declarations...');
+  execSync('tsc --emitDeclarationOnly --outDir dist', { stdio: 'inherit' });
+
+  console.log('🎉 Build process completed');
+} catch (error: unknown) {
+  console.error('❌ Build failed:', error instanceof Error ? error.message : String(error));
+  process.exit(1);
+}

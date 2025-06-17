@@ -4,7 +4,7 @@ import { registerCommitCommand } from './commands/commit';
 import { registerConfigCommands } from './commands/config';
 import { registerListModelsCommand } from './commands/list-models';
 import { registerTestCommands } from './commands/test';
-import { VERSION } from '../constants/metadata';
+import { VERSION } from '../generated/version';
 
 const program = new Command();
 
