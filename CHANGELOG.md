@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.0.12] - 2025-07-01
+
 ### Changed
 
 - Updated all example configuration files in `examples/configs/env/.env-example`, `examples/configs/project-local/.ollama-git-commit.json`, and `examples/configs/user-global/.ollama-git-commit.json` to match the current codebase configuration options, including multi-model, embeddings, and context providers.
