@@ -7,6 +7,43 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- Updated README.md with current default model (mistral:7b-instruct) in all examples and configuration sections
+- Enhanced CONTRIBUTING.md with current project structure and development guidelines
+- Updated configuration examples to reflect current multi-model and context provider features
+- Improved environment variable documentation with new configuration options
+- Updated model management examples to use current default model throughout documentation
+- Enhanced features section with centralized constants and auto-sync configuration descriptions
+
+### Added
+
+- Enhanced documentation synchronization with latest features and configurations
+- Added bunx installation option to README.md as alternative to npx
+- Updated context provider examples in CONTRIBUTING.md with current provider names
+- Added comprehensive multi-model configuration documentation with environment variables
+- Enhanced embeddings support documentation with current default model examples
+- Added detailed technical details for documentation updates in changelog
+
+### Fixed
+
+- Documentation alignment with current default models and configuration options
+- Updated model examples throughout documentation to use current defaults (mistral:7b-instruct)
+- Fixed outdated model references (codellama, llama2) in configuration examples
+- Corrected context provider examples to use current provider names (code, diff, docs)
+- Aligned environment variable examples with current configuration system
+
+### Technical Details
+
+- Updated README.md installation section to include bunx as alternative installation method
+- Enhanced README.md environment variables section with multi-model configuration options
+- Updated README.md configuration examples to use mistral:7b-instruct as default model
+- Enhanced README.md features section with centralized constants and auto-sync features
+- Updated CONTRIBUTING.md constants examples to use current default model and context format
+- Enhanced CONTRIBUTING.md debug mode section with current test commands and context providers
+- Updated CONTRIBUTING.md recent improvements section with accurate feature descriptions
+- Added comprehensive documentation updates to CHANGELOG.md following established format
+
 ## [1.0.10] - 2025-07-01
 
 ### Changed

@@ -16,13 +16,13 @@ describe('CommitCommand', () => {
 
     // Mock Git service
     mockGitService = {
-      getChanges: async () => ({
+      getChanges: () => ({
         diff: 'test diff',
         staged: true,
         stats: {},
-        filesInfo: [],
+        filesInfo: '📁 1 files changed:\n📄 test.js (modified) (+5 -2)\n\n📦 Version Changes:\n📦 package.json: Bumped version from 1.0.0 to 1.0.1',
       }),
-      execCommand: async (cmd: string) => {
+      execCommand: (cmd: string) => {
         if (cmd.includes('git commit')) {
           return true;
         }

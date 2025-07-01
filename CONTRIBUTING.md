@@ -267,15 +267,15 @@ Example:
 ```typescript
 // src/constants/models.ts
 export const MODELS = {
-  DEFAULT: 'llama3.2:3b',
+  DEFAULT: 'mistral:7b-instruct',
   EMBEDDINGS: 'nomic-embed-text',
   // ... other models
 } as const;
 
 export const CONTEXTS = [
-  'git-status',
-  'git-diff',
-  'git-log',
+  { provider: 'code', enabled: true },
+  { provider: 'docs', enabled: true },
+  { provider: 'diff', enabled: true },
   // ... other contexts
 ] as const;
 ```
@@ -295,13 +295,17 @@ ollama-git-commit config debug
 ollama-git-commit test connection
 
 # Test model availability
-ollama-git-commit test model -m llama3.2:3b
+ollama-git-commit test model -m mistral:7b-instruct
 
 # Test all models
 ollama-git-commit test all
 
 # Test with verbose output
 ollama-git-commit test all -v
+
+# Test context providers
+ollama-git-commit test context code
+ollama-git-commit test context diff
 ```
 
 ## Pull Request Process
@@ -354,8 +358,9 @@ bun test --verbose
 
 4. Test context providers individually:
    ```bash
-   ollama-git-commit test context git-status
-   ollama-git-commit test context git-diff
+   ollama-git-commit test context code
+   ollama-git-commit test context diff
+   ollama-git-commit test context docs
    ```
 
 ### Common Issues
@@ -373,13 +378,15 @@ bun test --verbose
 
 Recent major improvements include:
 
-- **Context Providers**: Enhanced commit context with git status, diff, and log information
+- **Context Providers**: Enhanced commit context with code analysis, documentation, diff analysis, terminal info, problem detection, folder structure, and codebase statistics
 - **Embeddings Support**: Added support for embedding models for better context understanding
-- **Message Cleaning**: Improved emoji removal and think tag cleaning
-- **Centralized Constants**: All models and contexts now use centralized constants
-- **Verbose Logging**: Enhanced logging throughout the application
-- **Improved Configuration**: Better default configurations with enabled context providers
+- **Message Cleaning**: Improved emoji removal and think tag cleaning with comprehensive Unicode regex
+- **Centralized Constants**: All models and contexts now use centralized constants from `src/constants/models.ts`
+- **Verbose Logging**: Enhanced logging throughout the application with detailed context information
+- **Improved Configuration**: Better default configurations with enabled context providers by default
 - **Enhanced Testing**: Comprehensive test coverage with proper mocks and utilities
+- **Multi-Model Support**: Support for multiple model types with role-based configuration
+- **Interactive CLI**: Improved user experience with better prompts and feedback
 
 ## Release Notes
 
