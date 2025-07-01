@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.0.10] - 2025-07-01
+
 ### Changed
 
 - Enhanced commit message grouping by file and category in prompt templates
