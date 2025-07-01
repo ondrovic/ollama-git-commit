@@ -1,6 +1,6 @@
 {
   "model": "mistral:7b-instruct",
-  "host": "http://127.0.0.1:11434",
+  "host": "http://localhost:11434",
   "verbose": false,
   "interactive": true,
   "debug": false,
@@ -14,5 +14,30 @@
     "connection": 10000,
     "generation": 120000,
     "modelPull": 300000
-  }
+  },
+  "models": [
+    {
+      "name": "mistral-7b-instruct",
+      "provider": "ollama",
+      "model": "mistral:7b-instruct",
+      "roles": ["chat", "edit", "autocomplete", "apply", "summarize"]
+    },
+    {
+      "name": "embeddingsProvider",
+      "provider": "ollama",
+      "model": "nomic-embed-text",
+      "roles": ["embed"]
+    }
+  ],
+  "embeddingsProvider": "embeddingsProvider",
+  "embeddingsModel": "nomic-embed-text",
+  "context": [
+    { "provider": "code", "enabled": true },
+    { "provider": "docs", "enabled": true },
+    { "provider": "diff", "enabled": true },
+    { "provider": "terminal", "enabled": true },
+    { "provider": "problems", "enabled": true },
+    { "provider": "folder", "enabled": true },
+    { "provider": "codebase", "enabled": true }
+  ]
 }

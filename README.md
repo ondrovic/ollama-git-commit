@@ -363,19 +363,19 @@ You can configure the tool using environment variables:
 export OLLAMA_HOST=http://localhost:11434
 
 # Set default model
-export OLLAMA_MODEL=mistral:7b-instruct
+export OLLAMA_COMMIT_MODEL=mistral:7b-instruct
 
 # Disable emojis
-export OLLAMA_USE_EMOJIS=false
+export OLLAMA_COMMIT_USE_EMOJIS=false
 
 # Multi-model configuration (JSON string)
-export OLLAMA_COMMIT_MODELS='[{"name":"mistral-7b-instruct","provider":"ollama","model":"mistral:7b-instruct","roles":["chat"]}]'
+export OLLAMA_COMMIT_MODELS='[{"name":"mistral-7b-instruct","provider":"ollama","model":"mistral:7b-instruct","roles":["chat","edit","autocomplete","apply","summarize"]},{"name":"embeddingsProvider","provider":"ollama","model":"nomic-embed-text","roles":["embed"]}]'
 
 # Set embeddings provider
 export OLLAMA_COMMIT_EMBEDDINGS_PROVIDER=embeddingsProvider
 
 # Set context providers (JSON string)
-export OLLAMA_COMMIT_CONTEXT='[{"provider":"code","enabled":true}]'
+export OLLAMA_COMMIT_CONTEXT='[{"provider":"code","enabled":true},{"provider":"docs","enabled":true},{"provider":"diff","enabled":true},{"provider":"terminal","enabled":true},{"provider":"problems","enabled":true},{"provider":"folder","enabled":true},{"provider":"codebase","enabled":true}]'
 ```
 
 ### Project-Local Configuration
@@ -385,8 +385,21 @@ Create a `.ollama-git-commit.json` file in your project root:
 ```json
 {
   "model": "mistral:7b-instruct",
-  "useEmojis": true,
-  "promptTemplate": "conventional"
+  "host": "http://localhost:11434",
+  "verbose": false,
+  "interactive": true,
+  "debug": false,
+  "autoStage": false,
+  "autoCommit": false,
+  "autoModel": false,
+  "useEmojis": false,
+  "promptTemplate": "default",
+  "promptFile": "~/.config/ollama-git-commit/prompt.txt",
+  "timeouts": {
+    "connection": 10000,
+    "generation": 120000,
+    "modelPull": 300000
+  }
 }
 ```
 
@@ -397,8 +410,22 @@ Create a `~/.ollama-git-commit.json` file:
 ```json
 {
   "model": "mistral:7b-instruct",
-  "useEmojis": true,
-  "promptTemplate": "detailed"
+  "host": "http://localhost:11434",
+  "verbose": false,
+  "interactive": true,
+  "debug": false,
+  "autoStage": false,
+  "autoCommit": false,
+  "autoModel": false,
+  "useEmojis": false,
+  "promptTemplate": "default",
+  "promptFile": "~/.config/ollama-git-commit/prompt.txt",
+  "configFile": "~/.config/ollama-git-commit/config.json",
+  "timeouts": {
+    "connection": 10000,
+    "generation": 120000,
+    "modelPull": 300000
+  }
 }
 ```
 
@@ -451,16 +478,26 @@ For enhanced context analysis, you can configure an embeddings model:
       "name": "mistral-7b-instruct",
       "provider": "ollama",
       "model": "mistral:7b-instruct",
-      "roles": ["chat"]
+      "roles": ["chat", "edit", "autocomplete", "apply", "summarize"]
     },
     {
-      "name": "embeddings",
+      "name": "embeddingsProvider",
       "provider": "ollama",
       "model": "nomic-embed-text",
       "roles": ["embed"]
     }
   ],
-  "embeddingsProvider": "embeddings"
+  "embeddingsProvider": "embeddingsProvider",
+  "embeddingsModel": "nomic-embed-text",
+  "context": [
+    { "provider": "code", "enabled": true },
+    { "provider": "docs", "enabled": true },
+    { "provider": "diff", "enabled": true },
+    { "provider": "terminal", "enabled": true },
+    { "provider": "problems", "enabled": true },
+    { "provider": "folder", "enabled": true },
+    { "provider": "codebase", "enabled": true }
+  ]
 }
 ```
 
@@ -664,14 +701,14 @@ You can configure the tool using environment variables:
 export OLLAMA_HOST=http://localhost:11434
 
 # Set default model
-export OLLAMA_MODEL=mistral:7b-instruct
+export OLLAMA_COMMIT_MODEL=mistral:7b-instruct
 
 # Multi-model configuration (JSON string)
-export OLLAMA_COMMIT_MODELS='[{"name":"mistral-7b-instruct","provider":"ollama","model":"mistral:7b-instruct","roles":["chat"]}]'
+export OLLAMA_COMMIT_MODELS='[{"name":"mistral-7b-instruct","provider":"ollama","model":"mistral:7b-instruct","roles":["chat","edit","autocomplete","apply","summarize"]},{"name":"embeddingsProvider","provider":"ollama","model":"nomic-embed-text","roles":["embed"]}]'
 
 # Set embeddings provider
 export OLLAMA_COMMIT_EMBEDDINGS_PROVIDER=embeddingsProvider
 
 # Set context providers (JSON string)
-export OLLAMA_COMMIT_CONTEXT='[{"provider":"code","enabled":true}]'
+export OLLAMA_COMMIT_CONTEXT='[{"provider":"code","enabled":true},{"provider":"docs","enabled":true},{"provider":"diff","enabled":true},{"provider":"terminal","enabled":true},{"provider":"problems","enabled":true},{"provider":"folder","enabled":true},{"provider":"codebase","enabled":true}]'
 ```
