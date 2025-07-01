@@ -25,31 +25,36 @@ mock.module('../src/utils/validation', () => ({
 // Mock GitService module for both possible import paths
 mock.module('../core/git', () => ({
   GitService: class {
-    async getStagedDiff() {
+    getStagedDiff() {
       return 'test diff';
     }
-    async getStatus() {
+    getStatus() {
       return 'test status';
     }
-    async commit() {
+    commit() {
       return true;
     }
-    async getChanges() {
-      return { diff: 'test diff', staged: true, stats: {}, filesInfo: [] };
+    getChanges() {
+      return { 
+        diff: 'test diff', 
+        staged: true, 
+        stats: {}, 
+        filesInfo: '📁 1 files changed:\n📄 test.js (modified) (+5 -2)\n\n📦 Version Changes:\n📦 package.json: Bumped version from 1.0.0 to 1.0.1' 
+      };
     }
-    async isRepository() {
+    isRepository() {
       return true;
     }
-    async getRoot() {
+    getRoot() {
       return '/mock/repo';
     }
-    async getCurrentBranch() {
+    getCurrentBranch() {
       return 'main';
     }
-    async stageAll() {
+    stageAll() {
       return true;
     }
-    async hasStagedChanges() {
+    hasStagedChanges() {
       return true;
     }
   },
@@ -69,15 +74,20 @@ const mockOllamaService = {
 };
 
 const mockGitService = {
-  getStagedDiff: async () => 'test diff',
-  getStatus: async () => 'test status',
-  commit: async () => true,
-  getChanges: async () => ({ diff: 'test diff', staged: true, stats: {}, filesInfo: [] }),
-  isRepository: async () => true,
-  getRoot: async () => '/mock/repo',
-  getCurrentBranch: async () => 'main',
-  stageAll: async () => true,
-  hasStagedChanges: async () => true,
+  getStagedDiff: () => 'test diff',
+  getStatus: () => 'test status',
+  commit: () => true,
+  getChanges: () => ({ 
+    diff: 'test diff', 
+    staged: true, 
+    stats: {}, 
+    filesInfo: '📁 1 files changed:\n📄 test.js (modified) (+5 -2)\n\n📦 Version Changes:\n📦 package.json: Bumped version from 1.0.0 to 1.0.1' 
+  }),
+  isRepository: () => true,
+  getRoot: () => '/mock/repo',
+  getCurrentBranch: () => 'main',
+  stageAll: () => true,
+  hasStagedChanges: () => true,
 };
 
 const mockPromptService = {

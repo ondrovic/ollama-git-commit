@@ -205,6 +205,7 @@ export class GitService implements IGitService {
 
       const lines = output.split('\n').filter(line => line.trim());
       let detailedInfo = '';
+      let versionChanges = '';
 
       lines.forEach(line => {
         const [status, ...pathParts] = line.split('\t');
@@ -250,6 +251,12 @@ export class GitService implements IGitService {
                 changeSummary += `, ${functionsAdded} new functions/vars`;
               }
               changeSummary += ')';
+
+              // Extract version changes for specific files
+              const versionInfo = this.extractVersionChanges(path, fileDiff);
+              if (versionInfo) {
+                versionChanges += `${versionInfo}\n`;
+              }
             }
           } catch {
             // File diff failed, continue without details
@@ -283,7 +290,14 @@ export class GitService implements IGitService {
         }
       });
 
-      return `📁 ${lines.length} files changed:\n${detailedInfo}`;
+      let result = `📁 ${lines.length} files changed:\n${detailedInfo}`;
+
+      // Add version changes section if any were found
+      if (versionChanges.trim()) {
+        result += `\n📦 Version Changes:\n${versionChanges}`;
+      }
+
+      return result;
     } catch (error: unknown) {
       if (typeof error === 'object' && error && 'message' in error) {
         return `📁 Unable to analyze file changes: ${(error as { message: string }).message}`;
@@ -291,6 +305,46 @@ export class GitService implements IGitService {
         return `📁 Unable to analyze file changes: ${String(error)}`;
       }
     }
+  }
+
+  private extractVersionChanges(filePath: string, fileDiff: string): string | null {
+    // Check if this is a package.json file
+    if (filePath.endsWith('package.json')) {
+      const oldVersion = fileDiff.match(/^[-]+[\s]*"version":\s*"([^"]+)"/m)?.[1];
+      const newVersion = fileDiff.match(/^[+]+[\s]*"version":\s*"([^"]+)"/m)?.[1];
+
+      if (oldVersion && newVersion) {
+        return `📦 package.json: Bumped version from ${oldVersion} to ${newVersion}`;
+      } else if (newVersion) {
+        return `📦 package.json: Set version to ${newVersion}`;
+      }
+    }
+
+    // Check for package-lock.json version changes
+    if (filePath.endsWith('package-lock.json')) {
+      const oldVersion = fileDiff.match(/^[-]+[\s]*"version":\s*"([^"]+)"/m)?.[1];
+      const newVersion = fileDiff.match(/^[+]+[\s]*"version":\s*"([^"]+)"/m)?.[1];
+
+      if (oldVersion && newVersion) {
+        return `📦 package-lock.json: Updated version from ${oldVersion} to ${newVersion}`;
+      } else if (newVersion) {
+        return `📦 package-lock.json: Set version to ${newVersion}`;
+      }
+    }
+
+    // Check for other common version files
+    if (filePath.includes('version') || filePath.includes('VERSION')) {
+      const oldVersion = fileDiff.match(/^[-]+[\s]*([0-9]+\.[0-9]+\.[0-9]+)/m)?.[1];
+      const newVersion = fileDiff.match(/^[+]+[\s]*([0-9]+\.[0-9]+\.[0-9]+)/m)?.[1];
+
+      if (oldVersion && newVersion) {
+        return `📦 ${filePath}: Updated version from ${oldVersion} to ${newVersion}`;
+      } else if (newVersion) {
+        return `📦 ${filePath}: Set version to ${newVersion}`;
+      }
+    }
+
+    return null;
   }
 
   getBranchName(): string {

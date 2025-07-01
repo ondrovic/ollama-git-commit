@@ -91,7 +91,9 @@ ${filesInfo}
 GIT DIFF:
 ${truncatedDiff}
 
-Please analyze these changes and create a meaningful commit message following the format specified above.`;
+Please analyze these changes and create a meaningful commit message following the format specified above.
+
+IMPORTANT: Maintain a professional, factual tone throughout. Focus on what was changed and why it was necessary. Avoid humor, commentary, or unnecessary text.`;
   }
 
   async buildCommitPromptWithEmbeddings(
@@ -112,7 +114,9 @@ Please analyze these changes and create a meaningful commit message following th
       // For now, we'll just add a note that embeddings were used
       // In a more sophisticated implementation, you could use these embeddings
       // to find similar commits or provide semantic context
-      const embeddingNote = `\n[Embeddings generated using ${embeddingsModel} for enhanced context analysis]`;
+      const embeddingNote = `\n[Embeddings generated using ${embeddingsModel} for enhanced context analysis]
+
+IMPORTANT: Maintain a professional, factual tone throughout. Focus on what was changed and why it was necessary. Avoid humor, commentary, or unnecessary text.`;
 
       return basicPrompt + embeddingNote;
     } catch (error) {
@@ -155,7 +159,9 @@ Please analyze these changes and create a meaningful commit message following th
       return `${basicPrompt}
 
 ADDITIONAL CONTEXT:
-${contextSection}`;
+${contextSection}
+
+IMPORTANT: Maintain a professional, factual tone throughout. Focus on what was changed and why it was necessary. Avoid humor, commentary, or unnecessary text.`;
     } catch (error) {
       if (verbose) {
         this.logger.warn(`Failed to gather context: ${error}. Using basic prompt.`);

@@ -65,10 +65,12 @@ You can view the status of all workflows in the "Actions" tab of the GitHub repo
 - 🔍 **Debug Tools**: Advanced debugging commands for configuration and connection issues
 - 📝 **Documentation**: Detailed guides for installation, configuration, and troubleshooting
 - 🚀 **Automated Publishing**: Streamlined release process with automatic NPM publishing
-- 🤖 **Multi-Model Support**: Configure multiple models for different purposes
+- 🤖 **Multi-Model Support**: Configure multiple models for different purposes with role-based configuration
 - 🔗 **Embeddings Support**: Use embeddings models for enhanced context analysis
 - 📈 **Verbose Logging**: Detailed logging for debugging and monitoring context gathering
 - 🧹 **Message Cleaning**: Advanced message processing to remove unwanted content like `<think>` tags and format output consistently
+- 🎯 **Centralized Constants**: All models and contexts use centralized constants for consistency
+- 🔄 **Auto-Sync Configuration**: Automatic synchronization between core model and multi-model configuration
 
 ## 🚀 Installation
 
@@ -80,6 +82,9 @@ npm install -g @condrovic/ollama-git-commit
 
 # Or use with npx (no installation required)
 npx @condrovic/ollama-git-commit -d .
+
+# Or use with bun (alternative)
+bunx @condrovic/ollama-git-commit -d .
 ```
 
 ### Global Installation for Development
@@ -298,7 +303,7 @@ ollama-git-commit -d . --debug
 
 ```bash
 # Use specific model
-ollama-git-commit -d . -m codellama
+ollama-git-commit -d . -m mistral:7b-instruct
 
 # Auto-select best available model
 ollama-git-commit -d . --auto-model
@@ -358,10 +363,19 @@ You can configure the tool using environment variables:
 export OLLAMA_HOST=http://localhost:11434
 
 # Set default model
-export OLLAMA_MODEL=codellama
+export OLLAMA_MODEL=mistral:7b-instruct
 
 # Disable emojis
 export OLLAMA_USE_EMOJIS=false
+
+# Multi-model configuration (JSON string)
+export OLLAMA_COMMIT_MODELS='[{"name":"mistral-7b-instruct","provider":"ollama","model":"mistral:7b-instruct","roles":["chat"]}]'
+
+# Set embeddings provider
+export OLLAMA_COMMIT_EMBEDDINGS_PROVIDER=embeddingsProvider
+
+# Set context providers (JSON string)
+export OLLAMA_COMMIT_CONTEXT='[{"provider":"code","enabled":true}]'
 ```
 
 ### Project-Local Configuration
@@ -370,7 +384,7 @@ Create a `.ollama-git-commit.json` file in your project root:
 
 ```json
 {
-  "model": "codellama",
+  "model": "mistral:7b-instruct",
   "useEmojis": true,
   "promptTemplate": "conventional"
 }
@@ -382,7 +396,7 @@ Create a `~/.ollama-git-commit.json` file:
 
 ```json
 {
-  "model": "llama2",
+  "model": "mistral:7b-instruct",
   "useEmojis": true,
   "promptTemplate": "detailed"
 }
@@ -434,9 +448,9 @@ For enhanced context analysis, you can configure an embeddings model:
 {
   "models": [
     {
-      "name": "codellama",
+      "name": "mistral-7b-instruct",
       "provider": "ollama",
-      "model": "codellama:7b",
+      "model": "mistral:7b-instruct",
       "roles": ["chat"]
     },
     {

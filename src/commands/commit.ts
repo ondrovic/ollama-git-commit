@@ -205,12 +205,33 @@ export class CommitCommand {
           }
 
           // Call Ollama API
-          const message = await this.ollamaService.generateCommitMessage(
+          let message = await this.ollamaService.generateCommitMessage(
             config.model,
             config.host,
             fullPrompt,
             config.verbose,
           );
+
+          // Post-processing: Replace incorrect version lines with correct ones in their proper position
+          const versionSectionMatch = gitChanges.filesInfo.match(/📦 Version Changes:\n([\s\S]+)/);
+          if (versionSectionMatch) {
+            const versionLines = versionSectionMatch[1]
+              .split('\n')
+              .map(line => line.trim())
+              .filter(line => line.startsWith('📦'));
+            // Remove emoji from version lines
+            const cleanVersionLines = versionLines.map(line => line.replace(/^📦\s*/, ''));
+
+            // Replace incorrect version lines with correct ones
+            cleanVersionLines.forEach(cleanLine => {
+              // Replace any line containing 'from .. to ..' (case insensitive) with the correct version
+              const incorrectVersionRegex = new RegExp(
+                '(.*from\\s+\\.\\.\\s+to\\s+\\.\\..*)',
+                'gi',
+              );
+              message = message.replace(incorrectVersionRegex, `- ${cleanLine}`);
+            });
+          }
 
           return message;
         } catch (error: unknown) {

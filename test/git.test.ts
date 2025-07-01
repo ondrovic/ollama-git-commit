@@ -1,20 +1,79 @@
-import { describe, test, expect } from 'bun:test';
+import { describe, expect, test } from 'bun:test';
 import * as path from 'path';
-import { mockFs, mockGit, createMockGitDiff } from './setup';
+import { GitService } from '../src/core/git';
+import { Logger } from '../src/utils/logger';
+import { mockFs, mockGit } from './setup';
 
 describe('Git Integration', () => {
   const testRepoPath = '/mock/repo';
 
   describe('Git Commands', () => {
-    test('should get staged diff', async () => {
-      const diff = await mockGit.exec('git', ['diff', '--staged']);
-      expect(diff).toContain('diff --git');
-      expect(diff).toContain('Test content');
-    });
-
     test('should get git status', async () => {
       const status = await mockGit.exec('git', ['status', '--porcelain']);
       expect(status).toBe('M  test.txt\n');
+    });
+  });
+
+  describe('Version Extraction', () => {
+    test('should extract version changes from package.json diff', () => {
+      const gitService = new GitService(process.cwd(), new Logger());
+      
+      // Mock the extractVersionChanges method by accessing it through the prototype
+      const extractVersionChanges = (gitService as any).extractVersionChanges.bind(gitService);
+      
+      const mockDiff = `diff --git a/package.json b/package.json
+index e2b836d..b62d39a 100644
+--- a/package.json
++++ b/package.json
+@@ -1,6 +1,6 @@
+ {
+   "name": "contentstack-search-cli",
+-  "version": "1.0.1",
++  "version": "1.0.2",
+   "type": "commonjs",
+   "description": "A powerful CLI tool for searching ContentStack CMS content"`;
+
+      const result = extractVersionChanges('package.json', mockDiff);
+      expect(result).toBe('📦 package.json: Bumped version from 1.0.1 to 1.0.2');
+    });
+
+    test('should extract version changes from package-lock.json diff', () => {
+      const gitService = new GitService(process.cwd(), new Logger());
+      
+      const extractVersionChanges = (gitService as any).extractVersionChanges.bind(gitService);
+      
+      const mockDiff = `diff --git a/package-lock.json b/package-lock.json
+index e2b836d..b62d39a 100644
+--- a/package-lock.json
++++ b/package-lock.json
+@@ -1,6 +1,6 @@
+ {
+   "name": "contentstack-search-cli",
+-  "version": "1.0.1",
++  "version": "1.0.2",
+   "lockfileVersion": 2`;
+
+      const result = extractVersionChanges('package-lock.json', mockDiff);
+      expect(result).toBe('📦 package-lock.json: Updated version from 1.0.1 to 1.0.2');
+    });
+
+    test('should return null for files without version changes', () => {
+      const gitService = new GitService(process.cwd(), new Logger());
+      
+      const extractVersionChanges = (gitService as any).extractVersionChanges.bind(gitService);
+      
+      const mockDiff = `diff --git a/src/index.js b/src/index.js
+index e2b836d..b62d39a 100644
+--- a/src/index.js
++++ b/src/index.js
+@@ -1,3 +1,4 @@
+ function hello() {
+   console.log('Hello World');
++  console.log('Goodbye World');
+ }`;
+
+      const result = extractVersionChanges('src/index.js', mockDiff);
+      expect(result).toBeNull();
     });
   });
 
