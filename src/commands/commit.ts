@@ -214,7 +214,7 @@ export class CommitCommand {
 
           // Post-processing: Replace incorrect version lines with correct ones in their proper position
           const versionSectionMatch = gitChanges.filesInfo.match(/📦 Version Changes:\n([\s\S]+)/);
-          if (versionSectionMatch) {
+          if (versionSectionMatch && versionSectionMatch[1]) {
             const versionLines = versionSectionMatch[1]
               .split('\n')
               .map(line => line.trim())
