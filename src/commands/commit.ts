@@ -2,7 +2,7 @@ import { spawn } from 'child_process';
 import { homedir } from 'os';
 import { join } from 'path';
 import { VALID_TEMPLATES, type VALID_TEMPLATE } from '../constants/prompts';
-import { getConfig } from '../core/config';
+import { ConfigManager, getConfig } from '../core/config';
 import { GitCommandError, GitNoChangesError, GitRepositoryError, GitService } from '../core/git';
 import { IGitService, ILogger, IOllamaService, IPromptService } from '../core/interfaces';
 import { OllamaService } from '../core/ollama';
@@ -162,12 +162,47 @@ export class CommitCommand {
             this.logger.info('Analysis complete, generating commit message...');
           }
 
-          // Build enhanced prompt
-          const fullPrompt = this.promptService.buildCommitPrompt(
-            gitChanges.filesInfo,
-            gitChanges.diff,
-            systemPrompt,
-          );
+          // Check if embeddings model and context providers are available
+          const configManager = ConfigManager.getInstance();
+          const embeddingsModel = await configManager.getEmbeddingsModel();
+          const contextProviders = await configManager.getContextProviders();
+
+          let fullPrompt: string;
+
+          // Use context-enhanced prompt if context providers are available
+          if (contextProviders && contextProviders.length > 0) {
+            fullPrompt = await this.promptService.buildCommitPromptWithContext(
+              gitChanges.filesInfo,
+              gitChanges.diff,
+              systemPrompt,
+              contextProviders,
+              this.directory,
+              config.verbose,
+            );
+            if (config.verbose) {
+              this.logger.info(`Using ${contextProviders.length} context providers`);
+            }
+          } else if (embeddingsModel) {
+            // Use embeddings-enhanced prompt
+            fullPrompt = await this.promptService.buildCommitPromptWithEmbeddings(
+              gitChanges.filesInfo,
+              gitChanges.diff,
+              systemPrompt,
+              this.ollamaService,
+              embeddingsModel.model,
+              config.host,
+            );
+            if (config.verbose) {
+              this.logger.info(`Using embeddings model: ${embeddingsModel.model}`);
+            }
+          } else {
+            // Use basic prompt
+            fullPrompt = this.promptService.buildCommitPrompt(
+              gitChanges.filesInfo,
+              gitChanges.diff,
+              systemPrompt,
+            );
+          }
 
           // Call Ollama API
           const message = await this.ollamaService.generateCommitMessage(
@@ -403,9 +438,18 @@ export class CommitCommand {
         ? options.promptTemplate
         : baseConfig.promptTemplate;
 
+    // Get the model to use - prefer CLI option, then chat model from multi-model config, then legacy model
+    let model = options.model;
+    if (!model) {
+      // Try to get chat model from multi-model configuration
+      const configManager = ConfigManager.getInstance();
+      const chatModel = await configManager.getChatModel();
+      model = chatModel?.model || baseConfig.model;
+    }
+
     // Override with CLI options (CLI options take highest priority)
     return {
-      model: options.model || baseConfig.model,
+      model: model,
       host: options.host || baseConfig.host,
       verbose: options.verbose !== undefined ? options.verbose : baseConfig.verbose,
       interactive: options.interactive !== undefined ? options.interactive : baseConfig.interactive,

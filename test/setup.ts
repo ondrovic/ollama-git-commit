@@ -1,6 +1,6 @@
-import { beforeAll, afterAll } from 'bun:test';
+import { afterAll, beforeAll } from 'bun:test';
 import * as path from 'path';
-import * as os from 'os';
+import { MODELS } from '../src/constants/models';
 
 // Mock file system
 export const mockFs = {
@@ -72,12 +72,12 @@ export const mockGit = {
 export const mockOllamaResponses = {
   models: {
     models: [
-      { name: 'mistral:7b-instruct', modified_at: '2024-03-20T12:00:00Z' },
+      { name: MODELS.DEFAULT, modified_at: '2024-03-20T12:00:00Z' },
       { name: 'llama2:7b', modified_at: '2024-03-20T12:00:00Z' },
     ],
   },
   generate: {
-    model: 'mistral:7b-instruct',
+    model: MODELS.DEFAULT,
     response: 'feat: add new feature for improved performance',
     done: true,
   },
@@ -117,7 +117,7 @@ export function mockOllamaFetch() {
 
 // Mock configuration
 export const mockConfig = {
-  model: 'mistral:7b-instruct',
+  model: MODELS.DEFAULT,
   host: 'http://localhost:11434',
   verbose: false,
   interactive: false,

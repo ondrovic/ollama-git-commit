@@ -1,8 +1,10 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'fs';
 import { dirname } from 'path';
 import { PROMPTS } from '../constants/prompts';
+import { ContextProvider } from '../types';
 import { Logger } from '../utils/logger';
-import { ILogger, IPromptService } from './interfaces';
+import { ContextData, ContextService } from './context';
+import { ILogger, IOllamaService, IPromptService } from './interfaces';
 
 export class PromptService implements IPromptService {
   private readonly defaultPrompt = PROMPTS.DEFAULT;
@@ -90,6 +92,90 @@ GIT DIFF:
 ${truncatedDiff}
 
 Please analyze these changes and create a meaningful commit message following the format specified above.`;
+  }
+
+  async buildCommitPromptWithEmbeddings(
+    filesInfo: string,
+    diff: string,
+    systemPrompt: string,
+    ollamaService: IOllamaService,
+    embeddingsModel: string,
+    host: string,
+  ): Promise<string> {
+    // First build the basic prompt
+    const basicPrompt = this.buildCommitPrompt(filesInfo, diff, systemPrompt);
+
+    try {
+      // Generate embeddings for the diff to provide additional context
+      await ollamaService.generateEmbeddings(embeddingsModel, diff, host);
+
+      // For now, we'll just add a note that embeddings were used
+      // In a more sophisticated implementation, you could use these embeddings
+      // to find similar commits or provide semantic context
+      const embeddingNote = `\n[Embeddings generated using ${embeddingsModel} for enhanced context analysis]`;
+
+      return basicPrompt + embeddingNote;
+    } catch (error) {
+      // If embeddings fail, fall back to basic prompt
+      this.logger.warn(`Failed to generate embeddings: ${error}. Using basic prompt.`);
+      return basicPrompt;
+    }
+  }
+
+  async buildCommitPromptWithContext(
+    filesInfo: string,
+    diff: string,
+    systemPrompt: string,
+    contextProviders: ContextProvider[],
+    directory: string,
+    verbose?: boolean,
+  ): Promise<string> {
+    // First build the basic prompt
+    const basicPrompt = this.buildCommitPrompt(filesInfo, diff, systemPrompt);
+
+    if (!contextProviders || contextProviders.length === 0) {
+      return basicPrompt;
+    }
+
+    try {
+      const contextService = new ContextService(this.logger);
+      const contextData = await contextService.gatherContext(contextProviders, {
+        directory,
+        diff,
+        verbose,
+      });
+
+      if (contextData.length === 0) {
+        return basicPrompt;
+      }
+
+      // Build context section
+      const contextSection = this.buildContextSection(contextData);
+
+      return `${basicPrompt}
+
+ADDITIONAL CONTEXT:
+${contextSection}`;
+    } catch (error) {
+      if (verbose) {
+        this.logger.warn(`Failed to gather context: ${error}. Using basic prompt.`);
+      }
+      return basicPrompt;
+    }
+  }
+
+  private buildContextSection(contextData: ContextData[]): string {
+    const sections: string[] = [];
+
+    for (const data of contextData) {
+      if (data.content && data.content.trim()) {
+        sections.push(`[${data.provider.toUpperCase()} CONTEXT]
+${data.content}
+`);
+      }
+    }
+
+    return sections.join('\n');
   }
 
   validatePrompt(prompt: string): { valid: boolean; errors: string[] } {

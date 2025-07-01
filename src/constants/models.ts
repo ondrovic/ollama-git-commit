@@ -1,5 +1,15 @@
 export const MODELS = {
   DEFAULT: 'mistral:7b-instruct',
+  EMBEDDINGS: 'nomic-embed-text',
+  CONTEXTS: [
+    { provider: 'code', enabled: true },
+    { provider: 'docs', enabled: true },
+    { provider: 'diff', enabled: true },
+    { provider: 'terminal', enabled: true },
+    { provider: 'problems', enabled: true },
+    { provider: 'folder', enabled: true },
+    { provider: 'codebase', enabled: true },
+  ],
   PREFERRED: [
     'llama3.2:latest',
     'llama3.2:3b',

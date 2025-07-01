@@ -3,10 +3,18 @@ import fsExtra from 'fs-extra';
 import { homedir } from 'os';
 import { dirname, join } from 'path';
 import { ENVIRONMENTAL_VARIABLES } from '../constants/enviornmental';
-import { ConfigSources, OllamaCommitConfig, type ActiveFile } from '../types';
+import { MODELS } from '../constants/models';
+import { VALID_TEMPLATES, type VALID_TEMPLATE } from '../constants/prompts';
+import {
+  ConfigSources,
+  ContextProvider,
+  ModelConfig,
+  ModelRole,
+  OllamaCommitConfig,
+  type ActiveFile,
+} from '../types';
 import { Logger } from '../utils/logger';
 import { IConfigManager, ILogger } from './interfaces';
-import { VALID_TEMPLATES, type VALID_TEMPLATE } from '../constants/prompts';
 
 export class ConfigManager implements IConfigManager {
   private static instance: ConfigManager;
@@ -52,7 +60,12 @@ export class ConfigManager implements IConfigManager {
   }
 
   private getDefaults(): OllamaCommitConfig {
-    return CONFIGURATIONS.DEFAULT as OllamaCommitConfig;
+    const defaults = CONFIGURATIONS.DEFAULT;
+    return {
+      ...defaults,
+      models: [...defaults.models],
+      context: [...defaults.context],
+    } as OllamaCommitConfig;
   }
 
   private async loadConfigFile(filePath: string): Promise<Record<string, unknown>> {
@@ -77,7 +90,8 @@ export class ConfigManager implements IConfigManager {
       if (!Object.prototype.hasOwnProperty.call(source, key)) continue;
       if (key === 'timeouts' && typeof source[key] === 'object' && source[key] !== null) {
         result.timeouts = { ...result.timeouts, ...(source.timeouts as object) };
-      } else if (key in result) {
+      } else {
+        // Allow any key to be merged, not just those that exist in the target
         (result as unknown as Record<string, unknown>)[key] = source[key];
       }
     }
@@ -114,6 +128,40 @@ export class ConfigManager implements IConfigManager {
 
     // Apply environment variables (highest priority)
     this.applyEnvironmentVariables(config);
+
+    // --- AUTO-SYNC MODELS ARRAY WITH CORE MODEL ---
+    // If user has set 'model' but not 'models', auto-generate models array for all chat/edit/autocomplete/apply/summarize roles
+    // OR if user has set 'model' but models array still contains the default model, update it
+    if (config.model) {
+      const currentChatModel = config.models?.find(m => m.roles.includes('chat'));
+      const shouldUpdate =
+        !config.models ||
+        config.models.length === 0 ||
+        (currentChatModel && currentChatModel.model !== config.model);
+
+      if (shouldUpdate) {
+        this.logger.debug(`Auto-syncing models array with core model: ${config.model}`);
+        config.models = [
+          {
+            name: config.model,
+            provider: 'ollama',
+            model: config.model,
+            roles: ['chat', 'edit', 'autocomplete', 'apply', 'summarize'],
+          },
+          {
+            name: 'embeddingsProvider',
+            provider: 'ollama',
+            model: config.embeddingsModel || MODELS.EMBEDDINGS,
+            roles: ['embed'],
+          },
+        ];
+        this.logger.debug(`Generated models array: ${JSON.stringify(config.models)}`);
+      } else {
+        this.logger.debug(
+          `No auto-sync needed. Model: ${config.model}, Models array: ${config.models ? config.models.length : 0} items`,
+        );
+      }
+    }
 
     return config;
   }
@@ -235,6 +283,39 @@ export class ConfigManager implements IConfigManager {
         config.timeouts.modelPull = timeout;
       }
     }
+
+    // New multi-model environment variables
+    if (process.env[ENVIRONMENTAL_VARIABLES.OLLAMA_COMMIT_EMBEDDINGS_PROVIDER]) {
+      config.embeddingsProvider = process.env[
+        ENVIRONMENTAL_VARIABLES.OLLAMA_COMMIT_EMBEDDINGS_PROVIDER
+      ] as string;
+    }
+
+    if (process.env[ENVIRONMENTAL_VARIABLES.OLLAMA_COMMIT_EMBEDDINGS_MODEL]) {
+      config.embeddingsModel = process.env[
+        ENVIRONMENTAL_VARIABLES.OLLAMA_COMMIT_EMBEDDINGS_MODEL
+      ] as string;
+    }
+
+    if (process.env[ENVIRONMENTAL_VARIABLES.OLLAMA_COMMIT_MODELS]) {
+      try {
+        config.models = JSON.parse(
+          process.env[ENVIRONMENTAL_VARIABLES.OLLAMA_COMMIT_MODELS] as string,
+        );
+      } catch (error) {
+        this.logger.error('Failed to parse OLLAMA_COMMIT_MODELS environment variable:', error);
+      }
+    }
+
+    if (process.env[ENVIRONMENTAL_VARIABLES.OLLAMA_COMMIT_CONTEXT]) {
+      try {
+        config.context = JSON.parse(
+          process.env[ENVIRONMENTAL_VARIABLES.OLLAMA_COMMIT_CONTEXT] as string,
+        );
+      } catch (error) {
+        this.logger.error('Failed to parse OLLAMA_COMMIT_CONTEXT environment variable:', error);
+      }
+    }
   }
 
   // Public API
@@ -242,6 +323,8 @@ export class ConfigManager implements IConfigManager {
     if (!this.initialized) {
       await this.initialize();
     }
+    // Always reload config to ensure auto-sync logic runs
+    this.config = await this.loadConfig();
     return { ...this.config };
   }
 
@@ -345,6 +428,12 @@ export class ConfigManager implements IConfigManager {
             process.env[ENVIRONMENTAL_VARIABLES.OLLAMA_COMMIT_TIME_OUTS_GENERATION],
           [ENVIRONMENTAL_VARIABLES.OLLAMA_COMMIT_TIME_OUTS_MODEL_PULL]:
             process.env[ENVIRONMENTAL_VARIABLES.OLLAMA_COMMIT_TIME_OUTS_MODEL_PULL],
+          [ENVIRONMENTAL_VARIABLES.OLLAMA_COMMIT_EMBEDDINGS_PROVIDER]:
+            process.env[ENVIRONMENTAL_VARIABLES.OLLAMA_COMMIT_EMBEDDINGS_PROVIDER],
+          [ENVIRONMENTAL_VARIABLES.OLLAMA_COMMIT_MODELS]:
+            process.env[ENVIRONMENTAL_VARIABLES.OLLAMA_COMMIT_MODELS],
+          [ENVIRONMENTAL_VARIABLES.OLLAMA_COMMIT_CONTEXT]:
+            process.env[ENVIRONMENTAL_VARIABLES.OLLAMA_COMMIT_CONTEXT],
         },
       },
     };
@@ -400,12 +489,106 @@ export class ConfigManager implements IConfigManager {
     sources.promptFile = await getSource('promptFile');
     sources.promptTemplate = await getSource('promptTemplate');
     sources.useEmojis = await getSource('useEmojis');
+    sources.models = await getSource('models');
+    sources.embeddingsProvider = await getSource('embeddingsProvider');
+    sources.embeddingsModel = await getSource('embeddingsModel');
+    sources.context = await getSource('context');
     if (sources.timeouts) {
       sources.timeouts.connection = await getSource('timeouts.connection');
       sources.timeouts.generation = await getSource('timeouts.generation');
       sources.timeouts.modelPull = await getSource('timeouts.modelPull');
     }
     return sources;
+  }
+
+  // New methods for multi-model support
+  async getModelByRole(role: ModelRole): Promise<ModelConfig | null> {
+    const config = await this.getConfig();
+    return config.models?.find(m => m.roles.includes(role)) || null;
+  }
+
+  async getEmbeddingsModel(): Promise<ModelConfig | null> {
+    const config = await this.getConfig();
+
+    // First check for simple embeddingsModel field (backward compatibility)
+    if (config.embeddingsModel) {
+      return {
+        name: 'embeddings',
+        provider: 'ollama',
+        model: config.embeddingsModel,
+        roles: ['embed'],
+      };
+    }
+
+    // Then check for multi-model embeddingsProvider
+    if (config.embeddingsProvider) {
+      return config.models?.find(m => m.name === config.embeddingsProvider) || null;
+    }
+
+    // Finally check for any model with embed role
+    return this.getModelByRole('embed');
+  }
+
+  async getContextProviders(): Promise<ContextProvider[]> {
+    const config = await this.getConfig();
+    return config.context || [];
+  }
+
+  async getChatModel(): Promise<ModelConfig | null> {
+    return this.getModelByRole('chat');
+  }
+
+  // Backward compatibility: get the primary model (either from models array or legacy model field)
+  async getPrimaryModel(): Promise<string> {
+    const config = await this.getConfig();
+    // If model is set, try to find it in models array
+    if (config.model) {
+      if (config.models && config.models.length > 0) {
+        const found = config.models.find(m => m.model === config.model || m.name === config.model);
+        if (found) return found.model;
+      }
+      return config.model;
+    }
+    // If not set, use first chat model in models array
+    if (config.models && config.models.length > 0) {
+      const chatModel = config.models.find(m => m.roles.includes('chat'));
+      if (chatModel) return chatModel.model;
+    }
+    // Fallback to legacy model
+    return config.model;
+  }
+
+  public async saveConfig(
+    config: Partial<OllamaCommitConfig>,
+    type: 'user' | 'local' = 'user',
+  ): Promise<void> {
+    const configFile = type === 'local' ? this.localConfigFile : this.defaultConfigFile;
+    const configDir = dirname(configFile);
+
+    try {
+      await this.fs.ensureDir(configDir);
+      await this.fs.writeJson(configFile, config, { spaces: 2 });
+      this.logger.success(`✅ Configuration saved to ${configFile}`);
+    } catch (error) {
+      this.logger.error(`❌ Failed to save configuration to ${configFile}:`, error);
+      throw error;
+    }
+  }
+
+  public async removeConfig(type: 'user' | 'local'): Promise<void> {
+    const configFile = type === 'local' ? this.localConfigFile : this.defaultConfigFile;
+
+    try {
+      if (await this.fs.pathExists(configFile)) {
+        await this.fs.remove(configFile);
+        this.logger.success(`✅ Configuration removed from ${configFile}`);
+      } else {
+        this.logger.info(`ℹ️  No configuration file found at ${configFile}`);
+      }
+    } catch (error) {
+      this.logger.error(`❌ Failed to remove configuration from ${configFile}:`, error);
+      throw error;
+    }
   }
 }
 

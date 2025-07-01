@@ -1,8 +1,8 @@
 import { Command } from 'commander';
-import { ConfigManager } from '../../../core/config';
-import { Logger } from '../../../utils/logger';
-import { getConfigFileInfo, getConfigSourceInfo } from '../../utils/get-friendly-source';
 import { CONFIGURATIONS } from '../../../constants/configurations';
+import { ConfigManager } from '../../../core/config';
+import { ConfigSourceInfo, ModelConfig } from '../../../types';
+import { Logger } from '../../../utils/logger';
 
 export const registerShowCommands = (configCommand: Command) => {
   configCommand
@@ -12,43 +12,72 @@ export const registerShowCommands = (configCommand: Command) => {
       try {
         const configManager = ConfigManager.getInstance();
         await configManager.initialize();
-        await configManager.reload();
         const config = await configManager.getConfig();
-        const files = await configManager.getConfigFiles();
-        const configSources = await configManager.getConfigSources();
-        const sourceInfo = getConfigSourceInfo(configSources);
+        const sourceInfo = await configManager.getConfigSources();
+        const primaryModel = await configManager.getPrimaryModel();
 
-        console.log('Current Configuration:');
+        // If multi-model config exists, try to find the primary model in the models array
+        let effectiveModelDetails: ModelConfig | undefined = undefined;
+        if (config.models && config.models.length > 0) {
+          effectiveModelDetails = config.models.find(
+            m => m.model === primaryModel || m.name === primaryModel,
+          );
+        }
+
+        // Convert ConfigSources to ConfigSourceInfo
+        const sourceInfoObj: ConfigSourceInfo = {
+          model: sourceInfo.model || 'built-in',
+          host: sourceInfo.host || 'built-in',
+          promptFile: sourceInfo.promptFile || 'built-in',
+          promptTemplate: sourceInfo.promptTemplate || 'built-in',
+          verbose: sourceInfo.verbose || 'built-in',
+          interactive: sourceInfo.interactive || 'built-in',
+          debug: sourceInfo.debug || 'built-in',
+          autoStage: sourceInfo.autoStage || 'built-in',
+          autoModel: sourceInfo.autoModel || 'built-in',
+          autoCommit: sourceInfo.autoCommit || 'built-in',
+          useEmojis: sourceInfo.useEmojis || 'built-in',
+          models: sourceInfo.models || 'built-in',
+          embeddingsProvider: sourceInfo.embeddingsProvider || 'built-in',
+          embeddingsModel: sourceInfo.embeddingsModel || 'built-in',
+          context: sourceInfo.context || 'built-in',
+          timeouts: {
+            connection: sourceInfo.timeouts?.connection || 'built-in',
+            generation: sourceInfo.timeouts?.generation || 'built-in',
+            modelPull: sourceInfo.timeouts?.modelPull || 'built-in',
+          },
+        };
+
+        console.log(
+          '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━',
+        );
+        console.log('🔧 Configuration');
         console.log(
           '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━',
         );
 
-        // Show active config files
-        console.log('Config Files (in order of precedence):');
-
-        // Use the new active structure
-        const sortedActiveFiles = files.active
-          .map(fileObj => {
-            // fileObj: { type, path, 'in-use' }
-            return getConfigFileInfo(fileObj.path);
-          })
-          .sort((a, b) => {
-            const precedence = { local: 0, global: 1, default: 2 };
-            return precedence[a.type] - precedence[b.type];
+        // Show config file locations
+        const configFiles = await configManager.getConfigFiles();
+        if (configFiles.active.length > 0) {
+          console.log('Config Files:');
+          configFiles.active.forEach(file => {
+            console.log(`  ${file.type}: ${file.path}`);
           });
+          console.log('');
+        }
 
-        sortedActiveFiles.forEach((fileInfo, index) => {
-          const prefix = index === 0 ? '   → ' : '     ';
-          console.log(`${prefix}${fileInfo.label} - ${fileInfo.path}`);
-        });
         // Core Settings
+        let modelDisplay = primaryModel;
+        if (effectiveModelDetails) {
+          modelDisplay = effectiveModelDetails.model;
+        }
         console.log(
           CONFIGURATIONS.MESSAGES.CORE_SETTINGS(
-            config.model,
+            modelDisplay,
             config.host,
             config.promptFile,
             config.promptTemplate,
-            sourceInfo,
+            sourceInfoObj,
           ),
         );
 
@@ -62,7 +91,7 @@ export const registerShowCommands = (configCommand: Command) => {
             config.autoModel,
             config.autoCommit,
             config.useEmojis,
-            sourceInfo,
+            sourceInfoObj,
           ),
         );
 
@@ -72,9 +101,28 @@ export const registerShowCommands = (configCommand: Command) => {
             config.timeouts.connection,
             config.timeouts.generation,
             config.timeouts.modelPull,
-            sourceInfo,
+            sourceInfoObj,
           ),
         );
+
+        // Models (if available)
+        if (config.models && config.models.length > 0) {
+          console.log(
+            CONFIGURATIONS.MESSAGES.MODELS(config.models, config.embeddingsProvider || 'none'),
+          );
+        }
+
+        // Context Providers (if available)
+        if (config.context && config.context.length > 0) {
+          console.log(CONFIGURATIONS.MESSAGES.CONTEXT(config.context));
+        }
+
+        // Embeddings Model (if available)
+        if (config.embeddingsModel) {
+          console.log(
+            `Embeddings Model: ${config.embeddingsModel} (from ${sourceInfoObj.embeddingsModel || 'user'})`,
+          );
+        }
       } catch (error) {
         Logger.error('Failed to show configuration:', error);
         process.exit(1);
@@ -86,11 +134,8 @@ export const registerShowCommands = (configCommand: Command) => {
     .description('Show detailed configuration debug information')
     .action(async () => {
       try {
-        console.log('Starting config-debug...');
         const configManager = ConfigManager.getInstance();
-        console.log('ConfigManager instance created');
         await configManager.initialize();
-        console.log('ConfigManager initialized');
         const debugInfo = await configManager.getDebugInfo();
         console.log('Debug info retrieved');
         console.log(JSON.stringify(debugInfo, null, 2));

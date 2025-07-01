@@ -1,6 +1,6 @@
 import * as os from 'os';
 import path from 'path';
-import { ConfigSourceInfo } from '../types';
+import { ConfigSourceInfo, ContextProvider, ModelConfig } from '../types';
 import { MODELS } from './models';
 
 export const CONFIGURATIONS = {
@@ -21,6 +21,9 @@ export const CONFIGURATIONS = {
       generation: undefined,
       modelPull: undefined,
     },
+    models: undefined,
+    embeddingsProvider: undefined,
+    context: undefined,
   },
   DEFAULT: {
     model: MODELS.DEFAULT,
@@ -40,6 +43,23 @@ export const CONFIGURATIONS = {
     },
     useEmojis: false,
     promptTemplate: 'default',
+    // New multi-model defaults
+    models: [
+      {
+        name: MODELS.DEFAULT,
+        provider: 'ollama',
+        model: MODELS.DEFAULT,
+        roles: ['chat', 'edit', 'autocomplete', 'apply', 'summarize'],
+      } as ModelConfig,
+      {
+        name: 'embeddingsProvider',
+        provider: 'ollama',
+        model: MODELS.EMBEDDINGS,
+        roles: ['embed'],
+      } as ModelConfig,
+    ],
+    embeddingsProvider: 'embeddingsProvider',
+    context: [...MODELS.CONTEXTS] as ContextProvider[],
   },
   MESSAGES: {
     CORE_SETTINGS: (
@@ -82,6 +102,13 @@ export const CONFIGURATIONS = {
         Generation: ${generation}ms (from ${sourceInfo.timeouts.generation})
         Model Pull: ${modelPull}ms (from ${sourceInfo.timeouts.modelPull})
         `,
+    MODELS: (models: ModelConfig[], embeddingsProvider: string) => `Models:
+        ${models.map(m => `  ${m.name} - Roles: ${m.roles.join(', ')}`).join('\n        ')}
+        Embeddings Provider: ${embeddingsProvider}
+        `,
+    CONTEXT: (context: ContextProvider[]) => `Context Providers:
+        ${context.map(c => `  ${c.provider}: ${c.enabled ? 'enabled' : 'disabled'}`).join('\n        ')}
+        `,
   },
   /**
    * Mock configuration used for testing with MockedConfigManager.
@@ -106,5 +133,23 @@ export const CONFIGURATIONS = {
     },
     useEmojis: true,
     promptTemplate: 'default',
+    models: [
+      {
+        name: 'mock-chat-model',
+        provider: 'ollama',
+        model: 'mock-chat',
+        roles: ['chat', 'edit'],
+      } as ModelConfig,
+      {
+        name: 'mock-embeddings',
+        provider: 'ollama',
+        model: 'mock-embed',
+        roles: ['embed'],
+      } as ModelConfig,
+    ],
+    embeddingsProvider: 'mock-embeddings',
+    context: MODELS.CONTEXTS.filter(c =>
+      ['code', 'diff'].includes(c.provider),
+    ) as ContextProvider[],
   },
 } as const;

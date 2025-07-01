@@ -39,6 +39,8 @@ describe('CommitCommand', () => {
     mockPromptService = {
       getSystemPrompt: () => 'test system prompt',
       buildCommitPrompt: () => 'test full prompt',
+      buildCommitPromptWithContext: async () => 'test context prompt',
+      buildCommitPromptWithEmbeddings: async () => 'test embeddings prompt',
     };
 
     const mockConfigProvider = async () => ({

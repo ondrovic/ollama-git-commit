@@ -46,6 +46,22 @@ export interface OllamaResponse {
   done?: boolean;
 }
 
+// New interfaces for multi-model configuration
+export interface ModelConfig {
+  name: string;
+  provider: 'ollama' | 'openai' | 'anthropic';
+  model: string;
+  roles: ModelRole[];
+}
+
+export type ModelRole = 'chat' | 'edit' | 'autocomplete' | 'apply' | 'summarize' | 'embed';
+
+export interface ContextProvider {
+  provider: 'code' | 'docs' | 'diff' | 'terminal' | 'problems' | 'folder' | 'codebase';
+  enabled?: boolean;
+  config?: Record<string, unknown>;
+}
+
 export interface OllamaCommitConfig {
   // Core settings
   model: string;
@@ -73,6 +89,16 @@ export interface OllamaCommitConfig {
   // UI settings
   useEmojis: boolean;
   promptTemplate: 'default' | 'conventional' | 'simple' | 'detailed';
+
+  // Embeddings model (simple field for backward compatibility)
+  embeddingsModel?: string;
+
+  // New multi-model support (optional for backward compatibility)
+  models?: ModelConfig[];
+  embeddingsProvider?: string; // name of the model with 'embed' role
+
+  // Context providers
+  context?: ContextProvider[];
 }
 
 export interface ModelInfo {
@@ -105,6 +131,10 @@ export interface ConfigSourceInfo {
     generation: string;
     modelPull: string;
   };
+  models?: string;
+  embeddingsProvider?: string;
+  embeddingsModel?: string;
+  context?: string;
 }
 
 export interface ConfigSources {
@@ -124,6 +154,10 @@ export interface ConfigSources {
     generation?: string;
     modelPull?: string;
   };
+  models?: string;
+  embeddingsProvider?: string;
+  embeddingsModel?: string;
+  context?: string;
 }
 
 export interface ConfigFileInfo {

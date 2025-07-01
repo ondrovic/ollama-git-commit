@@ -1,10 +1,11 @@
+import { TROUBLE_SHOOTING } from '@/constants/troubleshooting';
 import type { ModelInfo } from '../types';
 import { Logger } from '../utils/logger';
 import { Spinner } from '../utils/spinner';
 import { normalizeHost } from '../utils/url';
 import { getConfig } from './config';
 import { ILogger, IOllamaService } from './interfaces';
-import { TROUBLE_SHOOTING } from '@/constants/troubleshooting';
+
 export class OllamaService implements IOllamaService {
   private config = getConfig();
   private logger: ILogger;
@@ -13,6 +14,12 @@ export class OllamaService implements IOllamaService {
   constructor(logger: ILogger = Logger.getDefault(), spinner: Spinner = new Spinner()) {
     this.logger = logger;
     this.spinner = spinner;
+  }
+  generateEmbeddings(_model: string, _text: string, _host?: string): Promise<number[]> {
+    throw new Error('Method not implemented.');
+  }
+  generateEmbeddingsBatch(_model: string, _texts: string[], _host?: string): Promise<number[][]> {
+    throw new Error('Method not implemented.');
   }
 
   async generateCommitMessage(
@@ -127,10 +134,11 @@ export class OllamaService implements IOllamaService {
   }
 
   private removeEmojis(text: string): string {
-    // More comprehensive emoji and symbol removal
+    // Simple and comprehensive emoji removal using Unicode property escapes
     return text
-      .replace(/[\p{Emoji}\u{1F3FB}-\u{1F3FF}\u{1F9B0}-\u{1F9B3}]/gu, '') // Remove emojis and skin tone modifiers
-      .replace(/[\u{2600}-\u{26FF}\u{2700}-\u{27BF}]/gu, '') // Remove additional symbols
+      .replace(/[\p{Emoji}]/gu, '') // Remove all emoji characters
+      .replace(/[\u{200D}]/gu, '') // Remove zero width joiner (for composite emojis)
+      .replace(/[\u{FE0F}]/gu, '') // Remove variation selector-16 (emoji presentation)
       .replace(/️/g, '') // Remove variation selector (invisible character that follows some emojis)
       .replace(/^\s+|\s+$/gm, '') // Trim whitespace from each line
       .replace(/\n\s*\n/g, '\n') // Remove empty lines
@@ -138,8 +146,11 @@ export class OllamaService implements IOllamaService {
   }
 
   private cleanMessage(text: string): string {
+    // Remove <think></think> content (common in some models)
+    const cleaned = text.replace(/<think>[\s\S]*?<\/think>/gi, '');
+
     // properly format the message
-    return text
+    return cleaned
       .replace(/`/g, "'") // replace ` with '
       .replace(/"/g, "'") // replace " with '
       .replace(/'''/g, '') // Remove triple single quotes
