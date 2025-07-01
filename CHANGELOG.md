@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.0.11] - 2025-07-01
+
 ### Changed
 
 - Updated README.md with current default model (mistral:7b-instruct) in all examples and configuration sections
