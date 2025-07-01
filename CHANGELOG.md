@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- Updated all example configuration files in `examples/configs/env/.env-example`, `examples/configs/project-local/.ollama-git-commit.json`, and `examples/configs/user-global/.ollama-git-commit.json` to match the current codebase configuration options, including multi-model, embeddings, and context providers.
+- Updated README.md to ensure all environment variable and configuration examples are accurate and consistent with the latest codebase features and options.
+
+### Technical Details
+
+- Synchronized example configs with the latest configuration schema from `src/constants/configurations.ts` and `src/types/index.ts`.
+- Updated environment variable names in README.md to use the correct `OLLAMA_COMMIT_*` format.
+- Expanded configuration examples in README.md to include all supported fields and options, including multi-model and context provider settings.
+- Ensured documentation and example configs reflect the current default model (`mistral:7b-instruct`) and provider roles.
+
 ## [1.0.11] - 2025-07-01
 
 ### Changed
