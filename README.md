@@ -1,6 +1,6 @@
 # 🤖 Ollama Git Commit Message Generator
 
-A powerful CLI tool that generates meaningful, contextual commit messages using Ollama AI. This modern Node.js/TypeScript implementation fixes git diff parsing issues and provides better error handling, cross-platform compatibility, and a maintainable codebase.
+A powerful CLI tool that generates meaningful, contextual commit messages using Ollama AI. This modern Node.js/TypeScript implementation provides intelligent context analysis, multi-model support, embeddings, and advanced configuration options.
 
 [![npm version](https://img.shields.io/npm/v/@condrovic/ollama-git-commit.svg)](https://www.npmjs.com/package/@condrovic/ollama-git-commit)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.0+-blue.svg)](https://www.typescriptlang.org/)
@@ -12,12 +12,14 @@ A powerful CLI tool that generates meaningful, contextual commit messages using 
 This project uses **GitHub Actions** for automated testing and NPM publishing:
 
 ### Automated Testing
+
 - The test workflow is defined in `.github/workflows/test.yml`
 - All branches are tested automatically on push and pull requests
 - Tests are run using [Bun](https://bun.sh/) for fast execution
-- Comprehensive test coverage for all features
+- Comprehensive test coverage for all features including context providers and embeddings
 
 ### Automated NPM Publishing
+
 - The publish workflow is defined in `.github/workflows/publish.yml`
 - **Triggered automatically** when a git tag is pushed (e.g., `v1.0.4`)
 - **Validates** that the version doesn't already exist on NPM
@@ -27,6 +29,7 @@ This project uses **GitHub Actions** for automated testing and NPM publishing:
 **How it works:**
 
 - **For Testing**: On every push or PR, GitHub Actions will:
+
   1. Check out the code
   2. Set up Bun and Node.js
   3. Install dependencies (`bun install`)
@@ -45,6 +48,7 @@ You can view the status of all workflows in the "Actions" tab of the GitHub repo
 
 - 🧠 **AI-Powered**: Uses Ollama models to generate intelligent commit messages
 - 📊 **Context-Aware**: Analyzes file changes, additions, deletions, and code patterns
+- 🔍 **Advanced Context Providers**: Multiple context sources including code analysis, documentation, diff analysis, terminal info, problem detection, folder structure, and codebase statistics
 - 🎯 **Smart Staging**: Automatically detects staged vs unstaged changes
 - 🔄 **Interactive Mode**: Review and regenerate messages before committing
 - 📋 **Clipboard Support**: Copy messages to clipboard across platforms (macOS, Linux, Windows)
@@ -61,6 +65,10 @@ You can view the status of all workflows in the "Actions" tab of the GitHub repo
 - 🔍 **Debug Tools**: Advanced debugging commands for configuration and connection issues
 - 📝 **Documentation**: Detailed guides for installation, configuration, and troubleshooting
 - 🚀 **Automated Publishing**: Streamlined release process with automatic NPM publishing
+- 🤖 **Multi-Model Support**: Configure multiple models for different purposes
+- 🔗 **Embeddings Support**: Use embeddings models for enhanced context analysis
+- 📈 **Verbose Logging**: Detailed logging for debugging and monitoring context gathering
+- 🧹 **Message Cleaning**: Advanced message processing to remove unwanted content like `<think>` tags and format output consistently
 
 ## 🚀 Installation
 
@@ -105,6 +113,7 @@ After linking, the `ollama-git-commit` command should be available in your termi
 When contributing to the project, use the following workflow:
 
 1. **Create a feature branch:**
+
    ```bash
    git checkout -b feature/your-feature-name
    ```
@@ -112,11 +121,13 @@ When contributing to the project, use the following workflow:
 2. **Make your changes**
 
 3. **Run the staging script** to format, lint, and stage your changes:
+
    ```bash
    bun stage
    ```
 
 4. **Commit your changes:**
+
    ```bash
    git commit -m "feat: your feature description"
    ```
@@ -128,19 +139,21 @@ When contributing to the project, use the following workflow:
 After changes are merged into `main`:
 
 1. **Pull the latest changes:**
+
    ```bash
    git checkout main
    git pull origin main
    ```
 
 2. **Run the release command:**
+
    ```bash
    # For patch release (1.0.3 → 1.0.4)
    bun run release
-   
+
    # For minor release (1.0.3 → 1.1.0)
    bun run release minor
-   
+
    # For major release (1.0.3 → 2.0.0)
    bun run release major
    ```
@@ -156,7 +169,7 @@ The staging script will:
 - Format your code with Prettier
 - Fix linting issues with ESLint
 - Stage all files for commit
-- *(Version management is handled automatically by the release process)*
+- _(Version management is handled automatically by the release process)_
 
 ### Permanent Global Installation
 
@@ -380,19 +393,93 @@ Create a `~/.ollama-git-commit.json` file:
 This project uses a **streamlined version management system**:
 
 ### Single Source of Truth
+
 - **`package.json`** contains the authoritative version number
 - **`src/constants/metadata.ts`** automatically reads the version using `npm_package_version`
 - **No manual syncing** required between files
 
 ### How It Works
+
 - **When installed from NPM**: The tool uses `process.env.npm_package_version` (always accurate)
-- **During development**: Falls back to reading from local `package.json` 
+- **During development**: Falls back to reading from local `package.json`
 - **Version detection is automatic** and requires no manual intervention
 
 ### For Contributors
+
 - **No version management required** in your PRs
 - **Release process is automated** via `bun run release`
 - **Focus on features** instead of version bookkeeping
+
+## 🔍 Advanced Features
+
+### Context Providers
+
+The tool now includes intelligent context providers that gather additional information to improve commit message quality:
+
+- **Code Context**: Analyzes changed files and their patterns
+- **Documentation Context**: Finds and includes relevant documentation files
+- **Diff Context**: Provides detailed analysis of the git diff
+- **Terminal Context**: Captures current shell information and working directory
+- **Problems Context**: Detects common issues like lint errors or build problems
+- **Folder Context**: Analyzes project structure and organization
+- **Codebase Context**: Provides overall codebase statistics and patterns
+
+Context providers are enabled by default and can be configured in your settings.
+
+### Embeddings Support
+
+For enhanced context analysis, you can configure an embeddings model:
+
+```json
+{
+  "models": [
+    {
+      "name": "codellama",
+      "provider": "ollama",
+      "model": "codellama:7b",
+      "roles": ["chat"]
+    },
+    {
+      "name": "embeddings",
+      "provider": "ollama",
+      "model": "nomic-embed-text",
+      "roles": ["embed"]
+    }
+  ],
+  "embeddingsProvider": "embeddings"
+}
+```
+
+### Verbose Logging
+
+Enable verbose logging to see detailed information about context gathering and processing:
+
+```bash
+# Enable verbose mode
+ollama-git-commit -d . -v
+
+# Or set in configuration
+{
+  "verbose": true
+}
+```
+
+Verbose mode will show:
+
+- Context provider activation and results
+- Model selection process
+- Prompt construction details
+- API call information
+- Message processing steps
+
+### Message Cleaning
+
+The tool includes advanced message cleaning capabilities:
+
+- **Emoji Removal**: Configurable emoji filtering using Unicode property escapes
+- **Think Tag Removal**: Automatically removes `<think></think>` content from model responses
+- **Formatting**: Consistent message formatting with proper spacing and punctuation
+- **Content Filtering**: Removes unwanted artifacts and improves readability
 
 ## 📚 Documentation
 
@@ -479,4 +566,98 @@ ollama-git-commit test all
 
 # Benchmark model performance
 ollama-git-commit test benchmark -m mistral:7b-instruct
+```
+
+## 🛠️ Multi-Model & Embeddings Configuration
+
+You can configure multiple models and specify an embeddings provider for advanced context and search features. This tool is **Ollama-only** and the configuration is minimal and DRY.
+
+### Example Configuration
+
+```json
+{
+  "models": [
+    {
+      "name": "mistral-7b-instruct",
+      "provider": "ollama",
+      "model": "mistral:7b-instruct",
+      "roles": ["chat", "edit", "autocomplete", "apply", "summarize"]
+    },
+    {
+      "name": "embeddingsProvider",
+      "provider": "ollama",
+      "model": "nomic-embed-text",
+      "roles": ["embed"]
+    }
+  ],
+  "embeddingsProvider": "embeddingsProvider",
+  "context": [
+    { "provider": "code", "enabled": true },
+    { "provider": "docs", "enabled": true },
+    { "provider": "diff", "enabled": true },
+    { "provider": "terminal", "enabled": true },
+    { "provider": "problems", "enabled": true },
+    { "provider": "folder", "enabled": true },
+    { "provider": "codebase", "enabled": true }
+  ]
+}
+```
+
+- **models**: List of model configs, each with a name, model, and roles. Provider is always `ollama`.
+- **embeddingsProvider**: Name of the model to use for embeddings (must have the `embed` role).
+- **context**: List of enabled context providers.
+
+### Minimal Config Show Output
+
+```
+Core Settings:
+        Model: mistral:7b-instruct (from config)
+        Host: 0.0.0.0:11434 (from config)
+        ...
+
+Models:
+        embeddingsProvider - Roles: embed
+        mistral-7b-instruct - Roles: chat, edit, autocomplete, apply, summarize
+        Embeddings Provider: embeddingsProvider (from config)
+```
+
+- The active model is shown in Core Settings.
+- The Models section lists all configured models and their roles—no provider, no model string, no active indicator.
+- The config is DRY: you only need to set your model in one place.
+
+## 🔧 Configuration Commands
+
+```bash
+# Add a new model
+ollama-git-commit config models add <name> ollama <model> --roles chat,edit,embed
+
+# Remove a model
+ollama-git-commit config models remove <name>
+
+# List all configured models
+ollama-git-commit config models list
+
+# Set the embeddings provider
+ollama-git-commit config models set-embeddings <name>
+```
+
+## 🌱 Environment Variables
+
+You can configure the tool using environment variables:
+
+```bash
+# Set Ollama host
+export OLLAMA_HOST=http://localhost:11434
+
+# Set default model
+export OLLAMA_MODEL=mistral:7b-instruct
+
+# Multi-model configuration (JSON string)
+export OLLAMA_COMMIT_MODELS='[{"name":"mistral-7b-instruct","provider":"ollama","model":"mistral:7b-instruct","roles":["chat"]}]'
+
+# Set embeddings provider
+export OLLAMA_COMMIT_EMBEDDINGS_PROVIDER=embeddingsProvider
+
+# Set context providers (JSON string)
+export OLLAMA_COMMIT_CONTEXT='[{"provider":"code","enabled":true}]'
 ```

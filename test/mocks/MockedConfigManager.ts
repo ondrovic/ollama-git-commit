@@ -1,59 +1,59 @@
 import { CONFIGURATIONS } from '../../src/constants/configurations';
-import { ENVIRONMENTAL_VARIABLES } from '../../src/constants/enviornmental';
-import { IConfigManager } from '../../src/core/interfaces';
-import { ConfigSources, OllamaCommitConfig } from '../../src/types';
-import { VALID_TEMPLATES, type VALID_TEMPLATE } from '../../src/constants/prompts';
+import { IConfigManager, ILogger } from '../../src/core/interfaces';
+import { ActiveFile, ConfigSources, ContextProvider, ModelConfig, ModelRole, OllamaCommitConfig } from '../../src/types';
 
 export class MockedConfigManager implements IConfigManager {
   private config: OllamaCommitConfig;
-  private initialized = false;
+  private logger: ILogger;
 
-  constructor() {
-    this.config = { ...CONFIGURATIONS.MOCK };
-    this.applyEnvironmentVariables();
-  }
-
-  private applyEnvironmentVariables(): void {
-    if (process.env[ENVIRONMENTAL_VARIABLES.OLLAMA_COMMIT_AUTO_COMMIT] === 'true') {
-      this.config.autoCommit = true;
-    } else if (process.env[ENVIRONMENTAL_VARIABLES.OLLAMA_COMMIT_AUTO_COMMIT] === 'false') {
-      this.config.autoCommit = false;
-    }
-
-    if (process.env[ENVIRONMENTAL_VARIABLES.OLLAMA_COMMIT_PROMPT_TEMPLATE]) {
-      if (
-        VALID_TEMPLATES.includes(
-          process.env[ENVIRONMENTAL_VARIABLES.OLLAMA_COMMIT_PROMPT_TEMPLATE] as VALID_TEMPLATE,
-        )
-      ) {
-        this.config.promptTemplate =
-          process.env[ENVIRONMENTAL_VARIABLES.OLLAMA_COMMIT_PROMPT_TEMPLATE];
-      }
-    }
+  constructor(logger: ILogger) {
+    this.logger = logger;
+    this.config = CONFIGURATIONS.MOCK as OllamaCommitConfig;
   }
 
   async initialize(): Promise<void> {
-    if (!this.initialized) {
-      this.initialized = true;
-    }
+    // Mock initialization - no-op
   }
 
-  async getConfig(): Promise<Readonly<OllamaCommitConfig>> {
-    if (!this.initialized) {
-      await this.initialize();
-    }
-    return { ...this.config };
+  async getConfig(): Promise<OllamaCommitConfig> {
+    return this.config;
   }
 
-  get<K extends keyof OllamaCommitConfig>(key: K): OllamaCommitConfig[K] {
-    if (!this.initialized) {
-      throw new Error('ConfigManager not initialized. Call initialize() first.');
-    }
-    return this.config[key];
+  async saveConfig(config: Partial<OllamaCommitConfig>, type?: 'user' | 'local'): Promise<void> {
+    this.config = { ...this.config, ...config };
+    this.logger.info(`Mock config saved (type: ${type})`);
   }
 
-  async reload(): Promise<void> {
-    // No-op in mock
+  async removeConfig(type: 'user' | 'local'): Promise<void> {
+    this.logger.info(`Mock config removed (type: ${type})`);
+  }
+
+  async getConfigFiles(): Promise<{
+    user: string;
+    local: string;
+    active: ActiveFile[];
+  }> {
+    return {
+      user: '/mock/user/config.json',
+      local: '/mock/local/config.json',
+      active: [
+        { type: 'user', path: '/mock/user/config.json', 'in-use': true }
+      ]
+    };
+  }
+
+  async getDebugInfo(): Promise<Record<string, unknown>> {
+    return {
+      config: this.config as unknown as Record<string, unknown>,
+      files: await this.getConfigFiles(),
+      environment: {
+        platform: 'mock',
+        arch: 'mock',
+        nodeVersion: 'mock',
+        cwd: '/mock',
+        env: {}
+      }
+    };
   }
 
   async getConfigSources(): Promise<ConfigSources> {
@@ -69,11 +69,39 @@ export class MockedConfigManager implements IConfigManager {
       promptFile: 'mock',
       promptTemplate: 'mock',
       useEmojis: 'mock',
+      models: 'mock',
+      embeddingsProvider: 'mock',
+      context: 'mock',
       timeouts: {
         connection: 'mock',
         generation: 'mock',
         modelPull: 'mock',
       },
     };
+  }
+
+  // New multi-model methods
+  async getModelByRole(role: ModelRole): Promise<ModelConfig | null> {
+    return this.config.models?.find(m => m.roles.includes(role)) || null;
+  }
+
+  async getEmbeddingsModel(): Promise<ModelConfig | null> {
+    if (this.config.embeddingsProvider) {
+      return this.config.models?.find(m => m.name === this.config.embeddingsProvider) || null;
+    }
+    return this.getModelByRole('embed');
+  }
+
+  async getContextProviders(): Promise<ContextProvider[]> {
+    return this.config.context || [];
+  }
+
+  async getChatModel(): Promise<ModelConfig | null> {
+    return this.getModelByRole('chat');
+  }
+
+  async getPrimaryModel(): Promise<string> {
+    const chatModel = await this.getChatModel();
+    return chatModel?.model || this.config.model;
   }
 }

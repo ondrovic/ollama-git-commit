@@ -1,4 +1,13 @@
-import type { ConfigSources, GitChanges, ModelInfo, OllamaCommitConfig } from '../types';
+import type {
+  ActiveFile,
+  ConfigSources,
+  ContextProvider,
+  GitChanges,
+  ModelConfig,
+  ModelInfo,
+  ModelRole,
+  OllamaCommitConfig,
+} from '../types';
 
 export interface IGitService {
   getChanges(verbose: boolean, autoStage: boolean): GitChanges;
@@ -19,11 +28,29 @@ export interface IOllamaService {
   testConnection(host: string, verbose?: boolean): Promise<boolean>;
   getModels(host: string): Promise<ModelInfo[]>;
   isModelAvailable(host: string, model: string): Promise<boolean>;
+  generateEmbeddings(model: string, text: string, host?: string): Promise<number[]>;
+  generateEmbeddingsBatch(model: string, texts: string[], host?: string): Promise<number[][]>;
 }
 
 export interface IPromptService {
   getSystemPrompt(promptFile: string, verbose: boolean, promptTemplate?: string): string;
   buildCommitPrompt(filesInfo: string, diff: string, systemPrompt: string): string;
+  buildCommitPromptWithContext(
+    filesInfo: string,
+    diff: string,
+    systemPrompt: string,
+    contextProviders: ContextProvider[],
+    directory: string,
+    verbose?: boolean,
+  ): Promise<string>;
+  buildCommitPromptWithEmbeddings(
+    filesInfo: string,
+    diff: string,
+    systemPrompt: string,
+    ollamaService: IOllamaService,
+    embeddingsModel: string,
+    host: string,
+  ): Promise<string>;
   validatePrompt(prompt: string): { valid: boolean; errors: string[] };
   getPromptTemplates(): Record<string, string>;
   createPromptFromTemplate(templateName: string): string;
@@ -57,7 +84,20 @@ export interface ILogger {
  */
 export interface IConfigManager {
   initialize(): Promise<void>;
-  get<K extends keyof OllamaCommitConfig>(key: K): OllamaCommitConfig[K];
-  reload(): Promise<void>;
+  getConfig(): Promise<OllamaCommitConfig>;
+  saveConfig(config: Partial<OllamaCommitConfig>, type?: 'user' | 'local'): Promise<void>;
+  removeConfig(type: 'user' | 'local'): Promise<void>;
+  getConfigFiles(): Promise<{
+    user: string;
+    local: string;
+    active: ActiveFile[];
+  }>;
+  getDebugInfo(): Promise<Record<string, unknown>>;
   getConfigSources(): Promise<ConfigSources>;
+  // New multi-model methods
+  getModelByRole(role: ModelRole): Promise<ModelConfig | null>;
+  getEmbeddingsModel(): Promise<ModelConfig | null>;
+  getContextProviders(): Promise<ContextProvider[]>;
+  getChatModel(): Promise<ModelConfig | null>;
+  getPrimaryModel(): Promise<string>;
 }

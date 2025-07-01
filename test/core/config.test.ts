@@ -1,5 +1,5 @@
 import { beforeAll, describe, expect, test } from 'bun:test';
-import { ENVIRONMENTAL_VARIABLES } from '../../src/constants/enviornmental';
+import { CONFIGURATIONS } from '../../src/constants/configurations';
 import { Logger } from '../../src/utils/logger';
 import { MockedConfigManager } from '../mocks/MockedConfigManager';
 
@@ -12,31 +12,41 @@ describe('ConfigManager', () => {
     logger.setVerbose(true);
   });
 
-  test('should handle OLLAMA_COMMIT_AUTO_COMMIT environment variable', async () => {
-    process.env[ENVIRONMENTAL_VARIABLES.OLLAMA_COMMIT_AUTO_COMMIT] = 'true';
-    configManager = new MockedConfigManager();
+  test('should initialize with mock configuration', async () => {
+    configManager = new MockedConfigManager(logger);
     await configManager.initialize();
     const config = await configManager.getConfig();
-    expect(config.autoCommit).toBe(true);
-
-    process.env[ENVIRONMENTAL_VARIABLES.OLLAMA_COMMIT_AUTO_COMMIT] = 'false';
-    configManager = new MockedConfigManager();
-    await configManager.initialize();
-    const config2 = await configManager.getConfig();
-    expect(config2.autoCommit).toBe(false);
+    expect(config.model).toBe(CONFIGURATIONS.MOCK.model);
+    expect(config.host).toBe(CONFIGURATIONS.MOCK.host);
+    expect(config.autoCommit).toBe(CONFIGURATIONS.MOCK.autoCommit);
+    expect(config.promptTemplate).toBe(CONFIGURATIONS.MOCK.promptTemplate);
   });
 
-  test('should handle OLLAMA_COMMIT_PROMPT_TEMPLATE environment variable', async () => {
-    process.env[ENVIRONMENTAL_VARIABLES.OLLAMA_COMMIT_PROMPT_TEMPLATE] = 'simple';
-    configManager = new MockedConfigManager();
+  test('should support multi-model configuration', async () => {
+    configManager = new MockedConfigManager(logger);
     await configManager.initialize();
-    const config = await configManager.getConfig();
-    expect(config.promptTemplate).toBe('simple');
+    
+    const chatModel = await configManager.getChatModel();
+    expect(chatModel).toBeDefined();
+    expect(chatModel?.name).toBe('mock-chat-model');
+    expect(chatModel?.roles).toContain('chat');
 
-    process.env[ENVIRONMENTAL_VARIABLES.OLLAMA_COMMIT_PROMPT_TEMPLATE] = 'conventional';
-    configManager = new MockedConfigManager();
+    const embeddingsModel = await configManager.getEmbeddingsModel();
+    expect(embeddingsModel).toBeDefined();
+    expect(embeddingsModel?.name).toBe('mock-embeddings');
+    expect(embeddingsModel?.roles).toContain('embed');
+
+    const contextProviders = await configManager.getContextProviders();
+    expect(contextProviders).toHaveLength(2);
+    expect(contextProviders[0].provider).toBe('code');
+    expect(contextProviders[0].enabled).toBe(true);
+  });
+
+  test('should get primary model', async () => {
+    configManager = new MockedConfigManager(logger);
     await configManager.initialize();
-    const config2 = await configManager.getConfig();
-    expect(config2.promptTemplate).toBe('conventional');
+    
+    const primaryModel = await configManager.getPrimaryModel();
+    expect(primaryModel).toBe('mock-chat');
   });
 });

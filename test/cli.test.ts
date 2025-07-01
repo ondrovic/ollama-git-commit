@@ -84,6 +84,8 @@ const mockPromptService = {
   createCommitPrompt: () => 'test prompt',
   getSystemPrompt: () => 'test system prompt',
   buildCommitPrompt: (filesInfo, diff, systemPrompt) => 'test full prompt',
+  buildCommitPromptWithContext: async () => 'test context prompt',
+  buildCommitPromptWithEmbeddings: async () => 'test embeddings prompt',
 };
 
 // Mock commands
