@@ -411,3 +411,8 @@ The project uses GitHub Actions for automated NPM publishing:
 ## License
 
 By contributing to Ollama Git Commit, you agree that your contributions will be licensed under the project's MIT License.
+
+## Development Workflow
+
+- All configuration command tests are fully mocked and do not affect real user config files.
+- When adding new configuration features, include isolated, mock-based tests to ensure reliability and safety.

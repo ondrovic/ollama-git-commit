@@ -342,6 +342,14 @@ ollama-git-commit config debug
 ollama-git-commit config remove user
 # or
 ollama-git-commit config remove local
+
+# `config set <key> <value>`: Set a configuration value. Example:
+ollama-git-commit config set model llama3
+ollama-git-commit config set timeouts.connection 5000
+ollama-git-commit config set context code,diff,terminal
+
+# `config keys`: List all available configuration keys with descriptions and defaults
+ollama-git-commit config keys
 ```
 
 ### Configuration Sources
@@ -704,3 +712,11 @@ export OLLAMA_COMMIT_EMBEDDINGS_PROVIDER=embeddingsProvider
 # Set context providers (JSON string)
 export OLLAMA_COMMIT_CONTEXT='[{"provider":"code","enabled":true},{"provider":"docs","enabled":true},{"provider":"diff","enabled":true},{"provider":"terminal","enabled":true},{"provider":"problems","enabled":true},{"provider":"folder","enabled":true},{"provider":"codebase","enabled":true}]'
 ```
+
+## Testing & Development
+
+- All configuration command tests (including `config set`) are fully mocked and isolated. Tests do not touch your real user config files and are safe to run repeatedly.
+- To run tests:
+  ```sh
+  bun test
+  ```

@@ -7,6 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- `config set <key> <value>` command to set configuration values with support for nested keys, boolean parsing, numeric parsing, and array parsing
+- `config keys` command to list all available configuration keys with descriptions and default values
+- Support for `--all` flag in config set to update all active configuration files
+
+### Fixed
+
+- Config set command tests are now fully mocked, isolated, and reliable. The test suite no longer touches real config files and is deterministic.
+- Fixed duplicate "✅" in config set command output by removing redundant emoji from logger messages.
+
+### Changed
+
+- Updated prompts tofurther try and filter out the <think /> processes
+
 ## [1.0.12] - 2025-07-01
 
 ### Changed

@@ -568,7 +568,7 @@ export class ConfigManager implements IConfigManager {
     try {
       await this.fs.ensureDir(configDir);
       await this.fs.writeJson(configFile, config, { spaces: 2 });
-      this.logger.success(`✅ Configuration saved to ${configFile}`);
+      this.logger.success(`Configuration saved to ${configFile}`);
     } catch (error) {
       this.logger.error(`❌ Failed to save configuration to ${configFile}:`, error);
       throw error;
@@ -581,7 +581,7 @@ export class ConfigManager implements IConfigManager {
     try {
       if (await this.fs.pathExists(configFile)) {
         await this.fs.remove(configFile);
-        this.logger.success(`✅ Configuration removed from ${configFile}`);
+        this.logger.success(`Configuration removed from ${configFile}`);
       } else {
         this.logger.info(`ℹ️  No configuration file found at ${configFile}`);
       }

@@ -16,6 +16,8 @@ export const PROMPTS = {
 - **If a 'Version Changes' section is present in the context, you MUST include each line from it verbatim in your commit message**
 - If there are no changes or the input is blank, return a blank string
 
+CRITICAL: You must write ONLY the final commit message. Do NOT include any thinking process, reasoning steps, or internal thoughts. Do NOT use <think> tags, <reasoning> tags, or any similar formatting. Do NOT explain your thought process. Write the commit message directly.
+
 The output format should be:
 
 Summary of changes
@@ -100,6 +102,8 @@ What you write will be passed directly to git commit -m "[message]"`,
 - Focus on what was changed and why it was necessary
 - If version changes are detected, include the specific version numbers
 - **If a 'Version Changes' section is present in the context, you MUST include each line from it verbatim in your commit message**
+
+CRITICAL: You must write ONLY the final commit message. Do NOT include any thinking process, reasoning steps, or internal thoughts. Do NOT use <think> tags, <reasoning> tags, or any similar formatting. Do NOT explain your thought process. Write the commit message directly.
 
 Format:
 Summary of changes
