@@ -46,7 +46,7 @@ export const registerSetCommands = (configCommand: Command) => {
           const sourceInfo = await configManager.getConfigSources();
 
           // Display the specific key that was updated
-          displayUpdatedKey(key, updatedConfig, sourceInfo);
+          displayUpdatedKey(key, updatedConfig, sourceInfo as Record<string, unknown>);
         } catch (error) {
           Logger.error('Failed to set configuration:', error);
           process.exit(1);
@@ -89,11 +89,27 @@ export function createConfigUpdate(key: string, value: unknown): Record<string, 
     let current = result;
 
     for (let i = 0; i < keyParts.length - 1; i++) {
-      current[keyParts[i]] = {};
-      current = current[keyParts[i]] as Record<string, unknown>;
+      const keyPart = keyParts[i];
+      if (keyPart === undefined) {
+        throw new Error(`Invalid key structure: undefined key part at index ${i}`);
+      }
+      // Create nested object for each key part, including empty strings
+      current[keyPart] = {};
+      const next = current[keyPart];
+      if (typeof next === 'object' && next !== null) {
+        current = next as Record<string, unknown>;
+      } else {
+        // This should never happen since we just created an empty object
+        throw new Error(`Failed to create nested object for key part: ${keyPart}`);
+      }
     }
 
-    current[keyParts[keyParts.length - 1]] = value;
+    const lastKey = keyParts[keyParts.length - 1];
+    if (lastKey === undefined) {
+      throw new Error('Invalid key structure: undefined last key part');
+    }
+    // Set the value for the last key part, including empty strings
+    current[lastKey] = value;
     return result;
   }
 }

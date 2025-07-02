@@ -71,6 +71,7 @@ You can view the status of all workflows in the "Actions" tab of the GitHub repo
 - 🧹 **Message Cleaning**: Advanced message processing to remove unwanted content like `<think>` tags and format output consistently
 - 🎯 **Centralized Constants**: All models and contexts use centralized constants for consistency
 - 🔄 **Auto-Sync Configuration**: Automatic synchronization between core model and multi-model configuration
+- 🛡️ **Type-Safe Configuration**: Configuration commands now feature improved type safety and robust error handling, especially for nested key assignment and config source tracking. TypeScript errors related to config updates are now prevented by design.
 
 ## 🚀 Installation
 
