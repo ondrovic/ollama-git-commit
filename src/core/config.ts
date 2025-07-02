@@ -567,7 +567,46 @@ export class ConfigManager implements IConfigManager {
 
     try {
       await this.fs.ensureDir(configDir);
-      await this.fs.writeJson(configFile, config, { spaces: 2 });
+      let existingConfig: Record<string, unknown> = {};
+      if (await this.fs.pathExists(configFile)) {
+        try {
+          existingConfig = await this.fs.readJson(configFile);
+        } catch {
+          this.logger.warn(`Could not read existing config at ${configFile}, will overwrite.`);
+        }
+      }
+      // Merge the new config into the existing config, starting from defaults
+      const mergedConfig = this.deepMerge({ ...this.getDefaults(), ...existingConfig }, config);
+
+      // Auto-sync models array if model field was updated
+      if (config.model && mergedConfig.model) {
+        const currentChatModel = mergedConfig.models?.find(m => m.roles.includes('chat'));
+        const shouldUpdate =
+          !mergedConfig.models ||
+          mergedConfig.models.length === 0 ||
+          (currentChatModel && currentChatModel.model !== mergedConfig.model);
+
+        if (shouldUpdate) {
+          this.logger.debug(`Auto-syncing models array with core model: ${mergedConfig.model}`);
+          mergedConfig.models = [
+            {
+              name: mergedConfig.model,
+              provider: 'ollama',
+              model: mergedConfig.model,
+              roles: ['chat', 'edit', 'autocomplete', 'apply', 'summarize'],
+            },
+            {
+              name: 'embeddingsProvider',
+              provider: 'ollama',
+              model: mergedConfig.embeddingsModel || MODELS.EMBEDDINGS,
+              roles: ['embed'],
+            },
+          ];
+          this.logger.debug(`Generated models array: ${JSON.stringify(mergedConfig.models)}`);
+        }
+      }
+
+      await this.fs.writeJson(configFile, mergedConfig, { spaces: 2 });
       this.logger.success(`Configuration saved to ${configFile}`);
     } catch (error) {
       this.logger.error(`❌ Failed to save configuration to ${configFile}:`, error);

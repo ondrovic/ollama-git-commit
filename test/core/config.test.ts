@@ -49,4 +49,18 @@ describe('ConfigManager', () => {
     const primaryModel = await configManager.getPrimaryModel();
     expect(primaryModel).toBe('mock-chat');
   });
+
+  test('should merge new config values instead of overwriting', async () => {
+    configManager = new MockedConfigManager(logger);
+    await configManager.initialize();
+    // Save a new value
+    await configManager.saveConfig({ model: 'new-model', debug: true }, 'user');
+    const config = await configManager.getConfig();
+    // Old values should remain
+    expect(config.host).toBe(CONFIGURATIONS.MOCK.host);
+    expect(config.model).toBe('new-model');
+    expect(config.debug).toBe(true);
+    // Other values should remain unchanged
+    expect(config.promptFile).toBe(CONFIGURATIONS.MOCK.promptFile);
+  });
 });

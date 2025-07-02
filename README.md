@@ -721,3 +721,68 @@ export OLLAMA_COMMIT_CONTEXT='[{"provider":"code","enabled":true},{"provider":"d
   ```sh
   bun test
   ```
+
+## ⚙️ Configuration System (Updated)
+
+- Configuration files are now **merged** when using `config set <key> <value>`. Setting a value will only update the specified key, preserving all other existing configuration values. This prevents accidental overwrites and ensures safe incremental configuration changes.
+- The config file structure supports nested keys, arrays, and all fields shown in the example below.
+
+### Example: Setting a Value
+
+```bash
+ollama-git-commit config set model mistral:7b-instruct
+```
+
+This will update only the `model` key in your config file, leaving all other settings unchanged.
+
+### Example Configuration File
+
+```json
+{
+  "model": "mistral:7b-instruct",
+  "host": "http://localhost:11434",
+  "verbose": false,
+  "interactive": true,
+  "debug": false,
+  "autoStage": false,
+  "autoCommit": false,
+  "autoModel": false,
+  "useEmojis": false,
+  "promptTemplate": "default",
+  "promptFile": "~/.config/ollama-git-commit/prompt.txt",
+  "timeouts": {
+    "connection": 10000,
+    "generation": 120000,
+    "modelPull": 300000
+  },
+  "models": [
+    {
+      "name": "mistral-7b-instruct",
+      "provider": "ollama",
+      "model": "mistral:7b-instruct",
+      "roles": ["chat", "edit", "autocomplete", "apply", "summarize"]
+    },
+    {
+      "name": "embeddingsProvider",
+      "provider": "ollama",
+      "model": "nomic-embed-text",
+      "roles": ["embed"]
+    }
+  ],
+  "embeddingsProvider": "embeddingsProvider",
+  "embeddingsModel": "nomic-embed-text",
+  "context": [
+    { "provider": "code", "enabled": true },
+    { "provider": "docs", "enabled": true },
+    { "provider": "diff", "enabled": true },
+    { "provider": "terminal", "enabled": true },
+    { "provider": "problems", "enabled": true },
+    { "provider": "folder", "enabled": true },
+    { "provider": "codebase", "enabled": true }
+  ]
+}
+```
+
+> **Note:** The configuration system supports both user-global and project-local config files. All config changes are merged with existing values, never overwriting the entire file.
+
+> **Note:** When you set the `model` key using `config set model <value>`, the tool will automatically update the `models` array to keep it in sync with the new model. This ensures that both the `model` field and the `models` array always reflect the current primary model.

@@ -417,3 +417,5 @@ By contributing to Ollama Git Commit, you agree that your contributions will be 
 
 - All configuration command tests are fully mocked and do not affect real user config files.
 - When adding new configuration features, include isolated, mock-based tests to ensure reliability and safety.
+- When using `config set <key> <value>`, the configuration system now merges the new value with the existing config file, preserving all other keys. Tests should verify that config changes do not overwrite unrelated values.
+- When setting the `model` key via `config set`, the tool will automatically update the `models` array to keep it in sync. Contributors should test that both the `model` field and the `models` array are updated together.
