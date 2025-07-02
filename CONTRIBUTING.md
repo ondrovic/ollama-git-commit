@@ -387,6 +387,7 @@ Recent major improvements include:
 - **Enhanced Testing**: Comprehensive test coverage with proper mocks and utilities
 - **Multi-Model Support**: Support for multiple model types with role-based configuration
 - **Interactive CLI**: Improved user experience with better prompts and feedback
+- **All configuration commands are now type-safe and robust against invalid nested key assignment. TypeScript errors related to config updates are prevented by design, and error handling for config sources is improved.**
 
 ## Release Notes
 
