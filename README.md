@@ -532,14 +532,6 @@ The tool includes advanced message cleaning capabilities:
 - **Formatting**: Consistent message formatting with proper spacing and punctuation
 - **Content Filtering**: Removes unwanted artifacts and improves readability
 
-## 📚 Documentation
-
-For more detailed information, check out our documentation:
-
-- [Installation Guide](docs/installation.md)
-- [Configuration Guide](docs/configuration.md)
-- [Troubleshooting Guide](docs/troubleshooting.md)
-
 ## 🤝 Contributing
 
 We welcome contributions! Please see our [Contributing Guide](CONTRIBUTING.md) for details on:
