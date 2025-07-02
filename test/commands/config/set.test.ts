@@ -126,6 +126,28 @@ describe('Config Set Command - Utility Functions', () => {
     });
   });
 
+  test('createConfigUpdate should handle keys with empty parts', () => {
+    // Test key with empty part in middle: "a..b"
+    expect(createConfigUpdate('a..b', 'value')).toEqual({
+      a: { '': { b: 'value' } }
+    });
+    
+    // Test key ending with empty part: "a."
+    expect(createConfigUpdate('a.', 'value')).toEqual({
+      a: { '': 'value' }
+    });
+    
+    // Test key starting with empty part: ".a"
+    expect(createConfigUpdate('.a', 'value')).toEqual({
+      '': { a: 'value' }
+    });
+    
+    // Test key with multiple empty parts: "a..b..c"
+    expect(createConfigUpdate('a..b..c', 'value')).toEqual({
+      a: { '': { b: { '': { c: 'value' } } } }
+    });
+  });
+
   test('displayUpdatedKey should handle simple keys', () => {
     const consoleSpy = spyOn(console, 'log').mockImplementation(() => {});
     const config = { model: 'llama3' };

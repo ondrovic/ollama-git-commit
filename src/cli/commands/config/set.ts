@@ -89,22 +89,27 @@ export function createConfigUpdate(key: string, value: unknown): Record<string, 
     let current = result;
 
     for (let i = 0; i < keyParts.length - 1; i++) {
-      const key = keyParts[i];
-      if (key) {
-        current[key] = {};
-        const next = current[key];
-        if (typeof next === 'object' && next !== null) {
-          current = next as Record<string, unknown>;
-        } else {
-          current = {} as Record<string, unknown>;
-        }
+      const keyPart = keyParts[i];
+      if (keyPart === undefined) {
+        throw new Error(`Invalid key structure: undefined key part at index ${i}`);
+      }
+      // Create nested object for each key part, including empty strings
+      current[keyPart] = {};
+      const next = current[keyPart];
+      if (typeof next === 'object' && next !== null) {
+        current = next as Record<string, unknown>;
+      } else {
+        // This should never happen since we just created an empty object
+        throw new Error(`Failed to create nested object for key part: ${keyPart}`);
       }
     }
 
     const lastKey = keyParts[keyParts.length - 1];
-    if (lastKey) {
-      current[lastKey] = value;
+    if (lastKey === undefined) {
+      throw new Error('Invalid key structure: undefined last key part');
     }
+    // Set the value for the last key part, including empty strings
+    current[lastKey] = value;
     return result;
   }
 }

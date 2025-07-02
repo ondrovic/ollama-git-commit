@@ -18,6 +18,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Config set command tests are now fully mocked, isolated, and reliable. The test suite no longer touches real config files and is deterministic.
 - Fixed duplicate "✅" in config set command output by removing redundant emoji from logger messages.
 - Fixed TypeScript type errors in `config set` command related to `ConfigSources` and nested key assignment. The release process and type generation now succeed without errors.
+- Fixed `createConfigUpdate` function to properly handle keys with empty parts (e.g., "a..b", "a."). Previously, such keys would silently fail due to empty string key filtering. Now they correctly create nested objects with empty string keys as intended.
 
 ### Changed
 
@@ -27,6 +28,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Updated `displayUpdatedKey` to accept `ConfigSources` as `Record<string, unknown>` via type assertion.
 - Added type guards in `createConfigUpdate` to prevent 'undefined' index errors.
+- Enhanced `createConfigUpdate` function to process all key parts including empty strings, removing the `if (key)` and `if (lastKey)` checks that were silently filtering out empty key parts.
+- Added comprehensive test coverage for keys with empty parts to ensure proper handling of edge cases like "a..b", "a.", ".a", and "a..b..c".
+- Improved error handling in nested key creation with proper error messages for invalid key structures.
 
 ## [1.0.12] - 2025-07-01
 
