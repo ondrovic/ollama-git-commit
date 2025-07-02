@@ -326,4 +326,24 @@ describe('Config Set Command - Integration', () => {
     
     consoleSpy.mockRestore();
   });
+
+  test('should merge new config values and not overwrite existing config', async () => {
+    // Initial state
+    expect(mockConfigState.model).toBe('llama2');
+    expect(mockConfigState.host).toBe('http://localhost:11434');
+    expect(mockConfigState.verbose).toBe(false);
+    // Set a new key
+    const key = 'debug';
+    const value = 'true';
+    const options = { type: 'user' as const };
+    const parsedValue = parseValue(key, value);
+    const configToUpdate = createConfigUpdate(key, parsedValue);
+    await configManager.saveConfig(configToUpdate, options.type);
+    // Check that previous keys remain
+    expect(mockConfigState.model).toBe('llama2');
+    expect(mockConfigState.host).toBe('http://localhost:11434');
+    expect(mockConfigState.verbose).toBe(false);
+    // And new key is set
+    expect(mockConfigState.debug).toBe(true);
+  });
 }); 

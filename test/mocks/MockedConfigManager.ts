@@ -20,8 +20,62 @@ export class MockedConfigManager implements IConfigManager {
   }
 
   async saveConfig(config: Partial<OllamaCommitConfig>, type?: 'user' | 'local'): Promise<void> {
+    // Merge new config
     this.config = { ...this.config, ...config };
+
+    // --- AUTO-SYNC MODELS ARRAY WITH CORE MODEL (same as src/core/config.ts) ---
+    if (config.model !== undefined) {
+      if (!config.model || typeof config.model !== 'string' || config.model.trim() === '') {
+        this.logger.warn('Invalid model value provided, skipping auto-sync of models array');
+      } else {
+        const currentModels = this.config.models || [];
+        const currentChatModel = currentModels.find(m => m.roles.includes('chat'));
+        const shouldUpdate = !currentChatModel || currentChatModel.model !== config.model;
+        if (shouldUpdate) {
+          this.logger.debug(`Auto-syncing models array with core model: ${config.model}`);
+          const updatedModels = [...currentModels];
+          if (currentChatModel) {
+            const chatModelIndex = updatedModels.findIndex(m => m.roles.includes('chat'));
+            if (chatModelIndex !== -1) {
+              const existingModel = updatedModels[chatModelIndex];
+              if (existingModel) {
+                updatedModels[chatModelIndex] = {
+                  name: config.model,
+                  provider: existingModel.provider,
+                  model: config.model,
+                  roles: existingModel.roles,
+                };
+              }
+            }
+          } else {
+            updatedModels.push({
+              name: config.model,
+              provider: 'ollama',
+              model: config.model,
+              roles: ['chat', 'edit', 'autocomplete', 'apply', 'summarize'],
+            });
+          }
+          // Ensure embeddings model exists
+          const hasEmbeddingsModel = updatedModels.some(m => m.roles.includes('embed'));
+          if (!hasEmbeddingsModel) {
+            updatedModels.push({
+              name: 'embeddingsProvider',
+              provider: 'ollama',
+              model: this.config.embeddingsModel || 'nomic-embed-text',
+              roles: ['embed'],
+            });
+          }
+          this.config.models = updatedModels;
+          this.logger.debug(`Updated models array: ${JSON.stringify(this.config.models)}`);
+        }
+      }
+    }
     this.logger.info(`Mock config saved (type: ${type})`);
+  }
+
+  // Allow direct override for tests
+  override(config: OllamaCommitConfig) {
+    this.config = { ...config };
   }
 
   async removeConfig(type: 'user' | 'local'): Promise<void> {

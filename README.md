@@ -65,12 +65,12 @@ You can view the status of all workflows in the "Actions" tab of the GitHub repo
 - 🔍 **Debug Tools**: Advanced debugging commands for configuration and connection issues
 - 📝 **Documentation**: Detailed guides for installation, configuration, and troubleshooting
 - 🚀 **Automated Publishing**: Streamlined release process with automatic NPM publishing
-- 🤖 **Multi-Model Support**: Configure multiple models for different purposes with role-based configuration
+- 🤖 **Multi-Model Support**: Configure multiple models for different purposes with role-based configuration. The `models` array is now auto-synced with the `model` field: updating `model` will update or add the chat model in `models`, preserving all other custom models and never creating invalid entries.
 - 🔗 **Embeddings Support**: Use embeddings models for enhanced context analysis
 - 📈 **Verbose Logging**: Detailed logging for debugging and monitoring context gathering
 - 🧹 **Message Cleaning**: Advanced message processing to remove unwanted content like `<think>` tags and format output consistently
 - 🎯 **Centralized Constants**: All models and contexts use centralized constants for consistency
-- 🔄 **Auto-Sync Configuration**: Automatic synchronization between core model and multi-model configuration
+- 🔄 **Auto-Sync Configuration**: Automatic synchronization between core model and multi-model configuration. The auto-sync logic now ensures that only the chat model is updated or added, and custom models are preserved. Invalid or empty model values are ignored for auto-sync.
 - 🛡️ **Type-Safe Configuration**: Configuration commands now feature improved type safety and robust error handling, especially for nested key assignment and config source tracking. TypeScript errors related to config updates are now prevented by design.
 
 ## 🚀 Installation
@@ -126,11 +126,28 @@ When contributing to the project, use the following workflow:
 
 2. **Make your changes**
 
-3. **Run the staging script** to format, lint, and stage your changes:
+3. **Run pre-commit checks** (recommended):
 
-   ```bash
-   bun stage
-   ```
+   - Run the `precommit` script manually to lint, test, and check types before committing:
+     ```bash
+     bun run precommit
+     ```
+   - Optionally, set up a git pre-commit hook to run this script automatically:
+     - Create a file `.git/hooks/pre-commit` with the following content:
+       ```sh
+       #!/bin/sh
+       bun run precommit || exit 1
+       ```
+     - Make it executable:
+       ```bash
+       chmod +x .git/hooks/pre-commit
+       ```
+     - This will ensure pre-commit checks always run before each commit.
+
+   **Difference between `precommit` and `stage`:**
+
+   - `precommit` (script): Run before committing. Lints, tests, and checks types to catch errors that could break the release script.
+   - `stage` (script): The main project workflow script for formatting, linting, and staging as part of the release/development workflow.
 
 4. **Commit your changes:**
 
@@ -139,6 +156,8 @@ When contributing to the project, use the following workflow:
    ```
 
 5. **Create a pull request**
+
+> **Tip:** Running pre-commit checks helps ensure code quality, consistent formatting, and up-to-date versioning before you commit or push changes, and will catch errors that could break the release process.
 
 ### Release Workflow (For Maintainers)
 
@@ -643,6 +662,7 @@ You can configure multiple models and specify an embeddings provider for advance
     }
   ],
   "embeddingsProvider": "embeddingsProvider",
+  "embeddingsModel": "nomic-embed-text",
   "context": [
     { "provider": "code", "enabled": true },
     { "provider": "docs", "enabled": true },
@@ -721,3 +741,83 @@ export OLLAMA_COMMIT_CONTEXT='[{"provider":"code","enabled":true},{"provider":"d
   ```sh
   bun test
   ```
+
+## ⚙️ Configuration System (Updated)
+
+- Configuration files are now **merged** when using `config set <key> <value>`. Setting a value will only update the specified key, preserving all other existing configuration values. This prevents accidental overwrites and ensures safe incremental configuration changes.
+- The config file structure supports nested keys, arrays, and all fields shown in the example below.
+
+### Example: Setting a Value
+
+```bash
+ollama-git-commit config set model mistral:7b-instruct
+```
+
+This will update only the `model` key in your config file, leaving all other settings unchanged.
+
+### Example Configuration File
+
+```json
+{
+  "model": "mistral:7b-instruct",
+  "host": "http://localhost:11434",
+  "verbose": false,
+  "interactive": true,
+  "debug": false,
+  "autoStage": false,
+  "autoCommit": false,
+  "autoModel": false,
+  "useEmojis": false,
+  "promptTemplate": "default",
+  "promptFile": "~/.config/ollama-git-commit/prompt.txt",
+  "timeouts": {
+    "connection": 10000,
+    "generation": 120000,
+    "modelPull": 300000
+  },
+  "models": [
+    {
+      "name": "mistral-7b-instruct",
+      "provider": "ollama",
+      "model": "mistral:7b-instruct",
+      "roles": ["chat", "edit", "autocomplete", "apply", "summarize"]
+    },
+    {
+      "name": "embeddingsProvider",
+      "provider": "ollama",
+      "model": "nomic-embed-text",
+      "roles": ["embed"]
+    }
+  ],
+  "embeddingsProvider": "embeddingsProvider",
+  "embeddingsModel": "nomic-embed-text",
+  "context": [
+    { "provider": "code", "enabled": true },
+    { "provider": "docs", "enabled": true },
+    { "provider": "diff", "enabled": true },
+    { "provider": "terminal", "enabled": true },
+    { "provider": "problems", "enabled": true },
+    { "provider": "folder", "enabled": true },
+    { "provider": "codebase", "enabled": true }
+  ]
+}
+```
+
+> **Note:** The configuration system supports both user-global and project-local config files. All config changes are merged with existing values, never overwriting the entire file.
+
+> **Note:** When you set the `model` key using `config set model <value>`, the tool will automatically update the `models` array to keep it in sync with the new model. This ensures that both the `model` field and the `models` array always reflect the current primary model.
+
+## Configuration
+
+> **Note:** The `models` array is automatically kept in sync with the `model` field. When you update the `model` field (via config file, environment variable, or CLI), the tool will:
+>
+> - Update the chat model in the `models` array if it exists
+> - Add a chat model if none exists
+> - Never overwrite or remove your custom models (e.g., embeddings, summarize, etc.)
+> - Never create a model with an empty name (invalid/empty model values are ignored for auto-sync)
+
+## Troubleshooting
+
+### Model auto-sync issues
+
+If you set the `model` field to an empty or invalid value, the auto-sync logic will skip updating the `models` array to prevent invalid configuration. Make sure to provide a valid model name when updating the `model` field.

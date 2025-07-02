@@ -21,6 +21,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Fixed duplicate "✅" in config set command output by removing redundant emoji from logger messages.
 - Fixed TypeScript type errors in `config set` command related to `ConfigSources` and nested key assignment. The release process and type generation now succeed without errors.
 - Fixed `createConfigUpdate` function to properly handle keys with empty parts (e.g., "a..b", "a."). Previously, such keys would silently fail due to empty string key filtering. Now they correctly create nested objects with empty string keys as intended.
+- Fixed a bug where `config set <key> <value>` would overwrite the entire config file instead of merging/appending the new value. Now, only the specified key is updated and all other config values are preserved.
+- Setting the `model` key via `config set` now automatically updates the `models` array to keep them in sync. This prevents mismatches between the primary model and the models array.
+- Fixed a bug in the configuration auto-sync logic where updating the `model` field would:
+  - Fail to add a chat model if none existed in the `models` array
+  - Create invalid model entries with empty names if `model` was set to an empty string
+  - Overwrite existing custom model configurations in the `models` array instead of preserving them and only updating the relevant chat model
+  - Result in inconsistent configuration, potential API failures, and loss of user-defined models
 
 ### Changed
 
@@ -33,6 +40,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Enhanced `createConfigUpdate` function to process all key parts including empty strings, removing the `if (key)` and `if (lastKey)` checks that were silently filtering out empty key parts.
 - Added comprehensive test coverage for keys with empty parts to ensure proper handling of edge cases like "a..b", "a.", ".a", and "a..b..c".
 - Improved error handling in nested key creation with proper error messages for invalid key structures.
+- Updated config save logic to merge new values with existing config using defaults as a base, ensuring type safety and preventing accidental overwrites.
+- Added/expanded tests to verify that config changes merge values and do not overwrite unrelated keys.
+- Tests have been added/updated to verify that changing the model also updates the models array accordingly.
+- The `saveConfig` method in `ConfigManager` now:
+  - Validates the `model` value before updating the `models` array
+  - Only updates or adds the chat model, preserving all other custom models
+  - Never creates models with empty names
+  - Ensures the embeddings model is present if missing
+- The test suite (`test/core/config.test.ts`) now includes comprehensive tests for:
+  - Auto-syncing the models array when the `model` field is updated
+  - Adding a chat model if none exists
+  - Skipping auto-sync for invalid model values
+  - Preserving custom model configurations when updating the chat model
 
 ## [1.0.12] - 2025-07-01
 
