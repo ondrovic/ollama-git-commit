@@ -1,6 +1,5 @@
 {
-  // The models array is auto-synced with the model field. Updating the model will update or add the chat model in models, preserving custom models.
-  "model": "mistral:7b-instruct", // primary model
+  "model": "mistral:7b-instruct",
   "host": "http://localhost:11434",
   "verbose": false,
   "interactive": true,
