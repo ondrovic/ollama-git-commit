@@ -579,30 +579,59 @@ export class ConfigManager implements IConfigManager {
       const mergedConfig = this.deepMerge({ ...this.getDefaults(), ...existingConfig }, config);
 
       // Auto-sync models array if model field was updated
-      if (config.model && mergedConfig.model) {
-        const currentChatModel = mergedConfig.models?.find(m => m.roles.includes('chat'));
-        const shouldUpdate =
-          !mergedConfig.models ||
-          mergedConfig.models.length === 0 ||
-          (currentChatModel && currentChatModel.model !== mergedConfig.model);
+      if (config.model !== undefined) {
+        // Validate the model value
+        if (!config.model || typeof config.model !== 'string' || config.model.trim() === '') {
+          this.logger.warn('Invalid model value provided, skipping auto-sync of models array');
+        } else {
+          const currentModels = mergedConfig.models || [];
+          const currentChatModel = currentModels.find(m => m.roles.includes('chat'));
+          const shouldUpdate = !currentChatModel || currentChatModel.model !== config.model;
 
-        if (shouldUpdate) {
-          this.logger.debug(`Auto-syncing models array with core model: ${mergedConfig.model}`);
-          mergedConfig.models = [
-            {
-              name: mergedConfig.model,
-              provider: 'ollama',
-              model: mergedConfig.model,
-              roles: ['chat', 'edit', 'autocomplete', 'apply', 'summarize'],
-            },
-            {
-              name: 'embeddingsProvider',
-              provider: 'ollama',
-              model: mergedConfig.embeddingsModel || MODELS.EMBEDDINGS,
-              roles: ['embed'],
-            },
-          ];
-          this.logger.debug(`Generated models array: ${JSON.stringify(mergedConfig.models)}`);
+          if (shouldUpdate) {
+            this.logger.debug(`Auto-syncing models array with core model: ${config.model}`);
+
+            // Create a new models array, preserving existing non-chat models
+            const updatedModels = [...currentModels];
+
+            if (currentChatModel) {
+              // Update existing chat model
+              const chatModelIndex = updatedModels.findIndex(m => m.roles.includes('chat'));
+              if (chatModelIndex !== -1) {
+                const existingModel = updatedModels[chatModelIndex];
+                if (existingModel) {
+                  updatedModels[chatModelIndex] = {
+                    name: config.model,
+                    provider: existingModel.provider,
+                    model: config.model,
+                    roles: existingModel.roles,
+                  };
+                }
+              }
+            } else {
+              // Add new chat model if none exists
+              updatedModels.push({
+                name: config.model,
+                provider: 'ollama' as const,
+                model: config.model,
+                roles: ['chat', 'edit', 'autocomplete', 'apply', 'summarize'],
+              });
+            }
+
+            // Ensure embeddings model exists
+            const hasEmbeddingsModel = updatedModels.some(m => m.roles.includes('embed'));
+            if (!hasEmbeddingsModel) {
+              updatedModels.push({
+                name: 'embeddingsProvider',
+                provider: 'ollama',
+                model: mergedConfig.embeddingsModel || MODELS.EMBEDDINGS,
+                roles: ['embed'],
+              });
+            }
+
+            mergedConfig.models = updatedModels;
+            this.logger.debug(`Updated models array: ${JSON.stringify(mergedConfig.models)}`);
+          }
         }
       }
 

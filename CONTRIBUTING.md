@@ -42,6 +42,36 @@ Thank you for your interest in contributing to Ollama Git Commit! This document 
    bun link
    ```
 
+### Pre-commit Checks and Automation
+
+To help ensure code quality and consistency, the project provides a `precommit` script:
+
+- **`precommit` script** (`bun run precommit`):
+
+  - Runs linting with auto-fix, tests, and type build checks.
+  - Use this script manually before committing to catch issues early and prevent errors that could break the release script.
+  - Optionally, set up a git pre-commit hook to run this script automatically:
+    - Create a file `.git/hooks/pre-commit` with the following content:
+      ```sh
+      #!/bin/sh
+      bun run precommit || exit 1
+      ```
+    - Make it executable:
+      ```bash
+      chmod +x .git/hooks/pre-commit
+      ```
+    - This will ensure pre-commit checks always run before each commit.
+
+- **`stage` script** (`bun stage`):
+  - The main project workflow script for formatting, linting, and staging as part of the release/development workflow.
+
+**Tip:** Using pre-commit checks helps ensure code quality, consistent formatting, and up-to-date versioning before you commit or push changes, and will catch errors that could break the release process.
+
+**Summary of differences:**
+
+- `precommit`: Manual script for lint, test, and type checks before commit (recommended to run or hook before every commit)
+- `stage`: Main staging script for formatting, linting, and staging
+
 ## Release Workflow
 
 We use an automated release process for publishing to NPM. Here's the complete workflow:
@@ -212,6 +242,7 @@ ollama-git-commit/
 - Mock external dependencies
 - Place tests in the corresponding test directory structure
 - Use the provided test utilities and mocks in `test/mocks/`
+- **Ensure tests cover edge cases for model auto-sync, including invalid/empty model values and preservation of custom models.**
 
 ### Git Commit Messages
 
@@ -243,6 +274,8 @@ When adding new environment variables:
 2. Update the configuration system in `src/core/config.ts`
 3. Add documentation in `README.md`
 4. Add tests in `test/core/config.test.ts`
+
+> **Note:** The `models` array is now auto-synced with the `model` field. When you update the `model` field (via config file, environment variable, or CLI), only the chat model in `models` will be updated or added, and all other custom models will be preserved. Invalid or empty model values are ignored for auto-sync.
 
 Example:
 
