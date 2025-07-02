@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.0.13] - 2025-07-02
+
 ### Added
 
 - `config set <key> <value>` command to set configuration values with support for nested keys, boolean parsing, numeric parsing, and array parsing
