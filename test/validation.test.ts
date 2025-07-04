@@ -73,7 +73,6 @@ describe('Validation Utils', () => {
         expect(result.errors).toContain('Ollama host is not configured');
       } else {
         // Mock is not working, skip this test in the full suite
-        console.log('Skipping test due to mock interference - result:', JSON.stringify(result, null, 2));
         expect(true).toBe(true); // Pass the test
       }
     });
@@ -85,8 +84,10 @@ describe('Validation Utils', () => {
       
       try {
         const result = await validateEnvironment();
-        console.log('Basic test result:', JSON.stringify(result, null, 2));
-        // Don't assert here, just log to see what happens
+        // Don't assert here, just verify the function runs without error
+        expect(typeof result).toBe('object');
+        expect('valid' in result).toBe(true);
+        expect('errors' in result).toBe(true);
       } finally {
         if (originalHost !== undefined) {
           process.env[ENVIRONMENTAL_VARIABLES.OLLAMA_HOST] = originalHost;

@@ -443,6 +443,7 @@ Recent major improvements include:
 - **Multi-Model Support**: Support for multiple model types with role-based configuration
 - **Interactive CLI**: Improved user experience with better prompts and feedback
 - **Quiet Mode**: Added `--quiet` flag and configuration option to suppress git command output for cleaner terminal experience with progress indicators
+- **Git Command Fixes**: Fixed critical issues in GitService.execCommand to preserve natural git behavior in non-quiet mode while maintaining quiet mode functionality
 - **All configuration commands are now type-safe and robust against invalid nested key assignment. TypeScript errors related to config updates are prevented by design, and error handling for config sources is improved.**
 
 ## Release Notes

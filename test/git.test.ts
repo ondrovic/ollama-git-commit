@@ -169,5 +169,41 @@ index e2b836d..b62d39a 100644
       // Test that the service can be created with quiet parameter
       expect(gitService).toBeInstanceOf(GitService);
     });
+
+    test('should use correct stdio configuration for quiet mode', () => {
+      let capturedOptions: any = null;
+      const mockExecSync = (command: string, options: any) => {
+        capturedOptions = options;
+        return Buffer.from('mocked output');
+      };
+      
+      const gitService = new GitService(process.cwd(), new Logger(), false, mockExecSync);
+      
+      // Test quiet mode
+      gitService.execCommand('git status', true);
+      expect(capturedOptions.stdio).toEqual(['pipe', 'pipe', 'pipe']);
+      
+      // Test non-quiet mode
+      gitService.execCommand('git status', false);
+      expect(capturedOptions.stdio).toBe('inherit');
+    });
+
+    test('should use instance quiet setting when parameter is omitted', () => {
+      let capturedOptions: any = null;
+      const mockExecSync = (command: string, options: any) => {
+        capturedOptions = options;
+        return Buffer.from('mocked output');
+      };
+      
+      // Test with instance quiet = true
+      const quietGitService = new GitService(process.cwd(), new Logger(), true, mockExecSync);
+      quietGitService.execCommand('git status');
+      expect(capturedOptions.stdio).toEqual(['pipe', 'pipe', 'pipe']);
+      
+      // Test with instance quiet = false
+      const nonQuietGitService = new GitService(process.cwd(), new Logger(), false, mockExecSync);
+      nonQuietGitService.execCommand('git status');
+      expect(capturedOptions.stdio).toBe('inherit');
+    });
   });
 });

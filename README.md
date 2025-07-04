@@ -612,6 +612,8 @@ The tool supports quiet mode to suppress git command output:
 
 Quiet mode is useful when you want to reduce noise in your terminal output, especially in automated workflows or when running the tool frequently. Progress messages are still shown to keep you informed of the current operation.
 
+**Note**: Non-quiet mode preserves the natural git experience with proper stderr handling, colors, and interactive behavior. The tool intelligently switches between output modes to provide the best user experience.
+
 ```bash
 # Suppress git output for this run
 ollama-git-commit -d . --quiet

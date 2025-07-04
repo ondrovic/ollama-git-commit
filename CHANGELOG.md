@@ -25,6 +25,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Fixed Git file rename handling to properly stage file deletions and additions
 - Removed unused `stage-and-commit` script and package.json entry for cleaner codebase
 
+### Fixed
+
+- **GitService.execCommand Bug**: Fixed critical issue in non-quiet mode that was breaking git command behavior
+  - **Loss of stderr**: Fixed issue where important warnings and error messages were captured but discarded
+  - **Degraded user experience**: Fixed broken interactive commands, real-time output, and stripped formatting/colors
+  - **Excessive noise**: Fixed internal git commands printing unwanted output
+  - **Hidden errors**: Removed overly aggressive `.git` line filtering that could hide critical diagnostic messages
+  - **Solution**: Non-quiet mode now uses `stdio: 'inherit'` to preserve natural git behavior while quiet mode continues to use `stdio: ['pipe', 'pipe', 'pipe']` for output suppression
+
 ### Technical Details
 
 - Added `quiet` property to configuration interfaces and constants
@@ -37,6 +46,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Renamed test file from `quite.test.ts` to `quiet.test.ts` to fix spelling consistency
 - Fixed GitService.execCommand method to respect instance quiet setting when parameter is omitted
 - Removed unused `stage-and-commit` script and package.json entry for cleaner codebase
+- **GitService.execCommand Implementation**: Simplified to use appropriate `stdio` configuration for each mode:
+  - Quiet mode: `stdio: ['pipe', 'pipe', 'pipe']` (captures output without display)
+  - Non-quiet mode: `stdio: 'inherit'` (preserves natural git behavior with stderr, colors, and interactivity)
 
 ## [1.0.15] - 2025-07-04
 

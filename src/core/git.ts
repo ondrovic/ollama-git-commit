@@ -57,32 +57,12 @@ export class GitService implements IGitService {
       if (shouldBeQuiet) {
         // Suppress output in terminal, but capture output for program
         options.stdio = ['pipe', 'pipe', 'pipe'];
-        // Do NOT modify the command string or add shell redirection
         return this.execSyncFn(command, options).toString().trim();
       } else {
-        // For non-quiet mode, we need to capture output while ensuring stderr is displayed
-        // We'll use separate handling for stdout and stderr
-        options.stdio = ['pipe', 'pipe', 'pipe'];
-        const output = this.execSyncFn(command, options).toString().trim();
-
-        // Display the output in the terminal, but filter out control characters and .git references
-        if (output) {
-          // eslint-disable-next-line no-control-regex
-          const cleanOutput = output.replace(/[\x00-\x1F\x7F]/g, '');
-          if (cleanOutput.trim()) {
-            // Filter out lines that contain .git references
-            const filteredLines = cleanOutput
-              .split('\n')
-              .filter(line => !line.includes('.git'))
-              .join('\n');
-
-            if (filteredLines.trim()) {
-              console.log(filteredLines);
-            }
-          }
-        }
-
-        return output;
+        // For non-quiet mode, use inherit to preserve natural git behavior
+        // This ensures proper stderr handling, colors, and interactive behavior
+        options.stdio = 'inherit';
+        return this.execSyncFn(command, options).toString().trim();
       }
     } catch (error: unknown) {
       if (typeof error === 'object' && error && 'message' in error) {
