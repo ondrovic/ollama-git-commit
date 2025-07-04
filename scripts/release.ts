@@ -2,6 +2,7 @@
 import { execSync } from 'child_process';
 import { readFileSync, writeFileSync } from 'fs';
 import { join } from 'path';
+import { ConfigManager } from '../src/core/config';
 
 function getCurrentBranch(): string {
   return execSync('git rev-parse --abbrev-ref HEAD').toString().trim();
@@ -86,9 +87,26 @@ function testBuild(): void {
   }
 }
 
-function createAndPushTag(version: string): void {
+async function getQuietSetting(): Promise<boolean> {
+  // First check environment variable
+  if (process.env.QUIET === 'true') {
+    return true;
+  }
+  
+  // Then check config file
+  try {
+    const configManager = ConfigManager.getInstance();
+    const config = await configManager.getConfig();
+    return config.quiet;
+  } catch {
+    // Fallback to false if config can't be read
+    return false;
+  }
+}
+
+async function createAndPushTag(version: string): Promise<void> {
   const tag = `v${version}`;
-  const isQuiet = process.env.QUIET === 'true';
+  const isQuiet = await getQuietSetting();
 
   console.log(`🏷️ Creating and pushing tag ${tag}...`);
 
@@ -134,12 +152,12 @@ function createAndPushTag(version: string): void {
 
     console.log(`✅ Successfully created and pushed tag ${tag}`);
   } catch (error) {
-    console.error('❌ Failed to create/push tag:', error);
+    console.error('❌ Failed to create and push tag:', error);
     throw error;
   }
 }
 
-function main() {
+async function main() {
   console.log('🚀 Starting release process...');
 
   // Get version type from command line argument (default: patch)
@@ -177,7 +195,7 @@ function main() {
     const newVersion = incrementVersion(versionType);
 
     // Create tag and push
-    createAndPushTag(newVersion);
+    await createAndPushTag(newVersion);
 
     console.log(`🎉 Successfully released version ${newVersion}!`);
     console.log('🚀 The GitHub Actions workflow will now handle the NPM publish process.');
@@ -194,4 +212,7 @@ function main() {
   }
 }
 
-main();
+main().catch(error => {
+  console.error('❌ Script failed:', error);
+  process.exit(1);
+});

@@ -77,6 +77,7 @@ You can view the status of all workflows in the "Actions" tab of the GitHub repo
 - ⚡ **Auto-Commit with SSH Agent Support**: Auto-commit works seamlessly with 1Password SSH agent and other SSH agents, as long as the agent is running and the environment is inherited. If you use 1Password, ensure the 1Password CLI is running and SSH_AUTH_SOCK is set.
 - 🔄 **Smart Auto-Staging**: The `--auto-stage` flag runs the full staging script (`bun run stage`) which formats, lints, tests, builds type declarations, and stages files, then generates an AI commit message. If the staging script is not available, it falls back to simple `git add -A`. No commit is made - user must copy and run the git commit command manually.
 - 🤖 **Intelligent Auto-Commit**: The `--auto-commit` flag runs the full staging script, generates a commit message, and if approved, automatically commits and pushes to the remote repository. If the staging script is not available, it falls back to simple `git add -A`. Staging is only done once, before message generation.
+- 🏠 **Repository Compatibility**: Works seamlessly with any repository, automatically adapting to available scripts and workflows. The tool detects whether it's running in the ollama-git-commit repository or external repositories and adjusts its behavior accordingly. Scripts are only executed if they exist in the target repository's package.json.
 
 ## 🚀 Installation
 
@@ -612,7 +613,7 @@ The tool supports quiet mode to suppress git command output:
 
 Quiet mode is useful when you want to reduce noise in your terminal output, especially in automated workflows or when running the tool frequently. Progress messages are still shown to keep you informed of the current operation.
 
-**Note**: Non-quiet mode preserves the natural git experience with proper stderr handling, colors, and interactive behavior. The tool intelligently switches between output modes to provide the best user experience.
+**Note**: Non-quiet mode preserves the natural git experience by capturing output for programmatic use and then displaying it to the user. The tool intelligently switches between output modes to provide the best user experience.
 
 ```bash
 # Suppress git output for this run

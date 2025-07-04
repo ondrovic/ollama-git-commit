@@ -429,43 +429,6 @@ bun test --verbose
 7. **Context Providers**: Ensure all context providers are properly enabled in configuration
 8. **Message Cleaning**: Test emoji removal and think tag cleaning in `src/core/ollama.ts`
 
-### New Features and Improvements
-
-Recent major improvements include:
-
-- **Context Providers**: Enhanced commit context with code analysis, documentation, diff analysis, terminal info, problem detection, folder structure, and codebase statistics
-- **Embeddings Support**: Added support for embedding models for better context understanding
-- **Message Cleaning**: Improved emoji removal and think tag cleaning with comprehensive Unicode regex
-- **Centralized Constants**: All models and contexts now use centralized constants from `src/constants/models.ts`
-- **Verbose Logging**: Enhanced logging throughout the application with detailed context information
-- **Improved Configuration**: Better default configurations with enabled context providers by default
-- **Enhanced Testing**: Comprehensive test coverage with proper mocks and utilities
-- **Multi-Model Support**: Support for multiple model types with role-based configuration
-- **Interactive CLI**: Improved user experience with better prompts and feedback
-- **Quiet Mode**: Added `--quiet` flag and configuration option to suppress git command output for cleaner terminal experience with progress indicators
-- **Git Command Fixes**: Fixed critical issues in GitService.execCommand to preserve natural git behavior in non-quiet mode while maintaining quiet mode functionality
-- **All configuration commands are now type-safe and robust against invalid nested key assignment. TypeScript errors related to config updates are prevented by design, and error handling for config sources is improved.**
-
-## Release Notes
-
-### Version Management Changes
-
-As of version 1.0.4, we've streamlined our version management:
-
-- **Removed manual version syncing** - No more `update-version.ts` script
-- **Single source of truth** - `package.json` is the only place version is stored
-- **Automatic version detection** - `metadata.ts` uses `npm_package_version` with smart fallbacks
-- **Simplified release process** - One command handles everything
-
-### Automated Publishing
-
-The project uses GitHub Actions for automated NPM publishing:
-
-- **Triggered by git tags** - When you run `bun run release`, a tag is created and pushed
-- **Automatic validation** - Ensures version doesn't already exist on NPM
-- **Build and test** - Runs full test suite before publishing
-- **Zero manual intervention** - Everything happens automatically
-
 ## License
 
 By contributing to Ollama Git Commit, you agree that your contributions will be licensed under the project's MIT License.

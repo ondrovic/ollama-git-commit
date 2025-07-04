@@ -174,19 +174,22 @@ export class ContextService implements IContextService {
 
   private async findDocFiles(directory: string): Promise<string[]> {
     const docFiles: string[] = [];
-    const docPatterns = ['README*', 'docs/**/*', '*.md', '*.txt'];
 
-    for (const pattern of docPatterns) {
-      try {
-        const result = await this.execCommand(
-          'find',
-          [directory, '-name', pattern, '-type', 'f'],
-          directory,
-        );
-        docFiles.push(...result.split('\n').filter(line => line.trim()));
-      } catch {
-        // Pattern not found, continue
+    // Use cross-platform approach - just return basic doc files
+    try {
+      // For now, just return common documentation files that likely exist
+      const commonDocs = ['README.md', 'README.txt', 'CHANGELOG.md', 'CONTRIBUTING.md', 'LICENSE'];
+      for (const doc of commonDocs) {
+        try {
+          const fs = await import('fs/promises');
+          await fs.access(`${directory}/${doc}`);
+          docFiles.push(doc);
+        } catch {
+          // File doesn't exist, continue
+        }
       }
+    } catch {
+      // Fallback to empty array
     }
 
     return docFiles.slice(0, 10); // Limit to first 10 docs
@@ -203,9 +206,12 @@ export class ContextService implements IContextService {
 
   private async getShellInfo(): Promise<string> {
     try {
-      const pwd = await this.execCommand('pwd', []);
-      const user = await this.execCommand('whoami', []);
-      return `Current directory: ${pwd}\nUser: ${user}`;
+      // Use Node.js built-ins instead of shell commands
+      const path = await import('path');
+      const os = await import('os');
+      const currentDir = path.resolve(process.cwd());
+      const user = os.userInfo().username;
+      return `Current directory: ${currentDir}\nUser: ${user}`;
     } catch {
       return 'Shell info unavailable';
     }
@@ -214,22 +220,39 @@ export class ContextService implements IContextService {
   private async detectProblems(directory: string): Promise<string> {
     const problems: string[] = [];
 
+    // Check if package.json exists and read available scripts
+    let availableScripts: Record<string, string> = {};
+    try {
+      const fs = await import('fs/promises');
+      const path = await import('path');
+      const packageJsonPath = path.join(directory, 'package.json');
+      const packageJsonContent = await fs.readFile(packageJsonPath, 'utf-8');
+      const packageJson = JSON.parse(packageJsonContent);
+      availableScripts = packageJson.scripts || {};
+    } catch {
+      // No package.json or invalid JSON, continue without scripts
+    }
+
     // Check for common problem indicators
     try {
-      // Check for lint errors
-      const lintResult = await this.execCommand('npm', ['run', 'lint'], directory);
-      if (lintResult.includes('error')) {
-        problems.push('Lint errors detected');
+      // Check for lint errors only if lint script exists
+      if (availableScripts.lint) {
+        const lintResult = await this.execCommand('npm', ['run', 'lint'], directory);
+        if (lintResult.includes('error')) {
+          problems.push('Lint errors detected');
+        }
       }
     } catch {
       // No lint script or other issues
     }
 
     try {
-      // Check for build issues
-      const buildResult = await this.execCommand('npm', ['run', 'build'], directory);
-      if (buildResult.includes('error')) {
-        problems.push('Build errors detected');
+      // Check for build issues only if build script exists
+      if (availableScripts.build) {
+        const buildResult = await this.execCommand('npm', ['run', 'build'], directory);
+        if (buildResult.includes('error')) {
+          problems.push('Build errors detected');
+        }
       }
     } catch {
       // No build script or other issues
@@ -240,12 +263,31 @@ export class ContextService implements IContextService {
 
   private async getFolderStructure(directory: string): Promise<string> {
     try {
-      const result = await this.execCommand(
-        'find',
-        [directory, '-type', 'd', '-maxdepth', '3'],
-        directory,
-      );
-      const dirs = result.split('\n').filter(line => line.trim() && line !== directory);
+      // Use Node.js built-ins for cross-platform compatibility
+      const fs = await import('fs/promises');
+      const path = await import('path');
+
+      const getDirectories = async (dir: string, depth = 0): Promise<string[]> => {
+        if (depth > 3) return [];
+
+        const entries = await fs.readdir(dir, { withFileTypes: true });
+        const dirs: string[] = [];
+
+        for (const entry of entries) {
+          if (entry.isDirectory() && !entry.name.startsWith('.')) {
+            const fullPath = path.join(dir, entry.name);
+            dirs.push(fullPath);
+            if (depth < 2) {
+              const subDirs = await getDirectories(fullPath, depth + 1);
+              dirs.push(...subDirs);
+            }
+          }
+        }
+
+        return dirs;
+      };
+
+      const dirs = await getDirectories(directory);
       return dirs.slice(0, 20).join('\n'); // Limit to first 20 directories
     } catch {
       return 'Folder structure unavailable';
@@ -254,56 +296,39 @@ export class ContextService implements IContextService {
 
   private async getCodebaseStats(directory: string): Promise<string> {
     try {
-      const fileCount = await this.execCommand(
-        'find',
-        [
-          directory,
-          '-type',
-          'f',
-          '-name',
-          '*.js',
-          '-o',
-          '-name',
-          '*.ts',
-          '-o',
-          '-name',
-          '*.py',
-          '-o',
-          '-name',
-          '*.java',
-        ],
-        directory,
-      );
-      const lineCount = await this.execCommand(
-        'find',
-        [
-          directory,
-          '-type',
-          'f',
-          '-name',
-          '*.js',
-          '-o',
-          '-name',
-          '*.ts',
-          '-o',
-          '-name',
-          '*.py',
-          '-o',
-          '-name',
-          '*.java',
-          '-exec',
-          'wc',
-          '-l',
-          '{}',
-          '+',
-        ],
-        directory,
-      );
+      // Use Node.js built-ins for cross-platform compatibility
+      const fs = await import('fs/promises');
+      const path = await import('path');
 
-      const files = fileCount.split('\n').filter(line => line.trim()).length;
-      const lines = lineCount.split('\n').filter(line => line.trim()).length;
+      const extensions = ['.js', '.ts', '.py', '.java'];
+      let fileCount = 0;
+      let lineCount = 0;
 
-      return `Files: ${files}\nLines of code: ${lines}`;
+      const countFiles = async (dir: string): Promise<void> => {
+        const entries = await fs.readdir(dir, { withFileTypes: true });
+
+        for (const entry of entries) {
+          const fullPath = path.join(dir, entry.name);
+
+          if (entry.isDirectory() && !entry.name.startsWith('.') && entry.name !== 'node_modules') {
+            await countFiles(fullPath);
+          } else if (entry.isFile()) {
+            const ext = path.extname(entry.name);
+            if (extensions.includes(ext)) {
+              fileCount++;
+              try {
+                const content = await fs.readFile(fullPath, 'utf-8');
+                lineCount += content.split('\n').length;
+              } catch {
+                // Skip files that can't be read
+              }
+            }
+          }
+        }
+      };
+
+      await countFiles(directory);
+      return `Files: ${fileCount}\nLines of code: ${lineCount}`;
     } catch {
       return 'Codebase stats unavailable';
     }
@@ -313,7 +338,7 @@ export class ContextService implements IContextService {
     return new Promise((resolve, reject) => {
       const child = spawn(command, args, {
         cwd,
-        stdio: this.quiet ? ['pipe', 'pipe', 'pipe'] : ['pipe', 'inherit', 'pipe'],
+        stdio: ['pipe', 'pipe', 'pipe'], // Always capture output for programmatic use
         shell: true,
       });
 
@@ -334,8 +359,16 @@ export class ContextService implements IContextService {
 
       child.on('close', code => {
         if (code === 0) {
+          // In non-quiet mode, display the output to the user
+          if (!this.quiet && stdout) {
+            console.log(stdout);
+          }
           resolve(stdout.trim());
         } else {
+          // In non-quiet mode, display stderr to the user
+          if (!this.quiet && stderr) {
+            console.error(stderr);
+          }
           reject(new Error(`Command failed: ${stderr}`));
         }
       });

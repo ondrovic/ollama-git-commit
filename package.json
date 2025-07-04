@@ -17,8 +17,8 @@
   ],
   "scripts": {
     "prebuild": "bun run scripts/generate-version.ts",
-    "build": "bun build src/cli.ts --outdir dist --target node --format esm && bun run build:types",
-    "build:types": "tsc --emitDeclarationOnly --outDir dist",
+    "build": "bun scripts/build.ts",
+    "build:types": "bun scripts/build-types.ts",
     "local:link": "bun run build && npm link",
     "local:unlink": "npm uninstall -g @condrovic/ollama-git-commit",
     "dev:watch": "bun --watch src/cli.ts",
@@ -31,7 +31,7 @@
     "format:check": "prettier --check src/**/*.ts",
     "clean": "rm -rf dist",
     "release": "bun run scripts/release.ts",
-    "precommit": "bun run format && bun run lint --fix && bun run test && bun run build:types",
+    "precommit": "bun scripts/precommit.ts",
     "stage": "bun scripts/stage.ts"
   },
   "keywords": [

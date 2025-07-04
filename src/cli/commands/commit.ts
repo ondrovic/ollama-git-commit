@@ -38,7 +38,7 @@ export const registerCommitCommand = (program: Command) => {
           undefined,
           logger,
           undefined,
-          options.quiet,
+          false, // quiet will be determined from config
         );
         await commitCommand.execute({
           directory: options.directory,

@@ -609,7 +609,7 @@ export class CommitCommand {
     }
 
     // Override with CLI options (CLI options take highest priority)
-    return {
+    const config = {
       model: model,
       host: options.host || baseConfig.host,
       verbose: options.verbose !== undefined ? options.verbose : baseConfig.verbose,
@@ -625,5 +625,10 @@ export class CommitCommand {
       promptTemplate,
       quiet: options.quiet !== undefined ? options.quiet : baseConfig.quiet,
     };
+
+    // Update the instance quiet property to use the config value
+    this.quiet = config.quiet;
+
+    return config;
   }
 }

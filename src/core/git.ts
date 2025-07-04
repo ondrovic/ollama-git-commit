@@ -59,14 +59,19 @@ export class GitService implements IGitService {
         options.stdio = ['pipe', 'pipe', 'pipe'];
         return this.execSyncFn(command, options).toString().trim();
       } else {
-        // For non-quiet mode, capture stderr for error handling while displaying stdout naturally
-        // This preserves natural git behavior while ensuring we can capture detailed error messages
-        options.stdio = ['pipe', 'inherit', 'pipe'];
-        this.execSyncFn(command, options);
+        // For non-quiet mode, we need to capture output for programmatic use
+        // but also display it to the user. We'll use pipe for both stdout and stderr
+        // to capture the output, then display it manually if needed
+        options.stdio = ['pipe', 'pipe', 'pipe'];
+        const result = this.execSyncFn(command, options);
+        const output = result.toString().trim();
 
-        // In non-quiet mode, stdout is displayed naturally via 'inherit'
-        // We return empty string since output is already shown to user
-        return '';
+        // Display the output to the user (mimicking inherit behavior)
+        if (output) {
+          console.log(output);
+        }
+
+        return output;
       }
     } catch (error: unknown) {
       if (typeof error === 'object' && error && 'message' in error) {
