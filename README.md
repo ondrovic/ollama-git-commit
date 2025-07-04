@@ -74,8 +74,8 @@ You can view the status of all workflows in the "Actions" tab of the GitHub repo
 - 🛡️ **Type-Safe Configuration**: Configuration commands now feature improved type safety and robust error handling, especially for nested key assignment and config source tracking. TypeScript errors related to config updates are now prevented by design.
 - 📦 **Version Change Detection**: Detects and reports version changes in both `package.json` and `package-lock.json` for full transparency. This helps catch accidental mismatches or manual edits that could cause inconsistencies between the two files.
 - ⚡ **Auto-Commit with SSH Agent Support**: Auto-commit works seamlessly with 1Password SSH agent and other SSH agents, as long as the agent is running and the environment is inherited. If you use 1Password, ensure the 1Password CLI is running and SSH_AUTH_SOCK is set.
-- 🔄 **Smart Auto-Staging**: The `--auto-stage` flag runs the full staging script (`bun run stage`) which formats, lints, tests, and stages files, ensuring code quality before commit.
-- 🤖 **Intelligent Auto-Commit**: The `--auto-commit` flag runs the full staging script first, then commits with an AI-generated message, providing a complete workflow from staging to committing.
+- 🔄 **Smart Auto-Staging**: The `--auto-stage` flag runs the full staging script (`bun run stage`) which formats, lints, tests, and stages files, then exits. No commit is made.
+- 🤖 **Intelligent Auto-Commit**: The `--auto-commit` flag runs the full staging script, generates a commit message, and commits the currently staged files with the selected message. Staging is only done once, before message generation.
 
 ## 🚀 Installation
 
@@ -327,18 +327,23 @@ ollama-git-commit -d /path/to/repo --auto-commit
 
 The tool provides intelligent staging and committing workflows:
 
-**`--auto-stage`**: Runs the full staging script (`bun run stage`) which:
+**`--auto-stage`**: Runs the full staging script and generates a commit message, but requires manual commit:
 
 - Formats code with Prettier
 - Fixes linting issues with ESLint
 - Runs tests
 - Stages all files with `git add -A`
+- Generates an intelligent commit message using Ollama
+- Shows interactive prompt for user actions
+- User must copy and run the git commit command manually
 
-**`--auto-commit`**: Runs the full staging script first, then commits with an AI-generated message:
+**`--auto-commit`**: Runs the full staging script and automatically commits with an AI-generated message:
 
 - Formats, lints, tests, and stages files
 - Generates an intelligent commit message using Ollama
-- Commits with the generated message
+- Waits for user approval (if interactive)
+- If user approves with 'y', automatically commits with the AI-generated message
+- Staging is only done once, before message generation
 - Works with SSH agents like 1Password CLI
 
 ### Development Workflow
@@ -346,13 +351,13 @@ The tool provides intelligent staging and committing workflows:
 For development, you can use these commands:
 
 ```bash
-# Just stage files (format, lint, test, stage)
+# Stage files, generate AI message, and show interactive prompt (manual commit)
 bun dev:run commit -d . --auto-stage
 
-# Stage files and commit with AI-generated message
+# Stage files, generate AI message, and auto-commit if approved
 bun dev:run commit -d . --auto-commit
 
-# Alternative: Use the standalone script
+# Alternative: Use the standalone script (same as --auto-commit)
 bun run stage-and-commit
 ```
 

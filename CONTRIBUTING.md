@@ -96,17 +96,17 @@ We use an automated release process for publishing to NPM. Here's the complete w
    # Option 1: Stage files only
    bun run stage
 
-   # Option 2: Stage files and auto-commit with AI-generated message
-   bun run stage-and-commit
-
-   # Option 3: Use the tool's auto-stage functionality
+   # Option 2: Use the tool's auto-stage functionality
    bun dev:run commit -d . --auto-stage
 
-   # Option 4: Use the tool's auto-commit functionality
+   # Option 3: Stage files and auto-commit with AI-generated message
    bun dev:run commit -d . --auto-commit
+
+   # Option 4: Use the standalone script (same as --auto-commit)
+   bun run stage-and-commit
    ```
 
-4. Commit your changes (if using option 1 or 3):
+4. Commit your changes (if using option 1 or 2):
 
    ```bash
    git commit -m "feat: your feature description"
@@ -472,12 +472,12 @@ By contributing to Ollama Git Commit, you agree that your contributions will be 
 
 The tool provides intelligent staging and committing workflows:
 
-**`--auto-stage`**: Runs the full staging script (`bun run stage`) which formats, lints, tests, and stages files, ensuring code quality before commit.
+**`--auto-stage`**: Runs the full staging script, generates an AI commit message, and shows an interactive prompt, but requires manual commit. The user must copy and run the git commit command themselves.
 
-**`--auto-commit`**: Runs the full staging script first, then commits with an AI-generated message, providing a complete workflow from staging to committing.
+**`--auto-commit`**: Runs the full staging script, generates an AI commit message, and if the user approves with 'y', automatically commits with the AI-generated message.
 
 For development, you can use:
 
-- `bun dev:run commit -d . --auto-stage` - Just stage files
-- `bun dev:run commit -d . --auto-commit` - Stage and commit with AI message
-- `bun run stage-and-commit` - Alternative standalone script
+- `bun dev:run commit -d . --auto-stage` - Stage files, generate AI message, show interactive prompt (manual commit)
+- `bun dev:run commit -d . --auto-commit` - Stage files, generate AI message, auto-commit if approved
+- `bun run stage-and-commit` - Alternative standalone script (same as --auto-commit)

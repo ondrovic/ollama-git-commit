@@ -49,6 +49,17 @@ export class CommitCommand {
 
     this.logger.debug('Configuration:', config);
 
+    // Run staging script for both auto-stage and auto-commit
+    if (config.autoStage || config.autoCommit) {
+      this.logger.info('Running staging script (format, lint, test, stage)...');
+      execSync('bun run stage', {
+        cwd: this.directory,
+        stdio: 'inherit',
+        env: process.env,
+      });
+      this.logger.success('Staging completed!');
+    }
+
     // Validate environment
     validateGitRepository(options.directory || process.cwd());
 
@@ -333,22 +344,10 @@ export class CommitCommand {
         switch (action) {
           case 'use': {
             if (config.autoCommit) {
+              // Auto-commit mode: automatically commit with the AI-generated message
               try {
                 const escapedMessage = message.replace(/"/g, '\\"');
-
-                // For auto-commit, run the staging script first, then commit
-                if (config.verbose) {
-                  this.logger.info('Running staging script before commit...');
-                }
-
-                // Run the staging script (format, lint, test, stage)
-                execSync('bun run stage', {
-                  cwd: this.directory,
-                  stdio: 'inherit',
-                  env: process.env,
-                });
-
-                // Now commit with the AI-generated message
+                // Only commit, do not re-stage
                 const child = spawn('git', ['commit', '-m', escapedMessage], {
                   cwd: this.directory,
                   stdio: 'inherit',
@@ -376,6 +375,7 @@ export class CommitCommand {
                 result = 1;
               }
             } else {
+              // Auto-stage mode: require manual commit (user types the message)
               console.log('');
               console.log('📋 Copy and run this command:');
               const escapedMessage = message.replace(/"/g, '\\"');
@@ -413,22 +413,10 @@ export class CommitCommand {
 
         // Fallback to non-interactive behavior
         if (config.autoCommit) {
+          // Auto-commit mode: automatically commit with the AI-generated message
           try {
             const escapedMessage = message.replace(/"/g, '\\"');
-
-            // For auto-commit, run the staging script first, then commit
-            if (config.verbose) {
-              this.logger.info('Running staging script before commit...');
-            }
-
-            // Run the staging script (format, lint, test, stage)
-            execSync('bun run stage', {
-              cwd: this.directory,
-              stdio: 'inherit',
-              env: process.env,
-            });
-
-            // Now commit with the AI-generated message
+            // Only commit, do not re-stage
             this.gitService.execCommand(`git commit -m "${escapedMessage}"`);
             this.logger.success('Changes committed successfully!');
             return 0;
@@ -443,6 +431,7 @@ export class CommitCommand {
             return 1;
           }
         } else {
+          // Auto-stage mode: require manual commit (user types the message)
           console.log('📋 To commit with this message, run:');
           const escapedMessage = message.replace(/"/g, '\\"');
           console.log(`git commit -m "${escapedMessage}"`);
@@ -452,22 +441,10 @@ export class CommitCommand {
       }
     } else {
       if (config.autoCommit) {
+        // Auto-commit mode: automatically commit with the AI-generated message
         try {
           const escapedMessage = message.replace(/"/g, '\\"');
-
-          // For auto-commit, run the staging script first, then commit
-          if (config.verbose) {
-            this.logger.info('Running staging script before commit...');
-          }
-
-          // Run the staging script (format, lint, test, stage)
-          execSync('bun run stage', {
-            cwd: this.directory,
-            stdio: 'inherit',
-            env: process.env,
-          });
-
-          // Now commit with the AI-generated message
+          // Only commit, do not re-stage
           this.gitService.execCommand(`git commit -m "${escapedMessage}"`);
           this.logger.success('Changes committed successfully!');
           return 0;
@@ -482,6 +459,7 @@ export class CommitCommand {
           return 1;
         }
       } else {
+        // Auto-stage mode: require manual commit (user types the message)
         console.log('📋 To commit with this message, run:');
         const escapedMessage = message.replace(/"/g, '\\"');
         console.log(`git commit -m "${escapedMessage}"`);

@@ -9,9 +9,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- New `stage-and-commit` script that combines staging (format, lint, test, stage) with AI-generated auto-commit functionality. Use `bun run stage-and-commit` for a complete workflow from staging to committing with AI-generated messages.
-- Enhanced `--auto-stage` flag now runs the full staging script (`bun run stage`) instead of just `git add -A`, ensuring code quality (format, lint, test) before staging.
-- Enhanced `--auto-commit` flag now runs the full staging script first, then commits with an AI-generated message, providing a complete workflow from staging to committing.
+- New `stage-and-commit` script that is a shortcut for running the tool with `--auto-commit` (runs the full staging script, generates a commit message, and commits the currently staged files).
+- Enhanced `--auto-stage` flag now runs the full staging script, generates an AI commit message, and shows an interactive prompt, but requires manual commit (user must copy and run the git commit command).
+- Enhanced `--auto-commit` flag now runs the full staging script, generates an AI commit message, and if the user approves with 'y', automatically commits with the AI-generated message. Staging is only done once, before message generation.
 
 ### Fixed
 
