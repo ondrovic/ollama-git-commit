@@ -474,9 +474,9 @@ By contributing to Ollama Git Commit, you agree that your contributions will be 
 
 The tool provides intelligent staging and committing workflows:
 
-**`--auto-stage`**: Runs the full staging script, generates an AI commit message, and shows an interactive prompt, but requires manual commit. The user must copy and run the git commit command themselves.
+**`--auto-stage`**: Runs the full staging script, generates an AI commit message, and shows an interactive prompt, but does not commit or push. The user must copy and run the git commit command themselves.
 
-**`--auto-commit`**: Runs the full staging script, generates an AI commit message, and if the user approves with 'y', automatically commits with the AI-generated message and pushes to the remote repository.
+**`--auto-commit`**: Runs the full staging script, generates an AI commit message, and always commits and pushes to the remote repository if approved, regardless of interactive mode. Staging is only done once, before message generation.
 
 For development, you can use:
 

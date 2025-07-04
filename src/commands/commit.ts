@@ -383,42 +383,41 @@ export class CommitCommand {
             if (config.autoCommit) {
               // Auto-commit mode: automatically commit with the AI-generated message
               try {
-                const escapedMessage = message.replace(/"/g, '\\"');
-                // Only commit, do not re-stage
-                const child = spawn('git', ['commit', '-m', escapedMessage], {
-                  cwd: this.directory,
-                  stdio: 'inherit',
-                  env: process.env, // Inherit environment for SSH agent
-                });
-                child.on('exit', code => {
-                  if (code === 0) {
-                    this.logger.success('Changes committed successfully!');
-
-                    // Auto-push after successful commit
-                    this.logger.info('Pushing changes to remote repository...');
-                    const pushChild = spawn('git', ['push'], {
+                const escapedMessage = message.replace(/"/g, '"');
+                // Helper to run a command and await its completion
+                const runSpawn = (cmd: string, args: string[]) =>
+                  new Promise<number>((resolve, reject) => {
+                    const child = spawn(cmd, args, {
                       cwd: this.directory,
                       stdio: 'inherit',
-                      env: process.env, // Inherit environment for SSH agent
+                      env: process.env,
                     });
-                    pushChild.on('exit', pushCode => {
-                      if (pushCode === 0) {
-                        this.logger.success('Changes pushed successfully!');
-                      } else {
-                        this.logger.error('Failed to push changes.');
-                        this.logger.error(
-                          'If you are using 1Password SSH agent, ensure the 1Password CLI is running and SSH_AUTH_SOCK is set.',
-                        );
-                      }
-                    });
+                    child.on('exit', code => resolve(code ?? 1));
+                    child.on('error', err => reject(err));
+                  });
+
+                const commitCode = await runSpawn('git', ['commit', '-m', escapedMessage]);
+                if (commitCode === 0) {
+                  this.logger.success('Changes committed successfully!');
+                  this.logger.info('Pushing changes to remote repository...');
+                  const pushCode = await runSpawn('git', ['push']);
+                  if (pushCode === 0) {
+                    this.logger.success('Changes pushed successfully!');
+                    result = 0;
                   } else {
-                    this.logger.error('Failed to commit changes.');
+                    this.logger.error('Failed to push changes.');
                     this.logger.error(
                       'If you are using 1Password SSH agent, ensure the 1Password CLI is running and SSH_AUTH_SOCK is set.',
                     );
+                    result = 1;
                   }
-                });
-                result = 0;
+                } else {
+                  this.logger.error('Failed to commit changes.');
+                  this.logger.error(
+                    'If you are using 1Password SSH agent, ensure the 1Password CLI is running and SSH_AUTH_SOCK is set.',
+                  );
+                  result = 1;
+                }
               } catch (error) {
                 this.logger.error(
                   'Failed to commit changes:',
@@ -433,7 +432,7 @@ export class CommitCommand {
               // Auto-stage mode: require manual commit (user types the message)
               console.log('');
               console.log('📋 Copy and run this command:');
-              const escapedMessage = message.replace(/"/g, '\\"');
+              const escapedMessage = message.replace(/"/g, '"');
               console.log(`git commit -m "${escapedMessage}"`);
               result = 0;
             }
@@ -466,20 +465,20 @@ export class CommitCommand {
         }
         this.logger.info('Falling back to non-interactive mode');
 
-        // Fallback to non-interactive behavior
+        // Non-interactive mode: ensure auto-commit always commits AND pushes
         if (config.autoCommit) {
-          // Auto-commit mode: automatically commit with the AI-generated message
           try {
-            const escapedMessage = message.replace(/"/g, '\\"');
-            // Only commit, do not re-stage
+            const escapedMessage = message.replace(/"/g, '"');
+            // Commit changes
             this.gitService.execCommand(`git commit -m "${escapedMessage}"`);
             this.logger.success('Changes committed successfully!');
 
-            // Auto-push after successful commit
+            // Always push after commit in auto-commit mode
             this.logger.info('Pushing changes to remote repository...');
             try {
               this.gitService.execCommand('git push');
               this.logger.success('Changes pushed successfully!');
+              return 0;
             } catch (pushError) {
               this.logger.error(
                 'Failed to push changes:',
@@ -488,8 +487,8 @@ export class CommitCommand {
               this.logger.error(
                 'If you are using 1Password SSH agent, ensure the 1Password CLI is running and SSH_AUTH_SOCK is set.',
               );
+              return 1;
             }
-            return 0;
           } catch (error) {
             this.logger.error(
               'Failed to commit changes:',
@@ -503,21 +502,37 @@ export class CommitCommand {
         } else {
           // Auto-stage mode: require manual commit (user types the message)
           console.log('📋 To commit with this message, run:');
-          const escapedMessage = message.replace(/"/g, '\\"');
+          const escapedMessage = message.replace(/"/g, '"');
           console.log(`git commit -m "${escapedMessage}"`);
           console.log('');
           return 0;
         }
       }
     } else {
+      // Non-interactive mode: ensure auto-commit always commits AND pushes
       if (config.autoCommit) {
-        // Auto-commit mode: automatically commit with the AI-generated message
         try {
-          const escapedMessage = message.replace(/"/g, '\\"');
-          // Only commit, do not re-stage
+          const escapedMessage = message.replace(/"/g, '"');
+          // Commit changes
           this.gitService.execCommand(`git commit -m "${escapedMessage}"`);
           this.logger.success('Changes committed successfully!');
-          return 0;
+
+          // Always push after commit in auto-commit mode
+          this.logger.info('Pushing changes to remote repository...');
+          try {
+            this.gitService.execCommand('git push');
+            this.logger.success('Changes pushed successfully!');
+            return 0;
+          } catch (pushError) {
+            this.logger.error(
+              'Failed to push changes:',
+              pushError instanceof Error ? pushError.message : String(pushError),
+            );
+            this.logger.error(
+              'If you are using 1Password SSH agent, ensure the 1Password CLI is running and SSH_AUTH_SOCK is set.',
+            );
+            return 1;
+          }
         } catch (error) {
           this.logger.error(
             'Failed to commit changes:',
@@ -531,7 +546,7 @@ export class CommitCommand {
       } else {
         // Auto-stage mode: require manual commit (user types the message)
         console.log('📋 To commit with this message, run:');
-        const escapedMessage = message.replace(/"/g, '\\"');
+        const escapedMessage = message.replace(/"/g, '"');
         console.log(`git commit -m "${escapedMessage}"`);
         console.log('');
         return 0;
