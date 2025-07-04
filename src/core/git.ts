@@ -59,14 +59,13 @@ export class GitService implements IGitService {
         options.stdio = ['pipe', 'pipe', 'pipe'];
         return this.execSyncFn(command, options).toString().trim();
       } else {
-        // For non-quiet mode, we need to capture output for programmatic use
-        // but also display it to the user. We'll use pipe for both stdout and stderr
-        // to capture the output, then display it manually if needed
-        options.stdio = ['pipe', 'pipe', 'pipe'];
+        // For non-quiet mode, we want to show stderr to user while capturing stdout
+        // Use 'inherit' for stderr so warnings/progress/diagnostics are visible
+        options.stdio = ['pipe', 'pipe', 'inherit'];
         const result = this.execSyncFn(command, options);
         const output = result.toString().trim();
 
-        // Display the output to the user (mimicking inherit behavior)
+        // Display stdout to the user as well (for consistency)
         if (output) {
           console.log(output);
         }
@@ -74,6 +73,8 @@ export class GitService implements IGitService {
         return output;
       }
     } catch (error: unknown) {
+      // In non-quiet mode, stderr from the failed command will already be visible
+      // due to 'inherit' configuration, so we don't need to handle it specially
       if (typeof error === 'object' && error && 'message' in error) {
         throw new GitCommandError(
           `Failed to execute git command: ${(error as { message: string }).message}`,
