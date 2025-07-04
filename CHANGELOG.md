@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.0.15] - 2025-07-04
+
 ### Added
 
 - New `stage-and-commit` script that is a shortcut for running the tool with `--auto-commit` (runs the full staging script, generates a commit message, and commits the currently staged files).
