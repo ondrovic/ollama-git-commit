@@ -60,7 +60,7 @@ export class GitService implements IGitService {
     }
   }
 
-  getChanges(verbose: boolean, autoStage: boolean): GitChanges {
+  getChanges(verbose: boolean): GitChanges {
     if (!this.isGitRepository()) {
       throw new GitRepositoryError('Not a git repository');
     }
@@ -68,18 +68,8 @@ export class GitService implements IGitService {
     let diff = '';
     let staged = true;
 
-    // Run linters first if autoStage is true
-    if (autoStage) {
-      try {
-        if (verbose) {
-          this.logger.info('Running staging script (format, lint, test, stage)...');
-        }
-        // Run the staging script instead of just lint-staged
-        execSync('bun run stage', { cwd: this.directory, stdio: 'inherit' });
-      } catch {
-        this.logger.warn('Staging script failed, continuing with commit...');
-      }
-    }
+    // Note: Staging is handled by the commit command, not here
+    // This method only analyzes git changes
 
     // First check for staged changes
     try {
@@ -114,32 +104,13 @@ export class GitService implements IGitService {
         throw new GitNoChangesError('No changes found (staged or unstaged).');
       }
 
-      // We have unstaged changes - decide what to do with them
-      if (autoStage) {
-        if (verbose) {
-          this.logger.info('No staged changes found, running staging script...');
-        }
-        try {
-          // Run the staging script instead of just git add -A
-          execSync('bun run stage', { cwd: this.directory, stdio: 'inherit' });
-          diff = this.execCommand('git diff --cached');
-          staged = true;
-        } catch (error: unknown) {
-          if (typeof error === 'object' && error && 'message' in error) {
-            throw new GitCommandError(
-              `Failed to stage changes: ${(error as { message: string }).message}`,
-            );
-          } else {
-            throw new GitCommandError(`Failed to stage changes: ${String(error)}`);
-          }
-        }
-      } else {
-        diff = unstagedDiff;
-        staged = false;
-        if (verbose) {
-          Logger.info('Using unstaged changes for commit message generation');
-          Logger.warn("Note: You'll need to stage these changes before committing");
-        }
+      // We have unstaged changes - use them for analysis
+      // Note: Staging is handled by the commit command, not here
+      diff = unstagedDiff;
+      staged = false;
+      if (verbose) {
+        Logger.info('Using unstaged changes for commit message generation');
+        Logger.warn("Note: You'll need to stage these changes before committing");
       }
     } else if (verbose) {
       Logger.info('Using staged changes for commit message generation');

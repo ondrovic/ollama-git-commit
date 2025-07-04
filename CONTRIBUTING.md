@@ -63,7 +63,7 @@ To help ensure code quality and consistency, the project provides a `precommit` 
     - This will ensure pre-commit checks always run before each commit.
 
 - **`stage` script** (`bun stage`):
-  - The main project workflow script for formatting, linting, and staging as part of the release/development workflow.
+  - Formats, lints, tests, builds type declarations, and stages files
 
 **Tip:** Using pre-commit checks helps ensure code quality, consistent formatting, and up-to-date versioning before you commit or push changes, and will catch errors that could break the release process.
 
@@ -90,7 +90,7 @@ We use an automated release process for publishing to NPM. Here's the complete w
 
 2. Make your changes
 
-3. Run the staging script to format, lint, and stage your changes:
+3. Run the staging script to format, lint, build type declarations, and stage your changes:
 
    ```bash
    # Option 1: Stage files only
@@ -166,9 +166,11 @@ Our project uses a **single source of truth** for version management:
 
 The staging script (`bun stage`) will:
 
-- Format your code
-- Fix any linting issues
-- Stage all files
+- Run tests to ensure code quality
+- Format your code with Prettier
+- Fix any linting issues with ESLint
+- Build type declarations with `bun run build:types`
+- Stage all files for commit
 - _(No longer manages version numbers - this is handled by the release script)_
 
 ## Project Structure
@@ -474,10 +476,10 @@ The tool provides intelligent staging and committing workflows:
 
 **`--auto-stage`**: Runs the full staging script, generates an AI commit message, and shows an interactive prompt, but requires manual commit. The user must copy and run the git commit command themselves.
 
-**`--auto-commit`**: Runs the full staging script, generates an AI commit message, and if the user approves with 'y', automatically commits with the AI-generated message.
+**`--auto-commit`**: Runs the full staging script, generates an AI commit message, and if the user approves with 'y', automatically commits with the AI-generated message and pushes to the remote repository.
 
 For development, you can use:
 
 - `bun dev:run commit -d . --auto-stage` - Stage files, generate AI message, show interactive prompt (manual commit)
-- `bun dev:run commit -d . --auto-commit` - Stage files, generate AI message, auto-commit if approved
+- `bun dev:run commit -d . --auto-commit` - Stage files, generate AI message, auto-commit if approved, and push to remote
 - `bun run stage-and-commit` - Alternative standalone script (same as --auto-commit)

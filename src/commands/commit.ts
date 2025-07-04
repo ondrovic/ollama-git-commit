@@ -356,6 +356,24 @@ export class CommitCommand {
                 child.on('exit', code => {
                   if (code === 0) {
                     this.logger.success('Changes committed successfully!');
+
+                    // Auto-push after successful commit
+                    this.logger.info('Pushing changes to remote repository...');
+                    const pushChild = spawn('git', ['push'], {
+                      cwd: this.directory,
+                      stdio: 'inherit',
+                      env: process.env, // Inherit environment for SSH agent
+                    });
+                    pushChild.on('exit', pushCode => {
+                      if (pushCode === 0) {
+                        this.logger.success('Changes pushed successfully!');
+                      } else {
+                        this.logger.error('Failed to push changes.');
+                        this.logger.error(
+                          'If you are using 1Password SSH agent, ensure the 1Password CLI is running and SSH_AUTH_SOCK is set.',
+                        );
+                      }
+                    });
                   } else {
                     this.logger.error('Failed to commit changes.');
                     this.logger.error(
@@ -419,6 +437,21 @@ export class CommitCommand {
             // Only commit, do not re-stage
             this.gitService.execCommand(`git commit -m "${escapedMessage}"`);
             this.logger.success('Changes committed successfully!');
+
+            // Auto-push after successful commit
+            this.logger.info('Pushing changes to remote repository...');
+            try {
+              this.gitService.execCommand('git push');
+              this.logger.success('Changes pushed successfully!');
+            } catch (pushError) {
+              this.logger.error(
+                'Failed to push changes:',
+                pushError instanceof Error ? pushError.message : String(pushError),
+              );
+              this.logger.error(
+                'If you are using 1Password SSH agent, ensure the 1Password CLI is running and SSH_AUTH_SOCK is set.',
+              );
+            }
             return 0;
           } catch (error) {
             this.logger.error(

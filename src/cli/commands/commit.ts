@@ -17,7 +17,7 @@ export const registerCommitCommand = (program: Command) => {
     .option('-t, --prompt-template <template>', 'Prompt template to use')
     .option('--debug', 'Enable debug mode')
     .option('--auto-stage', 'Automatically stage changes')
-    .option('--auto-commit', 'Automatically commit changes')
+    .option('--auto-commit', 'Automatically commit changes and push to remote')
     .option('--auto-model', 'Automatically select model')
     .action(async options => {
       try {

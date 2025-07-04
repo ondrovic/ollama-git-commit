@@ -74,8 +74,8 @@ You can view the status of all workflows in the "Actions" tab of the GitHub repo
 - 🛡️ **Type-Safe Configuration**: Configuration commands now feature improved type safety and robust error handling, especially for nested key assignment and config source tracking. TypeScript errors related to config updates are now prevented by design.
 - 📦 **Version Change Detection**: Detects and reports version changes in both `package.json` and `package-lock.json` for full transparency. This helps catch accidental mismatches or manual edits that could cause inconsistencies between the two files.
 - ⚡ **Auto-Commit with SSH Agent Support**: Auto-commit works seamlessly with 1Password SSH agent and other SSH agents, as long as the agent is running and the environment is inherited. If you use 1Password, ensure the 1Password CLI is running and SSH_AUTH_SOCK is set.
-- 🔄 **Smart Auto-Staging**: The `--auto-stage` flag runs the full staging script (`bun run stage`) which formats, lints, tests, and stages files, then exits. No commit is made.
-- 🤖 **Intelligent Auto-Commit**: The `--auto-commit` flag runs the full staging script, generates a commit message, and commits the currently staged files with the selected message. Staging is only done once, before message generation.
+- 🔄 **Smart Auto-Staging**: The `--auto-stage` flag runs the full staging script (`bun run stage`) which formats, lints, tests, builds type declarations, and stages files, then generates an AI commit message. No commit is made - user must copy and run the git commit command manually.
+- 🤖 **Intelligent Auto-Commit**: The `--auto-commit` flag runs the full staging script, generates a commit message, and if approved, automatically commits and pushes to the remote repository. Staging is only done once, before message generation.
 
 ## 🚀 Installation
 
@@ -151,13 +151,13 @@ When contributing to the project, use the following workflow:
    **Difference between `precommit` and `stage`:**
 
    - `precommit` (script): Run before committing. Lints, tests, and checks types to catch errors that could break the release script.
-   - `stage` (script): The main project workflow script for formatting, linting, and staging as part of the release/development workflow.
+   - `stage` (script): The main project workflow script for formatting, linting, building type declarations, and staging as part of the release/development workflow.
    - `stage-and-commit` (script): Formats, lints, tests, stages files, and then auto-commits with an AI-generated message using the tool.
 
 4. **Commit your changes:**
 
    ```bash
-   # Option 1: Stage files only, then commit manually
+   # Option 1: Stage files only (format, lint, build types, stage), then commit manually
    bun run stage
    git commit -m "your message"
 
@@ -203,8 +203,11 @@ The staging script will:
 
 - Format your code with Prettier
 - Fix linting issues with ESLint
-- Stage all files for commit
-- _(Version management is handled automatically by the release process)_
+- Build type declarations with `bun run build:types`
+- Stages all files with `git add -A`
+- Generates an intelligent commit message using Ollama
+- Shows interactive prompt for user actions
+- User must copy and run the git commit command manually
 
 ### Permanent Global Installation
 
@@ -332,14 +335,15 @@ The tool provides intelligent staging and committing workflows:
 - Formats code with Prettier
 - Fixes linting issues with ESLint
 - Runs tests
+- Builds type declarations with `bun run build:types`
 - Stages all files with `git add -A`
 - Generates an intelligent commit message using Ollama
 - Shows interactive prompt for user actions
 - User must copy and run the git commit command manually
 
-**`--auto-commit`**: Runs the full staging script and automatically commits with an AI-generated message:
+**`--auto-commit`**: Runs the full staging script, automatically commits with an AI-generated message, and pushes to the remote repository:
 
-- Formats, lints, tests, and stages files
+- Formats, lints, tests, builds type declarations, and stages files
 - Generates an intelligent commit message using Ollama
 - Waits for user approval (if interactive)
 - If user approves with 'y', automatically commits with the AI-generated message
@@ -354,7 +358,7 @@ For development, you can use these commands:
 # Stage files, generate AI message, and show interactive prompt (manual commit)
 bun dev:run commit -d . --auto-stage
 
-# Stage files, generate AI message, and auto-commit if approved
+# Stage files, generate AI message, auto-commit if approved, and push to remote
 bun dev:run commit -d . --auto-commit
 
 # Alternative: Use the standalone script (same as --auto-commit)

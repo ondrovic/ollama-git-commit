@@ -11,7 +11,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - New `stage-and-commit` script that is a shortcut for running the tool with `--auto-commit` (runs the full staging script, generates a commit message, and commits the currently staged files).
 - Enhanced `--auto-stage` flag now runs the full staging script, generates an AI commit message, and shows an interactive prompt, but requires manual commit (user must copy and run the git commit command).
-- Enhanced `--auto-commit` flag now runs the full staging script, generates an AI commit message, and if the user approves with 'y', automatically commits with the AI-generated message. Staging is only done once, before message generation.
+- Enhanced `--auto-commit` flag now runs the full staging script, generates an AI commit message, and if the user approves with 'y', automatically commits with the AI-generated message and pushes to the remote repository. Staging is only done once, before message generation.
 
 ### Fixed
 
@@ -323,3 +323,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Support for various commit message formats
 - Integration with Git hooks
 - Configuration options for Ollama model and parameters
+
+## [1.0.0] - 2025-06-16
+
+### Changed
+
+- The stage script now runs formatting, linting, testing, builds type declarations (bun run build:types), and staging as part of the workflow.
+
+### Fixed
+
+- Fixed duplicate execution of staging script: removed redundant `bun run stage` calls from `src/core/git.ts` that were causing tests, formatting, and linting to run multiple times during `--auto-stage` and `--auto-commit` operations.
+- Removed legacy `.git-hooks/pre-stage` file that was causing additional duplication in the staging workflow.
+- Fixed duplicate git push execution in `--auto-commit` non-interactive mode: removed redundant `git push` call that was causing the push operation to run twice.
+
+### Technical Details
+
+- The git service (`src/core/git.ts`) was calling `bun run stage` twice in different scenarios, in addition to the commit command calling it once, resulting in the staging script running 3 times total.
+- Now only the commit command calls `bun run stage` once, and the git service only analyzes git changes without running staging scripts.
+- Added `GIT_SKIP_HOOKS=1` environment variable to prevent git hooks from triggering during staging operations.
+- The non-interactive fallback in `--auto-commit` mode had duplicate `git push` calls, which would cause the push operation to execute twice. This has been fixed to ensure push only happens once.
