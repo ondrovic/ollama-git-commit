@@ -33,14 +33,8 @@
       "@/utils/*": ["utils/*"]
     }
   },
-  "include": [
-    "src/**/*"
-  ],
-  "exclude": [
-    "node_modules",
-    "dist",
-    "test"
-  ],
+  "include": ["src/**/*"],
+  "exclude": ["node_modules", "dist", "test"],
   "ts-node": {
     "esm": true,
     "experimentalSpecifierResolution": "node"

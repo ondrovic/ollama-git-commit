@@ -26,7 +26,7 @@ export const VERSION = '${version}';
   const outputPath = join('src', 'generated', 'version.ts');
   console.log(`📝 Writing version file: ${outputPath}`);
   writeFileSync(outputPath, versionFileContent);
-  
+
   console.log(`✅ Generated version file: ${outputPath} (v${version})`);
 } catch (error) {
   console.error('❌ Failed to generate version file:', error.message);

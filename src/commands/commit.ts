@@ -1,4 +1,5 @@
-import { spawn } from 'child_process';
+import { execSync, spawn } from 'child_process';
+import { readFileSync } from 'fs';
 import { homedir } from 'os';
 import { join } from 'path';
 import { VALID_TEMPLATES, type VALID_TEMPLATE } from '../constants/prompts';
@@ -9,7 +10,7 @@ import { OllamaService } from '../core/ollama';
 import { PromptService } from '../core/prompt';
 import type { CommitConfig, CommitOptions } from '../types';
 import { copyToClipboard } from '../utils/clipboard';
-import { askCommitAction, InteractivePrompt } from '../utils/interactive';
+import { askCommitAction } from '../utils/interactive';
 import { Logger } from '../utils/logger';
 import { validateGitRepository } from '../utils/validation';
 import { ModelsCommand } from './models';
@@ -48,6 +49,53 @@ export class CommitCommand {
     const config = await this.buildConfig(options);
 
     this.logger.debug('Configuration:', config);
+
+    // Run staging script for both auto-stage and auto-commit
+    if (config.autoStage || config.autoCommit) {
+      // Check if staging script exists
+      const packageJsonPath = join(this.directory, 'package.json');
+      let hasStageScript = false;
+
+      try {
+        const packageJson = JSON.parse(readFileSync(packageJsonPath, 'utf8'));
+        hasStageScript = packageJson.scripts && packageJson.scripts.stage;
+      } catch {
+        // If package.json doesn't exist or is invalid, assume no stage script
+        hasStageScript = false;
+      }
+
+      if (hasStageScript) {
+        // Run the full staging script
+        this.logger.info('Running staging script (format, lint, test, stage)...');
+        execSync('bun run stage', {
+          cwd: this.directory,
+          stdio: 'inherit',
+          env: process.env,
+        });
+        this.logger.success('Staging completed!');
+      } else {
+        // Fall back to simple git add if no staging script exists
+        this.logger.info('No staging script found, using simple git add...');
+        this.logger.info(
+          'Note: For full formatting, linting, and testing, ensure your project has a "stage" script in package.json',
+        );
+
+        try {
+          execSync('git add -A', {
+            cwd: this.directory,
+            stdio: 'inherit',
+            env: { ...process.env, GIT_SKIP_HOOKS: '1' },
+          });
+          this.logger.success('Files staged successfully!');
+        } catch (addError) {
+          this.logger.error(
+            'Failed to stage files:',
+            addError instanceof Error ? addError.message : String(addError),
+          );
+          throw addError;
+        }
+      }
+    }
 
     // Validate environment
     validateGitRepository(options.directory || process.cwd());
@@ -333,39 +381,54 @@ export class CommitCommand {
         switch (action) {
           case 'use': {
             if (config.autoCommit) {
+              // Auto-commit mode: automatically commit with the AI-generated message
               try {
-                const escapedMessage = message.replace(/"/g, '\\"');
-                // Ensure cleanup before executing git command
-                InteractivePrompt.cleanup();
-                if (process.env.NODE_ENV === 'test') {
-                  this.gitService.execCommand(`git commit -m "${escapedMessage}"`);
+                // Helper to run a command and await its completion
+                const runSpawn = (cmd: string, args: string[]) =>
+                  new Promise<number>((resolve, reject) => {
+                    const child = spawn(cmd, args, {
+                      cwd: this.directory,
+                      stdio: 'inherit',
+                      env: process.env,
+                    });
+                    child.on('exit', code => resolve(code ?? 1));
+                    child.on('error', err => reject(err));
+                  });
+
+                const commitCode = await runSpawn('git', ['commit', '-m', message]);
+                if (commitCode === 0) {
                   this.logger.success('Changes committed successfully!');
+                  this.logger.info('Pushing changes to remote repository...');
+                  const pushCode = await runSpawn('git', ['push']);
+                  if (pushCode === 0) {
+                    this.logger.success('Changes pushed successfully!');
+                    result = 0;
+                  } else {
+                    this.logger.error('Failed to push changes.');
+                    this.logger.error(
+                      'If you are using 1Password SSH agent, ensure the 1Password CLI is running and SSH_AUTH_SOCK is set.',
+                    );
+                    result = 1;
+                  }
                 } else {
-                  // Run git commit as a detached child process
-                  const child = spawn('git', ['commit', '-m', escapedMessage], {
-                    cwd: this.directory,
-                    stdio: 'inherit',
-                    detached: true,
-                    shell: true,
-                  });
-                  child.on('exit', code => {
-                    if (code === 0) {
-                      this.logger.success('Changes committed successfully!');
-                    } else {
-                      this.logger.error('Failed to commit changes.');
-                    }
-                  });
-                  child.unref();
+                  this.logger.error('Failed to commit changes.');
+                  this.logger.error(
+                    'If you are using 1Password SSH agent, ensure the 1Password CLI is running and SSH_AUTH_SOCK is set.',
+                  );
+                  result = 1;
                 }
-                result = 0;
               } catch (error) {
                 this.logger.error(
                   'Failed to commit changes:',
                   error instanceof Error ? error.message : String(error),
                 );
+                this.logger.error(
+                  'If you are using 1Password SSH agent, ensure the 1Password CLI is running and SSH_AUTH_SOCK is set.',
+                );
                 result = 1;
               }
             } else {
+              // Auto-stage mode: require manual commit (user types the message)
               console.log('');
               console.log('📋 Copy and run this command:');
               const escapedMessage = message.replace(/"/g, '\\"');
@@ -401,21 +464,42 @@ export class CommitCommand {
         }
         this.logger.info('Falling back to non-interactive mode');
 
-        // Fallback to non-interactive behavior
+        // Non-interactive mode: ensure auto-commit always commits AND pushes
         if (config.autoCommit) {
           try {
             const escapedMessage = message.replace(/"/g, '\\"');
+            // Commit changes
             this.gitService.execCommand(`git commit -m "${escapedMessage}"`);
             this.logger.success('Changes committed successfully!');
-            return 0;
+
+            // Always push after commit in auto-commit mode
+            this.logger.info('Pushing changes to remote repository...');
+            try {
+              this.gitService.execCommand('git push');
+              this.logger.success('Changes pushed successfully!');
+              return 0;
+            } catch (pushError) {
+              this.logger.error(
+                'Failed to push changes:',
+                pushError instanceof Error ? pushError.message : String(pushError),
+              );
+              this.logger.error(
+                'If you are using 1Password SSH agent, ensure the 1Password CLI is running and SSH_AUTH_SOCK is set.',
+              );
+              return 1;
+            }
           } catch (error) {
             this.logger.error(
               'Failed to commit changes:',
               error instanceof Error ? error.message : String(error),
             );
+            this.logger.error(
+              'If you are using 1Password SSH agent, ensure the 1Password CLI is running and SSH_AUTH_SOCK is set.',
+            );
             return 1;
           }
         } else {
+          // Auto-stage mode: require manual commit (user types the message)
           console.log('📋 To commit with this message, run:');
           const escapedMessage = message.replace(/"/g, '\\"');
           console.log(`git commit -m "${escapedMessage}"`);
@@ -424,20 +508,42 @@ export class CommitCommand {
         }
       }
     } else {
+      // Non-interactive mode: ensure auto-commit always commits AND pushes
       if (config.autoCommit) {
         try {
           const escapedMessage = message.replace(/"/g, '\\"');
+          // Commit changes
           this.gitService.execCommand(`git commit -m "${escapedMessage}"`);
           this.logger.success('Changes committed successfully!');
-          return 0;
+
+          // Always push after commit in auto-commit mode
+          this.logger.info('Pushing changes to remote repository...');
+          try {
+            this.gitService.execCommand('git push');
+            this.logger.success('Changes pushed successfully!');
+            return 0;
+          } catch (pushError) {
+            this.logger.error(
+              'Failed to push changes:',
+              pushError instanceof Error ? pushError.message : String(pushError),
+            );
+            this.logger.error(
+              'If you are using 1Password SSH agent, ensure the 1Password CLI is running and SSH_AUTH_SOCK is set.',
+            );
+            return 1;
+          }
         } catch (error) {
           this.logger.error(
             'Failed to commit changes:',
             error instanceof Error ? error.message : String(error),
           );
+          this.logger.error(
+            'If you are using 1Password SSH agent, ensure the 1Password CLI is running and SSH_AUTH_SOCK is set.',
+          );
           return 1;
         }
       } else {
+        // Auto-stage mode: require manual commit (user types the message)
         console.log('📋 To commit with this message, run:');
         const escapedMessage = message.replace(/"/g, '\\"');
         console.log(`git commit -m "${escapedMessage}"`);

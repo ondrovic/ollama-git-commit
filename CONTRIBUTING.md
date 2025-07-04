@@ -63,7 +63,7 @@ To help ensure code quality and consistency, the project provides a `precommit` 
     - This will ensure pre-commit checks always run before each commit.
 
 - **`stage` script** (`bun stage`):
-  - The main project workflow script for formatting, linting, and staging as part of the release/development workflow.
+  - Formats, lints, tests, builds type declarations, and stages files
 
 **Tip:** Using pre-commit checks helps ensure code quality, consistent formatting, and up-to-date versioning before you commit or push changes, and will catch errors that could break the release process.
 
@@ -90,13 +90,23 @@ We use an automated release process for publishing to NPM. Here's the complete w
 
 2. Make your changes
 
-3. Run the staging script to format, lint, and stage your changes:
+3. Run the staging script to format, lint, build type declarations, and stage your changes:
 
    ```bash
-   bun stage
+   # Option 1: Stage files only
+   bun run stage
+
+   # Option 2: Use the tool's auto-stage functionality
+   bun dev:run commit -d . --auto-stage
+
+   # Option 3: Stage files and auto-commit with AI-generated message
+   bun dev:run commit -d . --auto-commit
+
+   # Option 4: Use the standalone script (same as --auto-commit)
+   bun run stage-and-commit
    ```
 
-4. Commit your changes:
+4. Commit your changes (if using option 1 or 2):
 
    ```bash
    git commit -m "feat: your feature description"
@@ -152,12 +162,15 @@ Our project uses a **single source of truth** for version management:
 - **`metadata.ts`** automatically reads the version using `npm_package_version`
 - **No manual version syncing** required between files
 - **Automatic fallback** to package.json during development
+- **Note:** The commit message generator also checks for version changes in `package-lock.json` and reports them if the version actually changes and is valid. This helps catch accidental mismatches or manual edits that could cause inconsistencies between the two files, even though `package.json` is the canonical source.
 
 The staging script (`bun stage`) will:
 
-- Format your code
-- Fix any linting issues
-- Stage all files
+- Run tests to ensure code quality
+- Format your code with Prettier
+- Fix any linting issues with ESLint
+- Build type declarations with `bun run build:types`
+- Stage all files for commit
 - _(No longer manages version numbers - this is handled by the release script)_
 
 ## Project Structure
@@ -452,3 +465,35 @@ By contributing to Ollama Git Commit, you agree that your contributions will be 
 - When adding new configuration features, include isolated, mock-based tests to ensure reliability and safety.
 - When using `config set <key> <value>`, the configuration system now merges the new value with the existing config file, preserving all other keys. Tests should verify that config changes do not overwrite unrelated values.
 - When setting the `model` key via `config set`, the tool will automatically update the `models` array to keep it in sync. Contributors should test that both the `model` field and the `models` array are updated together.
+
+### Troubleshooting SSH Agent (1Password, etc.)
+
+- If you use auto-commit and rely on an SSH agent (such as 1Password CLI), ensure the agent is running and SSH_AUTH_SOCK is set in your environment. The tool runs `git commit` as a foreground process with inherited environment, so interactive authentication (such as 1Password approval) should work as expected.
+
+### Auto-Staging and Auto-Commit
+
+The tool provides intelligent staging and committing workflows:
+
+**`--auto-stage`**: Runs the full staging script, generates an AI commit message, and shows an interactive prompt, but does not commit or push. The user must copy and run the git commit command themselves.
+
+**`--auto-commit`**: Runs the full staging script, generates an AI commit message, and always commits and pushes to the remote repository if approved, regardless of interactive mode. Staging is only done once, before message generation.
+
+For development, you can use:
+
+- `bun dev:run commit -d . --auto-stage` - Stage files, generate AI message, show interactive prompt (manual commit)
+- `bun dev:run commit -d . --auto-commit` - Stage files, generate AI message, auto-commit if approved, and push to remote
+- `bun run stage-and-commit` - Alternative standalone script (same as --auto-commit)
+
+- Code formatting is handled by running:
+
+```sh
+bun run format
+```
+
+- This invokes Prettier via npx, ensuring compatibility and avoiding Bun-specific issues.
+
+### Commit Message Escaping
+
+- When passing commit messages to shell commands as strings, always escape double quotes using `message.replace(/"/g, '\\"')`.
+- When passing commit messages as argument arrays (e.g., with Node.js spawn), do not escape quotes; pass the raw message.
+- Automated tests verify that both patterns are handled safely.

@@ -60,7 +60,7 @@ export class GitService implements IGitService {
     }
   }
 
-  getChanges(verbose: boolean, autoStage: boolean): GitChanges {
+  getChanges(verbose: boolean): GitChanges {
     if (!this.isGitRepository()) {
       throw new GitRepositoryError('Not a git repository');
     }
@@ -68,15 +68,8 @@ export class GitService implements IGitService {
     let diff = '';
     let staged = true;
 
-    // Run linters first if autoStage is true
-    if (autoStage) {
-      try {
-        // Run lint-staged to fix and stage any linting issues
-        execSync('npx lint-staged', { cwd: this.directory });
-      } catch {
-        this.logger.warn('Linting failed, continuing with commit...');
-      }
-    }
+    // Note: Staging is handled by the commit command, not here
+    // This method only analyzes git changes
 
     // First check for staged changes
     try {
@@ -111,31 +104,13 @@ export class GitService implements IGitService {
         throw new GitNoChangesError('No changes found (staged or unstaged).');
       }
 
-      // We have unstaged changes - decide what to do with them
-      if (autoStage) {
-        if (verbose) {
-          this.logger.info('No staged changes found, staging all changes...');
-        }
-        try {
-          this.execCommand('git add -A');
-          diff = this.execCommand('git diff --cached');
-          staged = true;
-        } catch (error: unknown) {
-          if (typeof error === 'object' && error && 'message' in error) {
-            throw new GitCommandError(
-              `Failed to stage changes: ${(error as { message: string }).message}`,
-            );
-          } else {
-            throw new GitCommandError(`Failed to stage changes: ${String(error)}`);
-          }
-        }
-      } else {
-        diff = unstagedDiff;
-        staged = false;
-        if (verbose) {
-          Logger.info('Using unstaged changes for commit message generation');
-          Logger.warn("Note: You'll need to stage these changes before committing");
-        }
+      // We have unstaged changes - use them for analysis
+      // Note: Staging is handled by the commit command, not here
+      diff = unstagedDiff;
+      staged = false;
+      if (verbose) {
+        Logger.info('Using unstaged changes for commit message generation');
+        Logger.warn("Note: You'll need to stage these changes before committing");
       }
     } else if (verbose) {
       Logger.info('Using staged changes for commit message generation');
@@ -313,11 +288,12 @@ export class GitService implements IGitService {
       const oldVersion = fileDiff.match(/^[-]+[\s]*"version":\s*"([^"]+)"/m)?.[1];
       const newVersion = fileDiff.match(/^[+]+[\s]*"version":\s*"([^"]+)"/m)?.[1];
 
-      if (oldVersion && newVersion) {
+      if (oldVersion && newVersion && oldVersion !== newVersion && newVersion !== '..') {
         return `📦 package.json: Bumped version from ${oldVersion} to ${newVersion}`;
-      } else if (newVersion) {
+      } else if (newVersion && newVersion !== '..') {
         return `📦 package.json: Set version to ${newVersion}`;
       }
+      return null;
     }
 
     // Check for package-lock.json version changes
@@ -325,11 +301,15 @@ export class GitService implements IGitService {
       const oldVersion = fileDiff.match(/^[-]+[\s]*"version":\s*"([^"]+)"/m)?.[1];
       const newVersion = fileDiff.match(/^[+]+[\s]*"version":\s*"([^"]+)"/m)?.[1];
 
-      if (oldVersion && newVersion) {
+      // Only report if both versions are present, not equal, and newVersion is not '..'
+      if (oldVersion && newVersion && oldVersion !== newVersion && newVersion !== '..') {
         return `📦 package-lock.json: Updated version from ${oldVersion} to ${newVersion}`;
-      } else if (newVersion) {
+      }
+      // Only report set if newVersion is present, not '..', and oldVersion is missing
+      if (!oldVersion && newVersion && newVersion !== '..') {
         return `📦 package-lock.json: Set version to ${newVersion}`;
       }
+      return null;
     }
 
     // Check for other common version files
@@ -337,11 +317,12 @@ export class GitService implements IGitService {
       const oldVersion = fileDiff.match(/^[-]+[\s]*([0-9]+\.[0-9]+\.[0-9]+)/m)?.[1];
       const newVersion = fileDiff.match(/^[+]+[\s]*([0-9]+\.[0-9]+\.[0-9]+)/m)?.[1];
 
-      if (oldVersion && newVersion) {
+      if (oldVersion && newVersion && oldVersion !== newVersion && newVersion !== '..') {
         return `📦 ${filePath}: Updated version from ${oldVersion} to ${newVersion}`;
-      } else if (newVersion) {
+      } else if (newVersion && newVersion !== '..') {
         return `📦 ${filePath}: Set version to ${newVersion}`;
       }
+      return null;
     }
 
     return null;

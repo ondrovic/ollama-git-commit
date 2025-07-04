@@ -17,10 +17,10 @@ describe('Git Integration', () => {
   describe('Version Extraction', () => {
     test('should extract version changes from package.json diff', () => {
       const gitService = new GitService(process.cwd(), new Logger());
-      
+
       // Mock the extractVersionChanges method by accessing it through the prototype
       const extractVersionChanges = (gitService as any).extractVersionChanges.bind(gitService);
-      
+
       const mockDiff = `diff --git a/package.json b/package.json
 index e2b836d..b62d39a 100644
 --- a/package.json
@@ -39,9 +39,9 @@ index e2b836d..b62d39a 100644
 
     test('should extract version changes from package-lock.json diff', () => {
       const gitService = new GitService(process.cwd(), new Logger());
-      
+
       const extractVersionChanges = (gitService as any).extractVersionChanges.bind(gitService);
-      
+
       const mockDiff = `diff --git a/package-lock.json b/package-lock.json
 index e2b836d..b62d39a 100644
 --- a/package-lock.json
@@ -59,9 +59,9 @@ index e2b836d..b62d39a 100644
 
     test('should return null for files without version changes', () => {
       const gitService = new GitService(process.cwd(), new Logger());
-      
+
       const extractVersionChanges = (gitService as any).extractVersionChanges.bind(gitService);
-      
+
       const mockDiff = `diff --git a/src/index.js b/src/index.js
 index e2b836d..b62d39a 100644
 --- a/src/index.js
@@ -75,24 +75,81 @@ index e2b836d..b62d39a 100644
       const result = extractVersionChanges('src/index.js', mockDiff);
       expect(result).toBeNull();
     });
+
+    test('should not detect version change in package-lock.json when version is truncated', () => {
+      const gitService = new GitService(process.cwd(), new Logger());
+
+      const extractVersionChanges = (gitService as any).extractVersionChanges.bind(gitService);
+
+      // This simulates a case where the version line is truncated in the diff
+      const mockDiff = `diff --git a/package-lock.json b/package-lock.json
+index e2b836d..b62d39a 100644
+--- a/package-lock.json
++++ b/package-lock.json
+@@ -1,6 +1,6 @@
+ {
+   "name": "test-package",
+-  "version": "1.0.0",
++  "version": "1.0.0",
+   "lockfileVersion": 2,
+   "requires": true,
+   "dependencies": {
+     "some-package": {
+-      "version": "2.1.0",
++      "version": "2.1.1",
+       "resolved": "https://registry.npmjs.org/some-package/-/some-package-2.1.1.tgz",
+       "integrity": "sha512-abc123"
+     }
+   }
+ }`;
+
+      const result = extractVersionChanges('package-lock.json', mockDiff);
+      // Should return null because the main version didn't change, only a dependency version
+      expect(result).toBeNull();
+    });
+
+    test('should not detect version change when version line is incomplete', () => {
+      const gitService = new GitService(process.cwd(), new Logger());
+
+      const extractVersionChanges = (gitService as any).extractVersionChanges.bind(gitService);
+
+      // This simulates a case where the version line is incomplete or malformed
+      const mockDiff = `diff --git a/package-lock.json b/package-lock.json
+index e2b836d..b62d39a 100644
+--- a/package-lock.json
++++ b/package-lock.json
+@@ -1,6 +1,6 @@
+ {
+   "name": "test-package",
+-  "version": "1.0.0",
++  "version": ".."
+ }`;
+
+      const result = extractVersionChanges('package-lock.json', mockDiff);
+      // Should return null because the version is incomplete
+      expect(result).toBeNull();
+    });
   });
 
   describe('File System Operations', () => {
     test('should create and read files', async () => {
       const filePath = path.join(testRepoPath, 'test.txt');
       const content = 'Test content';
-      
+
       await mockFs.writeFile(filePath, content);
       const readContent = await mockFs.readFile(filePath, 'utf-8');
-      
+
       expect(readContent).toBe(content);
     });
 
     test('should create directories', async () => {
       const dirPath = path.join(testRepoPath, 'nested', 'dir');
       await mockFs.mkdir(dirPath, { recursive: true });
-      
-      const exists = await mockFs.access(dirPath).then(() => true).catch(() => false);
+
+      const exists = await mockFs
+        .access(dirPath)
+        .then(() => true)
+        .catch(() => false);
       expect(exists).toBe(true);
     });
   });

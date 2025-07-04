@@ -72,6 +72,10 @@ You can view the status of all workflows in the "Actions" tab of the GitHub repo
 - 🎯 **Centralized Constants**: All models and contexts use centralized constants for consistency
 - 🔄 **Auto-Sync Configuration**: Automatic synchronization between core model and multi-model configuration. The auto-sync logic now ensures that only the chat model is updated or added, and custom models are preserved. Invalid or empty model values are ignored for auto-sync.
 - 🛡️ **Type-Safe Configuration**: Configuration commands now feature improved type safety and robust error handling, especially for nested key assignment and config source tracking. TypeScript errors related to config updates are now prevented by design.
+- 📦 **Version Change Detection**: Detects and reports version changes in both `package.json` and `package-lock.json` for full transparency. This helps catch accidental mismatches or manual edits that could cause inconsistencies between the two files.
+- ⚡ **Auto-Commit with SSH Agent Support**: Auto-commit works seamlessly with 1Password SSH agent and other SSH agents, as long as the agent is running and the environment is inherited. If you use 1Password, ensure the 1Password CLI is running and SSH_AUTH_SOCK is set.
+- 🔄 **Smart Auto-Staging**: The `--auto-stage` flag runs the full staging script (`bun run stage`) which formats, lints, tests, builds type declarations, and stages files, then generates an AI commit message. If the staging script is not available, it falls back to simple `git add -A`. No commit is made - user must copy and run the git commit command manually.
+- 🤖 **Intelligent Auto-Commit**: The `--auto-commit` flag runs the full staging script, generates a commit message, and if approved, automatically commits and pushes to the remote repository. If the staging script is not available, it falls back to simple `git add -A`. Staging is only done once, before message generation.
 
 ## 🚀 Installation
 
@@ -147,12 +151,18 @@ When contributing to the project, use the following workflow:
    **Difference between `precommit` and `stage`:**
 
    - `precommit` (script): Run before committing. Lints, tests, and checks types to catch errors that could break the release script.
-   - `stage` (script): The main project workflow script for formatting, linting, and staging as part of the release/development workflow.
+   - `stage` (script): The main project workflow script for formatting, linting, building type declarations, and staging as part of the release/development workflow.
+   - `stage-and-commit` (script): Formats, lints, tests, stages files, and then auto-commits with an AI-generated message using the tool.
 
 4. **Commit your changes:**
 
    ```bash
-   git commit -m "feat: your feature description"
+   # Option 1: Stage files only (format, lint, build types, stage), then commit manually
+   bun run stage
+   git commit -m "your message"
+
+   # Option 2: Stage files and auto-commit with AI-generated message
+   bun run stage-and-commit
    ```
 
 5. **Create a pull request**
@@ -193,8 +203,11 @@ The staging script will:
 
 - Format your code with Prettier
 - Fix linting issues with ESLint
-- Stage all files for commit
-- _(Version management is handled automatically by the release process)_
+- Build type declarations with `bun run build:types`
+- Stages all files with `git add -A`
+- Generates an intelligent commit message using Ollama
+- Shows interactive prompt for user actions
+- User must copy and run the git commit command manually
 
 ### Permanent Global Installation
 
@@ -300,23 +313,40 @@ Any validation issues will be reported with helpful error messages and suggestio
 
 ## 📖 Usage
 
-### Basic Commands
+### Basic Usage
 
 ```bash
-# Generate commit message for staged changes
-ollama-git-commit -d .
+# Generate a commit message for staged changes
+ollama-git-commit -d /path/to/repo
 
-# Non-interactive mode (just display the message)
-ollama-git-commit -d . -n
+# Generate a commit message for unstaged changes
+ollama-git-commit -d /path/to/repo --auto-stage
 
-# Verbose output with detailed information
-ollama-git-commit -d . -v
+# Auto-stage and auto-commit with AI-generated message
+ollama-git-commit -d /path/to/repo --auto-commit
+```
 
-# Auto-stage all changes if nothing is staged
-ollama-git-commit -d . --auto-stage
+### Auto-Staging and Auto-Commit
 
-# Debug mode with comprehensive logging
-ollama-git-commit -d . --debug
+The tool provides intelligent staging and committing workflows:
+
+**`--auto-stage`**: Runs the full staging script and generates a commit message, but does not commit or push. The user must copy and run the git commit command themselves.
+
+**`--auto-commit`**: Runs the full staging script, generates an AI commit message, and always commits and pushes to the remote repository if approved, regardless of interactive mode. Staging is only done once, before message generation. Works with SSH agents like 1Password CLI.
+
+### Development Workflow
+
+For development, you can use these commands:
+
+```bash
+# Stage files, generate AI message, and show interactive prompt (manual commit)
+bun dev:run commit -d . --auto-stage
+
+# Stage files, generate AI message, auto-commit if approved, and push to remote
+bun dev:run commit -d . --auto-commit
+
+# Alternative: Use the standalone script (same as --auto-commit)
+bun run stage-and-commit
 ```
 
 ### Model Management
@@ -821,3 +851,26 @@ This will update only the `model` key in your config file, leaving all other set
 ### Model auto-sync issues
 
 If you set the `model` field to an empty or invalid value, the auto-sync logic will skip updating the `models` array to prevent invalid configuration. Make sure to provide a valid model name when updating the `model` field.
+
+### 1Password SSH Agent
+
+If you encounter issues with auto-commit and 1Password SSH agent, make sure the 1Password CLI is running and SSH_AUTH_SOCK is set in your environment. The tool runs `git commit` as a foreground process with inherited environment, so interactive authentication should work as expected.
+
+## Technical Details
+
+- **Version Change Reporting**: The tool analyzes git diffs for both `package.json` and `package-lock.json`. It only reports a version change if the version actually changes and the new version is valid (not '..' or empty). This ensures commit messages are accurate and avoids false positives when the version is unchanged or truncated. Both files are checked to help catch accidental mismatches or manual edits that could cause inconsistencies between them.
+
+- To format code, run:
+
+```sh
+bun run format
+```
+
+- This will use Prettier via npx to format all TypeScript files in src/. This avoids known issues with Bun on Windows.
+
+## 🛡️ Security and Robustness
+
+- The tool safely handles commit messages containing quotes and special characters.
+- All shell command invocations escape double quotes to prevent syntax errors and command injection.
+- When using auto-commit or any workflow that passes the commit message as an argument array, no escaping is needed and the message is passed safely.
+- You can use commit messages with quotes (e.g., `fix: handle "edge cases" in parser`) without any issues.

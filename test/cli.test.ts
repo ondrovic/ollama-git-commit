@@ -35,11 +35,12 @@ mock.module('../core/git', () => ({
       return true;
     }
     getChanges() {
-      return { 
-        diff: 'test diff', 
-        staged: true, 
-        stats: {}, 
-        filesInfo: '📁 1 files changed:\n📄 test.js (modified) (+5 -2)\n\n📦 Version Changes:\n📦 package.json: Bumped version from 1.0.0 to 1.0.1' 
+      return {
+        diff: 'test diff',
+        staged: true,
+        stats: {},
+        filesInfo:
+          '📁 1 files changed:\n📄 test.js (modified) (+5 -2)\n\n📦 Version Changes:\n📦 package.json: Bumped version from 1.0.0 to 1.0.1',
       };
     }
     isRepository() {
@@ -77,11 +78,12 @@ const mockGitService = {
   getStagedDiff: () => 'test diff',
   getStatus: () => 'test status',
   commit: () => true,
-  getChanges: () => ({ 
-    diff: 'test diff', 
-    staged: true, 
-    stats: {}, 
-    filesInfo: '📁 1 files changed:\n📄 test.js (modified) (+5 -2)\n\n📦 Version Changes:\n📦 package.json: Bumped version from 1.0.0 to 1.0.1' 
+  getChanges: () => ({
+    diff: 'test diff',
+    staged: true,
+    stats: {},
+    filesInfo:
+      '📁 1 files changed:\n📄 test.js (modified) (+5 -2)\n\n📦 Version Changes:\n📦 package.json: Bumped version from 1.0.0 to 1.0.1',
   }),
   isRepository: () => true,
   getRoot: () => '/mock/repo',

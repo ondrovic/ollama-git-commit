@@ -1,6 +1,13 @@
 import { CONFIGURATIONS } from '../../src/constants/configurations';
 import { IConfigManager, ILogger } from '../../src/core/interfaces';
-import { ActiveFile, ConfigSources, ContextProvider, ModelConfig, ModelRole, OllamaCommitConfig } from '../../src/types';
+import {
+  ActiveFile,
+  ConfigSources,
+  ContextProvider,
+  ModelConfig,
+  ModelRole,
+  OllamaCommitConfig,
+} from '../../src/types';
 
 export class MockedConfigManager implements IConfigManager {
   private config: OllamaCommitConfig;
@@ -90,9 +97,7 @@ export class MockedConfigManager implements IConfigManager {
     return {
       user: '/mock/user/config.json',
       local: '/mock/local/config.json',
-      active: [
-        { type: 'user', path: '/mock/user/config.json', 'in-use': true }
-      ]
+      active: [{ type: 'user', path: '/mock/user/config.json', 'in-use': true }],
     };
   }
 
@@ -105,8 +110,8 @@ export class MockedConfigManager implements IConfigManager {
         arch: 'mock',
         nodeVersion: 'mock',
         cwd: '/mock',
-        env: {}
-      }
+        env: {},
+      },
     };
   }
 
