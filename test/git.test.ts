@@ -156,9 +156,8 @@ index e2b836d..b62d39a 100644
 
   describe('Quiet Functionality', () => {
     test('should handle quiet parameter correctly', () => {
-      const gitService = new GitService(process.cwd(), new Logger());
-      
-      // Test that the method exists and can be called
+      const mockExecSync = () => Buffer.from('mocked output');
+      const gitService = new GitService(process.cwd(), new Logger(), false, mockExecSync);
       expect(() => gitService.execCommand('git status', true)).not.toThrow();
       expect(() => gitService.execCommand('git status', false)).not.toThrow();
       expect(() => gitService.execCommand('git status')).not.toThrow();

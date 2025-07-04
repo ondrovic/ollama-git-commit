@@ -1,4 +1,4 @@
-import { execSync, ExecSyncOptions } from 'child_process';
+import { ExecSyncOptions, execSync as realExecSync } from 'child_process';
 import type { GitChanges } from '../types';
 import { Logger } from '../utils/logger';
 import { IGitService, ILogger } from './interfaces';
@@ -29,15 +29,18 @@ export class GitService implements IGitService {
   private directory: string;
   private logger: ILogger;
   private quiet: boolean;
+  private execSyncFn: typeof realExecSync;
 
   constructor(
     directory: string = process.cwd(),
     logger: ILogger = Logger.getDefault(),
     quiet = false,
+    execSyncFn: typeof realExecSync = realExecSync,
   ) {
     this.directory = directory;
     this.logger = logger;
     this.quiet = quiet;
+    this.execSyncFn = execSyncFn;
   }
 
   public setQuiet(quiet: boolean): void {
@@ -52,9 +55,31 @@ export class GitService implements IGitService {
         // Suppress output in terminal, but capture output for program
         options.stdio = ['pipe', 'pipe', 'pipe'];
         // Do NOT modify the command string or add shell redirection
-        return execSync(command, options).toString().trim();
+        return this.execSyncFn(command, options).toString().trim();
       } else {
-        return execSync(command, options).toString().trim();
+        // For non-quiet mode, we need to both capture the output and display it
+        // We'll capture it first, then display it manually
+        options.stdio = ['pipe', 'pipe', 'pipe'];
+        const output = this.execSyncFn(command, options).toString().trim();
+
+        // Display the output in the terminal, but filter out control characters and .git references
+        if (output) {
+          // eslint-disable-next-line no-control-regex
+          const cleanOutput = output.replace(/[\x00-\x1F\x7F]/g, '');
+          if (cleanOutput.trim()) {
+            // Filter out lines that contain .git references
+            const filteredLines = cleanOutput
+              .split('\n')
+              .filter(line => !line.includes('.git'))
+              .join('\n');
+
+            if (filteredLines.trim()) {
+              console.log(filteredLines);
+            }
+          }
+        }
+
+        return output;
       }
     } catch (error: unknown) {
       if (typeof error === 'object' && error && 'message' in error) {
@@ -204,6 +229,11 @@ export class GitService implements IGitService {
       lines.forEach(line => {
         const [status, ...pathParts] = line.split('\t');
         const path = pathParts.join('\t'); // Handle paths with tabs
+
+        // Skip .git and its contents
+        if (path === '.git' || path.startsWith('.git/') || path.startsWith('.git\\')) {
+          return;
+        }
 
         let action = 'modified';
         if (status) {
