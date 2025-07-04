@@ -7,6 +7,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- New `stage-and-commit` script that combines staging (format, lint, test, stage) with AI-generated auto-commit functionality. Use `bun run stage-and-commit` for a complete workflow from staging to committing with AI-generated messages.
+- Enhanced `--auto-stage` flag now runs the full staging script (`bun run stage`) instead of just `git add -A`, ensuring code quality (format, lint, test) before staging.
+- Enhanced `--auto-commit` flag now runs the full staging script first, then commits with an AI-generated message, providing a complete workflow from staging to committing.
+
+### Fixed
+
+- Improved version change detection logic for `package-lock.json`: now only reports a version change if the version actually changes and the new version is valid (not '..' or empty). Prevents false positives in commit messages.
+- Auto-commit now works with 1Password SSH agent and other SSH agents: the tool runs `git commit` as a foreground process with inherited environment, allowing interactive authentication to work as expected.
+- Auto-commit now works with 1Password SSH agent and other SSH agents: the tool runs `git commit` as a foreground process with inherited environment, allowing interactive authentication to work as expected.
+
+### Technical Details
+
+- The version extraction logic for `package-lock.json` and similar files now checks that both old and new versions are present, not equal, and the new version is not '..' or empty before reporting a change. This avoids reporting spurious or truncated version changes in commit messages.
+- The auto-commit implementation now uses `spawn` with `stdio: 'inherit'` and inherits the environment, ensuring compatibility with SSH agents like 1Password CLI on all platforms.
+
 ## [1.0.13],[1.0.14] - 2025-07-02
 
 ### Added

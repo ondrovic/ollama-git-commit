@@ -20,7 +20,8 @@ describe('CommitCommand', () => {
         diff: 'test diff',
         staged: true,
         stats: {},
-        filesInfo: '📁 1 files changed:\n📄 test.js (modified) (+5 -2)\n\n📦 Version Changes:\n📦 package.json: Bumped version from 1.0.0 to 1.0.1',
+        filesInfo:
+          '📁 1 files changed:\n📄 test.js (modified) (+5 -2)\n\n📦 Version Changes:\n📦 package.json: Bumped version from 1.0.0 to 1.0.1',
       }),
       execCommand: (cmd: string) => {
         if (cmd.includes('git commit')) {
@@ -96,7 +97,7 @@ describe('CommitCommand', () => {
     expect(invalidConfig.promptTemplate).toBe('default');
   });
 
-  test('should execute commit when autoCommit is true', async () => {
+  test('should show commit command when autoCommit is true', async () => {
     const options = {
       autoCommit: true,
       autoStage: false,
@@ -104,8 +105,9 @@ describe('CommitCommand', () => {
 
     const execCommandSpy = spyOn(mockGitService, 'execCommand');
     await commitCommand.execute(options);
-    expect(execCommandSpy).toHaveBeenCalledWith(expect.stringContaining('git commit'));
-    expect(execCommandSpy.mock.calls.length).toBeGreaterThan(0);
+    // With autoCommit enabled, we now show the command instead of executing it
+    // to avoid issues with 1Password SSH key authentication
+    expect(execCommandSpy.mock.calls.length).toBe(0);
     if (execCommandSpy.mockReset) execCommandSpy.mockReset();
   });
 

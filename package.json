@@ -32,7 +32,8 @@
     "clean": "rm -rf dist",
     "release": "bun run scripts/release.ts",
     "precommit": "bun run lint --fix && bun run test && bun run build:types",
-    "stage": "bun scripts/stage.ts"
+    "stage": "bun scripts/stage.ts",
+    "stage-and-commit": "bun scripts/stage-and-commit.ts"
   },
   "keywords": [
     "git",

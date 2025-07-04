@@ -1,4 +1,4 @@
-import { spawn } from 'child_process';
+import { execSync, spawn } from 'child_process';
 import { homedir } from 'os';
 import { join } from 'path';
 import { VALID_TEMPLATES, type VALID_TEMPLATE } from '../constants/prompts';
@@ -9,7 +9,7 @@ import { OllamaService } from '../core/ollama';
 import { PromptService } from '../core/prompt';
 import type { CommitConfig, CommitOptions } from '../types';
 import { copyToClipboard } from '../utils/clipboard';
-import { askCommitAction, InteractivePrompt } from '../utils/interactive';
+import { askCommitAction } from '../utils/interactive';
 import { Logger } from '../utils/logger';
 import { validateGitRepository } from '../utils/validation';
 import { ModelsCommand } from './models';
@@ -335,33 +335,43 @@ export class CommitCommand {
             if (config.autoCommit) {
               try {
                 const escapedMessage = message.replace(/"/g, '\\"');
-                // Ensure cleanup before executing git command
-                InteractivePrompt.cleanup();
-                if (process.env.NODE_ENV === 'test') {
-                  this.gitService.execCommand(`git commit -m "${escapedMessage}"`);
-                  this.logger.success('Changes committed successfully!');
-                } else {
-                  // Run git commit as a detached child process
-                  const child = spawn('git', ['commit', '-m', escapedMessage], {
-                    cwd: this.directory,
-                    stdio: 'inherit',
-                    detached: true,
-                    shell: true,
-                  });
-                  child.on('exit', code => {
-                    if (code === 0) {
-                      this.logger.success('Changes committed successfully!');
-                    } else {
-                      this.logger.error('Failed to commit changes.');
-                    }
-                  });
-                  child.unref();
+
+                // For auto-commit, run the staging script first, then commit
+                if (config.verbose) {
+                  this.logger.info('Running staging script before commit...');
                 }
+
+                // Run the staging script (format, lint, test, stage)
+                execSync('bun run stage', {
+                  cwd: this.directory,
+                  stdio: 'inherit',
+                  env: process.env,
+                });
+
+                // Now commit with the AI-generated message
+                const child = spawn('git', ['commit', '-m', escapedMessage], {
+                  cwd: this.directory,
+                  stdio: 'inherit',
+                  env: process.env, // Inherit environment for SSH agent
+                });
+                child.on('exit', code => {
+                  if (code === 0) {
+                    this.logger.success('Changes committed successfully!');
+                  } else {
+                    this.logger.error('Failed to commit changes.');
+                    this.logger.error(
+                      'If you are using 1Password SSH agent, ensure the 1Password CLI is running and SSH_AUTH_SOCK is set.',
+                    );
+                  }
+                });
                 result = 0;
               } catch (error) {
                 this.logger.error(
                   'Failed to commit changes:',
                   error instanceof Error ? error.message : String(error),
+                );
+                this.logger.error(
+                  'If you are using 1Password SSH agent, ensure the 1Password CLI is running and SSH_AUTH_SOCK is set.',
                 );
                 result = 1;
               }
@@ -405,6 +415,20 @@ export class CommitCommand {
         if (config.autoCommit) {
           try {
             const escapedMessage = message.replace(/"/g, '\\"');
+
+            // For auto-commit, run the staging script first, then commit
+            if (config.verbose) {
+              this.logger.info('Running staging script before commit...');
+            }
+
+            // Run the staging script (format, lint, test, stage)
+            execSync('bun run stage', {
+              cwd: this.directory,
+              stdio: 'inherit',
+              env: process.env,
+            });
+
+            // Now commit with the AI-generated message
             this.gitService.execCommand(`git commit -m "${escapedMessage}"`);
             this.logger.success('Changes committed successfully!');
             return 0;
@@ -412,6 +436,9 @@ export class CommitCommand {
             this.logger.error(
               'Failed to commit changes:',
               error instanceof Error ? error.message : String(error),
+            );
+            this.logger.error(
+              'If you are using 1Password SSH agent, ensure the 1Password CLI is running and SSH_AUTH_SOCK is set.',
             );
             return 1;
           }
@@ -427,6 +454,20 @@ export class CommitCommand {
       if (config.autoCommit) {
         try {
           const escapedMessage = message.replace(/"/g, '\\"');
+
+          // For auto-commit, run the staging script first, then commit
+          if (config.verbose) {
+            this.logger.info('Running staging script before commit...');
+          }
+
+          // Run the staging script (format, lint, test, stage)
+          execSync('bun run stage', {
+            cwd: this.directory,
+            stdio: 'inherit',
+            env: process.env,
+          });
+
+          // Now commit with the AI-generated message
           this.gitService.execCommand(`git commit -m "${escapedMessage}"`);
           this.logger.success('Changes committed successfully!');
           return 0;
@@ -434,6 +475,9 @@ export class CommitCommand {
           this.logger.error(
             'Failed to commit changes:',
             error instanceof Error ? error.message : String(error),
+          );
+          this.logger.error(
+            'If you are using 1Password SSH agent, ensure the 1Password CLI is running and SSH_AUTH_SOCK is set.',
           );
           return 1;
         }

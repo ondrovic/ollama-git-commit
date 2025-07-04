@@ -93,10 +93,20 @@ We use an automated release process for publishing to NPM. Here's the complete w
 3. Run the staging script to format, lint, and stage your changes:
 
    ```bash
-   bun stage
+   # Option 1: Stage files only
+   bun run stage
+
+   # Option 2: Stage files and auto-commit with AI-generated message
+   bun run stage-and-commit
+
+   # Option 3: Use the tool's auto-stage functionality
+   bun dev:run commit -d . --auto-stage
+
+   # Option 4: Use the tool's auto-commit functionality
+   bun dev:run commit -d . --auto-commit
    ```
 
-4. Commit your changes:
+4. Commit your changes (if using option 1 or 3):
 
    ```bash
    git commit -m "feat: your feature description"
@@ -152,6 +162,7 @@ Our project uses a **single source of truth** for version management:
 - **`metadata.ts`** automatically reads the version using `npm_package_version`
 - **No manual version syncing** required between files
 - **Automatic fallback** to package.json during development
+- **Note:** The commit message generator also checks for version changes in `package-lock.json` and reports them if the version actually changes and is valid. This helps catch accidental mismatches or manual edits that could cause inconsistencies between the two files, even though `package.json` is the canonical source.
 
 The staging script (`bun stage`) will:
 
@@ -452,3 +463,21 @@ By contributing to Ollama Git Commit, you agree that your contributions will be 
 - When adding new configuration features, include isolated, mock-based tests to ensure reliability and safety.
 - When using `config set <key> <value>`, the configuration system now merges the new value with the existing config file, preserving all other keys. Tests should verify that config changes do not overwrite unrelated values.
 - When setting the `model` key via `config set`, the tool will automatically update the `models` array to keep it in sync. Contributors should test that both the `model` field and the `models` array are updated together.
+
+### Troubleshooting SSH Agent (1Password, etc.)
+
+- If you use auto-commit and rely on an SSH agent (such as 1Password CLI), ensure the agent is running and SSH_AUTH_SOCK is set in your environment. The tool runs `git commit` as a foreground process with inherited environment, so interactive authentication (such as 1Password approval) should work as expected.
+
+### Auto-Staging and Auto-Commit
+
+The tool provides intelligent staging and committing workflows:
+
+**`--auto-stage`**: Runs the full staging script (`bun run stage`) which formats, lints, tests, and stages files, ensuring code quality before commit.
+
+**`--auto-commit`**: Runs the full staging script first, then commits with an AI-generated message, providing a complete workflow from staging to committing.
+
+For development, you can use:
+
+- `bun dev:run commit -d . --auto-stage` - Just stage files
+- `bun dev:run commit -d . --auto-commit` - Stage and commit with AI message
+- `bun run stage-and-commit` - Alternative standalone script

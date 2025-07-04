@@ -71,10 +71,13 @@ export class GitService implements IGitService {
     // Run linters first if autoStage is true
     if (autoStage) {
       try {
-        // Run lint-staged to fix and stage any linting issues
-        execSync('npx lint-staged', { cwd: this.directory });
+        if (verbose) {
+          this.logger.info('Running staging script (format, lint, test, stage)...');
+        }
+        // Run the staging script instead of just lint-staged
+        execSync('bun run stage', { cwd: this.directory, stdio: 'inherit' });
       } catch {
-        this.logger.warn('Linting failed, continuing with commit...');
+        this.logger.warn('Staging script failed, continuing with commit...');
       }
     }
 
@@ -114,10 +117,11 @@ export class GitService implements IGitService {
       // We have unstaged changes - decide what to do with them
       if (autoStage) {
         if (verbose) {
-          this.logger.info('No staged changes found, staging all changes...');
+          this.logger.info('No staged changes found, running staging script...');
         }
         try {
-          this.execCommand('git add -A');
+          // Run the staging script instead of just git add -A
+          execSync('bun run stage', { cwd: this.directory, stdio: 'inherit' });
           diff = this.execCommand('git diff --cached');
           staged = true;
         } catch (error: unknown) {
@@ -313,11 +317,12 @@ export class GitService implements IGitService {
       const oldVersion = fileDiff.match(/^[-]+[\s]*"version":\s*"([^"]+)"/m)?.[1];
       const newVersion = fileDiff.match(/^[+]+[\s]*"version":\s*"([^"]+)"/m)?.[1];
 
-      if (oldVersion && newVersion) {
+      if (oldVersion && newVersion && oldVersion !== newVersion && newVersion !== '..') {
         return `📦 package.json: Bumped version from ${oldVersion} to ${newVersion}`;
-      } else if (newVersion) {
+      } else if (newVersion && newVersion !== '..') {
         return `📦 package.json: Set version to ${newVersion}`;
       }
+      return null;
     }
 
     // Check for package-lock.json version changes
@@ -325,11 +330,15 @@ export class GitService implements IGitService {
       const oldVersion = fileDiff.match(/^[-]+[\s]*"version":\s*"([^"]+)"/m)?.[1];
       const newVersion = fileDiff.match(/^[+]+[\s]*"version":\s*"([^"]+)"/m)?.[1];
 
-      if (oldVersion && newVersion) {
+      // Only report if both versions are present, not equal, and newVersion is not '..'
+      if (oldVersion && newVersion && oldVersion !== newVersion && newVersion !== '..') {
         return `📦 package-lock.json: Updated version from ${oldVersion} to ${newVersion}`;
-      } else if (newVersion) {
+      }
+      // Only report set if newVersion is present, not '..', and oldVersion is missing
+      if (!oldVersion && newVersion && newVersion !== '..') {
         return `📦 package-lock.json: Set version to ${newVersion}`;
       }
+      return null;
     }
 
     // Check for other common version files
@@ -337,11 +346,12 @@ export class GitService implements IGitService {
       const oldVersion = fileDiff.match(/^[-]+[\s]*([0-9]+\.[0-9]+\.[0-9]+)/m)?.[1];
       const newVersion = fileDiff.match(/^[+]+[\s]*([0-9]+\.[0-9]+\.[0-9]+)/m)?.[1];
 
-      if (oldVersion && newVersion) {
+      if (oldVersion && newVersion && oldVersion !== newVersion && newVersion !== '..') {
         return `📦 ${filePath}: Updated version from ${oldVersion} to ${newVersion}`;
-      } else if (newVersion) {
+      } else if (newVersion && newVersion !== '..') {
         return `📦 ${filePath}: Set version to ${newVersion}`;
       }
+      return null;
     }
 
     return null;
