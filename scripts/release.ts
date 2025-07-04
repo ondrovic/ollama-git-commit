@@ -88,6 +88,7 @@ function testBuild(): void {
 
 function createAndPushTag(version: string): void {
   const tag = `v${version}`;
+  const isQuiet = process.env.QUIET === 'true';
 
   console.log(`🏷️ Creating and pushing tag ${tag}...`);
 
@@ -103,23 +104,33 @@ function createAndPushTag(version: string): void {
 
     // Stage version changes (note: we don't stage the generated version file)
     console.log(`📦 Staging package.json and CHANGELOG.md...`);
-    execSync('git add package.json CHANGELOG.md', { stdio: 'inherit' });
+    execSync('git add package.json CHANGELOG.md', { 
+      stdio: isQuiet ? ['pipe', 'pipe', 'pipe'] : 'inherit' 
+    });
 
     // Commit changes
     console.log(`💾 Committing version ${version}...`);
-    execSync(`git commit -m "chore: release version ${version}"`, { stdio: 'inherit' });
+    execSync(`git commit -m "chore: release version ${version}"`, { 
+      stdio: isQuiet ? ['pipe', 'pipe', 'pipe'] : 'inherit' 
+    });
 
     // Create tag
     console.log(`🏷️ Creating tag ${tag}...`);
-    execSync(`git tag ${tag}`, { stdio: 'inherit' });
+    execSync(`git tag ${tag}`, { 
+      stdio: isQuiet ? ['pipe', 'pipe', 'pipe'] : 'inherit' 
+    });
 
     // Push tag first
     console.log(`🚀 Pushing tag ${tag}...`);
-    execSync(`git push origin ${tag}`, { stdio: 'inherit' });
+    execSync(`git push origin ${tag}`, { 
+      stdio: isQuiet ? ['pipe', 'pipe', 'pipe'] : 'inherit' 
+    });
 
     // Push commits
     console.log(`🚀 Pushing commits to main...`);
-    execSync('git push origin main', { stdio: 'inherit' });
+    execSync('git push origin main', { 
+      stdio: isQuiet ? ['pipe', 'pipe', 'pipe'] : 'inherit' 
+    });
 
     console.log(`✅ Successfully created and pushed tag ${tag}`);
   } catch (error) {

@@ -12,6 +12,7 @@ export interface CommitOptions {
   autoModel?: boolean;
   autoCommit?: boolean;
   promptTemplate?: string;
+  quite?: boolean;
 }
 
 export interface CommitConfig {
@@ -25,6 +26,7 @@ export interface CommitConfig {
   autoModel: boolean;
   autoCommit: boolean;
   promptTemplate?: string;
+  quite: boolean;
 }
 
 export interface GitChanges {
@@ -74,6 +76,7 @@ export interface OllamaCommitConfig {
   autoStage: boolean;
   autoModel: boolean;
   autoCommit: boolean;
+  quite: boolean;
 
   // File paths
   promptFile: string;
@@ -126,6 +129,7 @@ export interface ConfigSourceInfo {
   autoModel: string;
   autoCommit: string;
   useEmojis: string;
+  quite: string;
   timeouts: {
     connection: string;
     generation: string;
@@ -149,6 +153,7 @@ export interface ConfigSources {
   autoModel?: string;
   autoCommit?: string;
   useEmojis?: string;
+  quite?: string;
   timeouts?: {
     connection?: string;
     generation?: string;

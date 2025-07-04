@@ -1,4 +1,4 @@
-import { beforeAll, describe, expect, mock, test } from 'bun:test';
+import { afterEach, beforeAll, beforeEach, describe, expect, mock, test } from 'bun:test';
 import { Command } from 'commander';
 import { CommitCommand } from '../src/commands/commit';
 import { ModelsCommand } from '../src/commands/models';
@@ -122,15 +122,26 @@ mock.module('../src/utils/interactive', () => ({
 describe('CLI Commands', () => {
   let program: Command;
   let logger: Logger;
+  let originalHost: string | undefined;
 
   beforeAll(() => {
     program = new Command();
     logger = new Logger();
     logger.setVerbose(true);
+  });
 
-    // Set up test environment
-    if (!process.env[ENVIRONMENTAL_VARIABLES.OLLAMA_HOST]) {
-      process.env[ENVIRONMENTAL_VARIABLES.OLLAMA_HOST] = mockConfig.host;
+  beforeEach(() => {
+    // Save and set OLLAMA_HOST for each test
+    originalHost = process.env[ENVIRONMENTAL_VARIABLES.OLLAMA_HOST];
+    process.env[ENVIRONMENTAL_VARIABLES.OLLAMA_HOST] = mockConfig.host;
+  });
+
+  afterEach(() => {
+    // Restore OLLAMA_HOST after each test
+    if (originalHost !== undefined) {
+      process.env[ENVIRONMENTAL_VARIABLES.OLLAMA_HOST] = originalHost;
+    } else {
+      delete process.env[ENVIRONMENTAL_VARIABLES.OLLAMA_HOST];
     }
   });
 

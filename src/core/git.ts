@@ -1,4 +1,4 @@
-import { execSync } from 'child_process';
+import { execSync, ExecSyncOptions } from 'child_process';
 import type { GitChanges } from '../types';
 import { Logger } from '../utils/logger';
 import { IGitService, ILogger } from './interfaces';
@@ -28,15 +28,35 @@ export class GitCommandError extends Error {
 export class GitService implements IGitService {
   private directory: string;
   private logger: ILogger;
+  private quiet: boolean;
 
-  constructor(directory: string = process.cwd(), logger: ILogger = Logger.getDefault()) {
+  constructor(
+    directory: string = process.cwd(),
+    logger: ILogger = Logger.getDefault(),
+    quiet = false,
+  ) {
     this.directory = directory;
     this.logger = logger;
+    this.quiet = quiet;
   }
 
-  public execCommand(command: string): string {
+  public execCommand(command: string, quiet = false): string {
     try {
-      return execSync(command, { cwd: this.directory }).toString().trim();
+      const options: ExecSyncOptions = { cwd: this.directory };
+
+      if (quiet) {
+        // Redirect output to /dev/null (Unix) or NUL (Windows)
+        const nullDevice = process.platform === 'win32' ? 'NUL' : '/dev/null';
+        options.stdio = ['pipe', 'pipe', 'pipe'];
+        options.shell = process.platform === 'win32' ? 'cmd.exe' : '/bin/sh';
+
+        // Modify command to redirect output
+        const redirectCommand = `${command} > ${nullDevice} 2>&1`;
+        const result = execSync(redirectCommand, options);
+        return result.toString().trim();
+      } else {
+        return execSync(command, options).toString().trim();
+      }
     } catch (error: unknown) {
       if (typeof error === 'object' && error && 'message' in error) {
         throw new GitCommandError(
@@ -73,7 +93,7 @@ export class GitService implements IGitService {
 
     // First check for staged changes
     try {
-      diff = this.execCommand('git diff --cached');
+      diff = this.execCommand('git diff --cached', this.quiet);
     } catch (error: unknown) {
       if (typeof error === 'object' && error && 'message' in error) {
         throw new GitCommandError(
@@ -88,7 +108,7 @@ export class GitService implements IGitService {
       // No staged changes, check for unstaged changes
       let unstagedDiff = '';
       try {
-        unstagedDiff = this.execCommand('git diff');
+        unstagedDiff = this.execCommand('git diff', this.quiet);
       } catch (error: unknown) {
         if (typeof error === 'object' && error && 'message' in error) {
           throw new GitCommandError(
@@ -147,7 +167,7 @@ export class GitService implements IGitService {
 
     try {
       const statsCommand = staged ? 'git diff --cached --stat' : 'git diff --stat';
-      const statsOutput = this.execCommand(statsCommand);
+      const statsOutput = this.execCommand(statsCommand, this.quiet);
 
       if (statsOutput) {
         const lines = statsOutput.split('\n');
@@ -172,7 +192,7 @@ export class GitService implements IGitService {
   private analyzeFileChanges(verbose: boolean, staged: boolean): string {
     try {
       const command = staged ? 'git diff --cached --name-status' : 'git diff --name-status';
-      const output = this.execCommand(command);
+      const output = this.execCommand(command, this.quiet);
 
       if (!output.trim()) {
         return '📁 0 files changed';
@@ -212,7 +232,7 @@ export class GitService implements IGitService {
         if (action !== 'deleted') {
           try {
             const fileCommand = staged ? `git diff --cached "${path}"` : `git diff "${path}"`;
-            const fileDiff = this.execCommand(fileCommand);
+            const fileDiff = this.execCommand(fileCommand, this.quiet);
 
             if (fileDiff) {
               const additions = (fileDiff.match(/^\+/gm) || []).length;
@@ -244,7 +264,7 @@ export class GitService implements IGitService {
         if (verbose && action !== 'deleted') {
           try {
             const fileCommand = staged ? `git diff --cached "${path}"` : `git diff "${path}"`;
-            const fileDiff = this.execCommand(fileCommand);
+            const fileDiff = this.execCommand(fileCommand, this.quiet);
 
             if (fileDiff) {
               const keyChanges = fileDiff
@@ -273,12 +293,8 @@ export class GitService implements IGitService {
       }
 
       return result;
-    } catch (error: unknown) {
-      if (typeof error === 'object' && error && 'message' in error) {
-        return `📁 Unable to analyze file changes: ${(error as { message: string }).message}`;
-      } else {
-        return `📁 Unable to analyze file changes: ${String(error)}`;
-      }
+    } catch {
+      return '📁 Error analyzing file changes';
     }
   }
 
@@ -330,7 +346,7 @@ export class GitService implements IGitService {
 
   getBranchName(): string {
     try {
-      return this.execCommand('git branch --show-current');
+      return this.execCommand('git branch --show-current', this.quiet);
     } catch {
       return 'unknown';
     }
@@ -338,7 +354,7 @@ export class GitService implements IGitService {
 
   getLastCommitHash(): string {
     try {
-      return this.execCommand('git rev-parse HEAD');
+      return this.execCommand('git rev-parse HEAD', this.quiet);
     } catch {
       return '';
     }
@@ -346,7 +362,7 @@ export class GitService implements IGitService {
 
   getRepositoryRoot(): string {
     try {
-      return this.execCommand('git rev-parse --show-toplevel');
+      return this.execCommand('git rev-parse --show-toplevel', this.quiet);
     } catch {
       return process.cwd();
     }

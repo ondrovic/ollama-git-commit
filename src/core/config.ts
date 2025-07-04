@@ -232,6 +232,12 @@ export class ConfigManager implements IConfigManager {
       config.autoCommit = false;
     }
 
+    if (process.env[ENVIRONMENTAL_VARIABLES.OLLAMA_COMMIT_QUITE] === 'true') {
+      config.quite = true;
+    } else if (process.env[ENVIRONMENTAL_VARIABLES.OLLAMA_COMMIT_QUITE] === 'false') {
+      config.quite = false;
+    }
+
     if (process.env[ENVIRONMENTAL_VARIABLES.OLLAMA_COMMIT_PROMPT_FILE]) {
       config.promptFile = (
         process.env[ENVIRONMENTAL_VARIABLES.OLLAMA_COMMIT_PROMPT_FILE] as string
@@ -486,6 +492,7 @@ export class ConfigManager implements IConfigManager {
     sources.autoStage = await getSource('autoStage');
     sources.autoModel = await getSource('autoModel');
     sources.autoCommit = await getSource('autoCommit');
+    sources.quite = await getSource('quite');
     sources.promptFile = await getSource('promptFile');
     sources.promptTemplate = await getSource('promptTemplate');
     sources.useEmojis = await getSource('useEmojis');

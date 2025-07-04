@@ -116,6 +116,13 @@ function getConfigKeys(): ConfigKeyInfo[] {
       example: 'false',
     },
     {
+      key: 'quite',
+      description: 'Suppress git command output',
+      type: 'boolean',
+      default: defaultConfig.quite,
+      example: 'true',
+    },
+    {
       key: 'promptFile',
       description: 'Path to custom prompt file',
       type: 'string',

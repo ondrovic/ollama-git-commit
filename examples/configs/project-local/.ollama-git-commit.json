@@ -8,6 +8,7 @@
   "autoCommit": false,
   "autoModel": false,
   "useEmojis": false,
+  "quite": false,
   "promptTemplate": "default",
   "promptFile": "~/.config/ollama-git-commit/prompt.txt",
   "timeouts": {

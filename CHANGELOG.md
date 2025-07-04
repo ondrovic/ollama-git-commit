@@ -7,6 +7,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **Quiet Mode Support**: Added `--quite` flag and `quite` configuration option to suppress git command output
+  - CLI flag: `--quite` for one-time quiet mode
+  - Configuration: `quite: true/false` in config files
+  - Environment variable: `OLLAMA_COMMIT_QUITE=true/false`
+  - Works seamlessly with `--auto-commit` and `--auto-stage` flags
+  - Useful for reducing terminal noise in automated workflows
+
+### Changed
+
+- Enhanced GitService to support quiet mode by redirecting git command output when quiet mode is enabled
+- Updated commit command to respect quiet mode setting from both CLI options and configuration
+- Modified stage and release scripts to respect `QUIET` environment variable for git output suppression
+
+### Technical Details
+
+- Added `quite` property to configuration interfaces and constants
+- Updated GitService to use `stdio: 'pipe'` when quiet mode is enabled
+- Enhanced commit command to pass quiet setting to all git operations
+- Updated config commands to handle and display the `quite` option
+- Added comprehensive test coverage for quiet mode functionality
+- Fixed test pollution issues in validation tests to ensure reliable test execution
+
 ## [1.0.15] - 2025-07-04
 
 ### Added

@@ -2,6 +2,8 @@
 
 import { execSync } from 'child_process';
 
+const isQuiet = process.env.QUIET === 'true';
+
 console.log('🚀 Running staging checks...');
 
 try {
@@ -19,7 +21,7 @@ try {
 
   console.log('📝 Staging all files...');
   execSync('git add -A', {
-    stdio: 'inherit',
+    stdio: isQuiet ? ['pipe', 'pipe', 'pipe'] : 'inherit',
     env: { ...process.env, GIT_SKIP_HOOKS: '1' },
   });
 

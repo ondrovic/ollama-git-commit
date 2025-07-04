@@ -26,6 +26,7 @@ export class CommitCommand {
   private promptService: IPromptService;
   private logger: ILogger;
   private configProvider: ConfigProvider;
+  private quite: boolean;
 
   constructor(
     private directory: string,
@@ -34,9 +35,11 @@ export class CommitCommand {
     promptService?: IPromptService,
     logger: ILogger = Logger.getDefault(),
     configProvider?: ConfigProvider,
+    quite = false,
   ) {
     this.logger = logger;
-    this.gitService = gitService || new GitService(this.directory, this.logger);
+    this.quite = quite;
+    this.gitService = gitService || new GitService(this.directory, this.logger, this.quite);
     this.ollamaService = ollamaService || new OllamaService(this.logger);
     this.promptService = promptService || new PromptService(this.logger);
     this.modelsCommand = new ModelsCommand();
@@ -47,6 +50,9 @@ export class CommitCommand {
   async execute(options: CommitOptions): Promise<void> {
     // Set up configuration with defaults
     const config = await this.buildConfig(options);
+
+    // Update the quite property from the resolved config
+    this.quite = config.quite;
 
     this.logger.debug('Configuration:', config);
 
@@ -69,8 +75,8 @@ export class CommitCommand {
         this.logger.info('Running staging script (format, lint, test, stage)...');
         execSync('bun run stage', {
           cwd: this.directory,
-          stdio: 'inherit',
-          env: process.env,
+          stdio: this.quite ? ['pipe', 'pipe', 'pipe'] : 'inherit',
+          env: { ...process.env, ...(this.quite && { QUIET: 'true' }) },
         });
         this.logger.success('Staging completed!');
       } else {
@@ -81,11 +87,7 @@ export class CommitCommand {
         );
 
         try {
-          execSync('git add -A', {
-            cwd: this.directory,
-            stdio: 'inherit',
-            env: { ...process.env, GIT_SKIP_HOOKS: '1' },
-          });
+          this.gitService.execCommand('git add -A', this.quite);
           this.logger.success('Files staged successfully!');
         } catch (addError) {
           this.logger.error(
@@ -388,7 +390,7 @@ export class CommitCommand {
                   new Promise<number>((resolve, reject) => {
                     const child = spawn(cmd, args, {
                       cwd: this.directory,
-                      stdio: 'inherit',
+                      stdio: this.quite ? ['pipe', 'pipe', 'pipe'] : 'inherit',
                       env: process.env,
                     });
                     child.on('exit', code => resolve(code ?? 1));
@@ -469,13 +471,13 @@ export class CommitCommand {
           try {
             const escapedMessage = message.replace(/"/g, '\\"');
             // Commit changes
-            this.gitService.execCommand(`git commit -m "${escapedMessage}"`);
+            this.gitService.execCommand(`git commit -m "${escapedMessage}"`, this.quite);
             this.logger.success('Changes committed successfully!');
 
             // Always push after commit in auto-commit mode
             this.logger.info('Pushing changes to remote repository...');
             try {
-              this.gitService.execCommand('git push');
+              this.gitService.execCommand('git push', this.quite);
               this.logger.success('Changes pushed successfully!');
               return 0;
             } catch (pushError) {
@@ -513,13 +515,13 @@ export class CommitCommand {
         try {
           const escapedMessage = message.replace(/"/g, '\\"');
           // Commit changes
-          this.gitService.execCommand(`git commit -m "${escapedMessage}"`);
+          this.gitService.execCommand(`git commit -m "${escapedMessage}"`, this.quite);
           this.logger.success('Changes committed successfully!');
 
           // Always push after commit in auto-commit mode
           this.logger.info('Pushing changes to remote repository...');
           try {
-            this.gitService.execCommand('git push');
+            this.gitService.execCommand('git push', this.quite);
             this.logger.success('Changes pushed successfully!');
             return 0;
           } catch (pushError) {
@@ -589,6 +591,7 @@ export class CommitCommand {
       autoModel: options.autoModel || baseConfig.autoModel,
       autoCommit: options.autoCommit || baseConfig.autoCommit,
       promptTemplate,
+      quite: options.quite !== undefined ? options.quite : baseConfig.quite,
     };
   }
 }
