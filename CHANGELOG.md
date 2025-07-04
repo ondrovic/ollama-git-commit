@@ -9,10 +9,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- **Quiet Mode Support**: Added `--quite` flag and `quite` configuration option to suppress git command output
-  - CLI flag: `--quite` for one-time quiet mode
-  - Configuration: `quite: true/false` in config files
-  - Environment variable: `OLLAMA_COMMIT_QUITE=true/false`
+- **Quiet Mode Support**: Added `--quiet` flag and `quiet` configuration option to suppress git command output
+  - CLI flag: `--quiet` for one-time quiet mode
+  - Configuration: `quiet: true/false` in config files
+  - Environment variable: `OLLAMA_COMMIT_QUIET=true/false`
   - Works seamlessly with `--auto-commit` and `--auto-stage` flags
   - Useful for reducing terminal noise in automated workflows
 
@@ -21,15 +21,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Enhanced GitService to support quiet mode by redirecting git command output when quiet mode is enabled
 - Updated commit command to respect quiet mode setting from both CLI options and configuration
 - Modified stage and release scripts to respect `QUIET` environment variable for git output suppression
+- Improved quiet mode progress messages to avoid duplicate output and provide cleaner user experience
+- Fixed Git file rename handling to properly stage file deletions and additions
 
 ### Technical Details
 
-- Added `quite` property to configuration interfaces and constants
+- Added `quiet` property to configuration interfaces and constants
 - Updated GitService to use `stdio: 'pipe'` when quiet mode is enabled
 - Enhanced commit command to pass quiet setting to all git operations
-- Updated config commands to handle and display the `quite` option
+- Updated config commands to handle and display the `quiet` option
 - Added comprehensive test coverage for quiet mode functionality
 - Fixed test pollution issues in validation tests to ensure reliable test execution
+- Optimized progress message display to use `console.log()` for quiet mode to avoid redundant checkmarks
+- Renamed test file from `quite.test.ts` to `quiet.test.ts` to fix spelling consistency
 
 ## [1.0.15] - 2025-07-04
 

@@ -14,7 +14,7 @@ mock.module('../src/utils/interactive', () => ({
   askCommitAction: async () => 'use',
 }));
 
-describe('Quite Functionality', () => {
+describe('Quiet Functionality', () => {
   let logger: Logger;
   let mockGitService: any;
   let mockOllamaService: any;
@@ -58,12 +58,12 @@ describe('Quite Functionality', () => {
     };
   });
 
-  test('should respect quite=false from config (default behavior)', async () => {
+  test('should respect quiet=false from config (default behavior)', async () => {
     const mockConfigProvider = async () => ({
       model: 'test-model',
       host: 'http://localhost:11434',
       verbose: false,
-      quite: false,
+      quiet: false,
       autoCommit: true,
       autoStage: true,
       promptTemplate: 'default',
@@ -89,12 +89,12 @@ describe('Quite Functionality', () => {
     expect(true).toBe(true);
   });
 
-  test('should respect quite=true from config (suppress git output)', async () => {
+  test('should respect quiet=true from config (suppress git output)', async () => {
     const mockConfigProvider = async () => ({
       model: 'test-model',
       host: 'http://localhost:11434',
       verbose: false,
-      quite: true,
+      quiet: true,
       autoCommit: true,
       autoStage: true,
       promptTemplate: 'default',
@@ -120,12 +120,12 @@ describe('Quite Functionality', () => {
     expect(true).toBe(true);
   });
 
-  test('should respect quite=true from CLI options (override config)', async () => {
+  test('should respect quiet=true from CLI options (override config)', async () => {
     const mockConfigProvider = async () => ({
       model: 'test-model',
       host: 'http://localhost:11434',
       verbose: false,
-      quite: false, // Config has quite=false
+      quiet: false, // Config has quiet=false
       autoCommit: true,
       autoStage: true,
       promptTemplate: 'default',
@@ -143,7 +143,7 @@ describe('Quite Functionality', () => {
     const options = {
       autoCommit: true,
       autoStage: true,
-      quite: true, // CLI option overrides config
+      quiet: true, // CLI option overrides config
     };
 
     await commitCommand.execute(options);
@@ -152,12 +152,12 @@ describe('Quite Functionality', () => {
     expect(true).toBe(true);
   });
 
-  test('should respect quite=false from CLI options (override config)', async () => {
+  test('should respect quiet=false from CLI options (override config)', async () => {
     const mockConfigProvider = async () => ({
       model: 'test-model',
       host: 'http://localhost:11434',
       verbose: false,
-      quite: true, // Config has quite=true
+      quiet: true, // Config has quiet=true
       autoCommit: true,
       autoStage: true,
       promptTemplate: 'default',
@@ -175,7 +175,7 @@ describe('Quite Functionality', () => {
     const options = {
       autoCommit: true,
       autoStage: true,
-      quite: false, // CLI option overrides config
+      quiet: false, // CLI option overrides config
     };
 
     await commitCommand.execute(options);

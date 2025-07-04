@@ -154,8 +154,8 @@ index e2b836d..b62d39a 100644
     });
   });
 
-  describe('Quite Functionality', () => {
-    test('should handle quite parameter correctly', () => {
+  describe('Quiet Functionality', () => {
+    test('should handle quiet parameter correctly', () => {
       const gitService = new GitService(process.cwd(), new Logger());
       
       // Test that the method exists and can be called
@@ -164,10 +164,10 @@ index e2b836d..b62d39a 100644
       expect(() => gitService.execCommand('git status')).not.toThrow();
     });
 
-    test('should handle quite parameter in constructor', () => {
+    test('should handle quiet parameter in constructor', () => {
       const gitService = new GitService(process.cwd(), new Logger(), true);
       
-      // Test that the service can be created with quite parameter
+      // Test that the service can be created with quiet parameter
       expect(gitService).toBeInstanceOf(GitService);
     });
   });

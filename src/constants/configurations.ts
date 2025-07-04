@@ -13,7 +13,7 @@ export const CONFIGURATIONS = {
     autoStage: undefined,
     autoModel: undefined,
     autoCommit: undefined,
-    quite: undefined,
+    quiet: undefined,
     promptFile: undefined,
     promptTemplate: undefined,
     useEmojis: undefined,
@@ -35,7 +35,7 @@ export const CONFIGURATIONS = {
     autoStage: false,
     autoModel: false,
     autoCommit: false,
-    quite: false,
+    quiet: false,
     promptFile: path.join(os.homedir(), '.config', 'ollama-git-commit', 'prompt.txt'),
     configFile: path.join(os.homedir(), '.config', 'ollama-git-commit', 'config.json'),
     timeouts: {
@@ -84,7 +84,7 @@ export const CONFIGURATIONS = {
       autoModel: boolean,
       autoCommit: boolean,
       useEmojis: boolean,
-      quite: boolean,
+      quiet: boolean,
       sourceInfo: ConfigSourceInfo,
     ) => `Behavior Settings:
         Verbose: ${verbose} (from ${sourceInfo.verbose})
@@ -94,7 +94,7 @@ export const CONFIGURATIONS = {
         Auto Model: ${autoModel} (from ${sourceInfo.autoModel})
         Auto Commit: ${autoCommit} (from ${sourceInfo.autoCommit})
         Use Emojis: ${useEmojis} (from ${sourceInfo.useEmojis})
-        Quite: ${quite} (from ${sourceInfo.quite})
+        Quiet: ${quiet} (from ${sourceInfo.quiet})
         `,
     TIMEOUTS: (
       connection: number,
@@ -128,7 +128,7 @@ export const CONFIGURATIONS = {
     autoStage: false,
     autoModel: false,
     autoCommit: false,
-    quite: false,
+    quiet: false,
     promptFile: '/mock/mock-prompt-file.txt',
     configFile: '/mock/mock-config-file.json',
     timeouts: {

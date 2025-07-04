@@ -26,7 +26,7 @@ export class CommitCommand {
   private promptService: IPromptService;
   private logger: ILogger;
   private configProvider: ConfigProvider;
-  private quite: boolean;
+  private quiet: boolean;
 
   constructor(
     private directory: string,
@@ -35,11 +35,11 @@ export class CommitCommand {
     promptService?: IPromptService,
     logger: ILogger = Logger.getDefault(),
     configProvider?: ConfigProvider,
-    quite = false,
+    quiet = false,
   ) {
     this.logger = logger;
-    this.quite = quite;
-    this.gitService = gitService || new GitService(this.directory, this.logger, this.quite);
+    this.quiet = quiet;
+    this.gitService = gitService || new GitService(this.directory, this.logger, this.quiet);
     this.ollamaService = ollamaService || new OllamaService(this.logger);
     this.promptService = promptService || new PromptService(this.logger);
     this.modelsCommand = new ModelsCommand();
@@ -51,13 +51,23 @@ export class CommitCommand {
     // Set up configuration with defaults
     const config = await this.buildConfig(options);
 
-    // Update the quite property from the resolved config
-    this.quite = config.quite;
+    // Update the quiet property from the resolved config
+    this.quiet = config.quiet;
 
     this.logger.debug('Configuration:', config);
 
+    // Show initial progress even in quiet mode
+    if (this.quiet) {
+      console.log('🚀 Starting commit process...');
+    }
+
     // Run staging script for both auto-stage and auto-commit
     if (config.autoStage || config.autoCommit) {
+      // Show staging progress even in quiet mode
+      if (this.quiet) {
+        console.log('📦 Staging changes...');
+      }
+
       // Check if staging script exists
       const packageJsonPath = join(this.directory, 'package.json');
       let hasStageScript = false;
@@ -75,8 +85,8 @@ export class CommitCommand {
         this.logger.info('Running staging script (format, lint, test, stage)...');
         execSync('bun run stage', {
           cwd: this.directory,
-          stdio: this.quite ? ['pipe', 'pipe', 'pipe'] : 'inherit',
-          env: { ...process.env, ...(this.quite && { QUIET: 'true' }) },
+          stdio: this.quiet ? ['pipe', 'pipe', 'pipe'] : 'inherit',
+          env: { ...process.env, ...(this.quiet && { QUIET: 'true' }) },
         });
         this.logger.success('Staging completed!');
       } else {
@@ -87,7 +97,7 @@ export class CommitCommand {
         );
 
         try {
-          this.gitService.execCommand('git add -A', this.quite);
+          this.gitService.execCommand('git add -A', this.quiet);
           this.logger.success('Files staged successfully!');
         } catch (addError) {
           this.logger.error(
@@ -101,6 +111,11 @@ export class CommitCommand {
 
     // Validate environment
     validateGitRepository(options.directory || process.cwd());
+
+    // Show analysis progress even in quiet mode
+    if (this.quiet) {
+      console.log('🔍 Analyzing changes...');
+    }
 
     // Test Ollama connection
     if (config.verbose || config.debug) {
@@ -390,7 +405,7 @@ export class CommitCommand {
                   new Promise<number>((resolve, reject) => {
                     const child = spawn(cmd, args, {
                       cwd: this.directory,
-                      stdio: this.quite ? ['pipe', 'pipe', 'pipe'] : 'inherit',
+                      stdio: this.quiet ? ['pipe', 'pipe', 'pipe'] : 'inherit',
                       env: process.env,
                     });
                     child.on('exit', code => resolve(code ?? 1));
@@ -471,13 +486,17 @@ export class CommitCommand {
           try {
             const escapedMessage = message.replace(/"/g, '\\"');
             // Commit changes
-            this.gitService.execCommand(`git commit -m "${escapedMessage}"`, this.quite);
+            this.gitService.execCommand(`git commit -m "${escapedMessage}"`, this.quiet);
             this.logger.success('Changes committed successfully!');
 
             // Always push after commit in auto-commit mode
-            this.logger.info('Pushing changes to remote repository...');
+            if (this.quiet) {
+              console.log('🚀 Pushing to remote...');
+            } else {
+              this.logger.info('Pushing changes to remote repository...');
+            }
             try {
-              this.gitService.execCommand('git push', this.quite);
+              this.gitService.execCommand('git push', this.quiet);
               this.logger.success('Changes pushed successfully!');
               return 0;
             } catch (pushError) {
@@ -515,13 +534,17 @@ export class CommitCommand {
         try {
           const escapedMessage = message.replace(/"/g, '\\"');
           // Commit changes
-          this.gitService.execCommand(`git commit -m "${escapedMessage}"`, this.quite);
+          this.gitService.execCommand(`git commit -m "${escapedMessage}"`, this.quiet);
           this.logger.success('Changes committed successfully!');
 
           // Always push after commit in auto-commit mode
-          this.logger.info('Pushing changes to remote repository...');
+          if (this.quiet) {
+            console.log('🚀 Pushing to remote...');
+          } else {
+            this.logger.info('Pushing changes to remote repository...');
+          }
           try {
-            this.gitService.execCommand('git push', this.quite);
+            this.gitService.execCommand('git push', this.quiet);
             this.logger.success('Changes pushed successfully!');
             return 0;
           } catch (pushError) {
@@ -591,7 +614,7 @@ export class CommitCommand {
       autoModel: options.autoModel || baseConfig.autoModel,
       autoCommit: options.autoCommit || baseConfig.autoCommit,
       promptTemplate,
-      quite: options.quite !== undefined ? options.quite : baseConfig.quite,
+      quiet: options.quiet !== undefined ? options.quiet : baseConfig.quiet,
     };
   }
 }

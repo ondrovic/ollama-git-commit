@@ -116,10 +116,10 @@ function getConfigKeys(): ConfigKeyInfo[] {
       example: 'false',
     },
     {
-      key: 'quite',
+      key: 'quiet',
       description: 'Suppress git command output',
       type: 'boolean',
-      default: defaultConfig.quite,
+      default: defaultConfig.quiet,
       example: 'true',
     },
     {

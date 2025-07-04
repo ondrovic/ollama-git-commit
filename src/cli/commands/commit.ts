@@ -19,7 +19,7 @@ export const registerCommitCommand = (program: Command) => {
     .option('--auto-stage', 'Automatically stage changes')
     .option('--auto-commit', 'Automatically commit changes and push to remote')
     .option('--auto-model', 'Automatically select model')
-    .option('--quite', 'Suppress git command output')
+    .option('--quiet', 'Suppress git command output')
     .action(async options => {
       try {
         const logger = new Logger();
@@ -38,7 +38,7 @@ export const registerCommitCommand = (program: Command) => {
           undefined,
           logger,
           undefined,
-          options.quite,
+          options.quiet,
         );
         await commitCommand.execute({
           directory: options.directory,
@@ -52,7 +52,7 @@ export const registerCommitCommand = (program: Command) => {
           autoStage: options.autoStage,
           autoModel: options.autoModel,
           autoCommit: options.autoCommit,
-          quite: options.quite,
+          quiet: options.quiet,
         });
       } catch (error: unknown) {
         if (options.verbose) {

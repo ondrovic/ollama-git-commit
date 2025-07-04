@@ -354,10 +354,13 @@ ollama-git-commit test context code
 ollama-git-commit test context diff
 
 # Use quiet mode to reduce git command output
-ollama-git-commit -d . --quite
+ollama-git-commit -d . --quiet
 
 # Test quiet mode with auto-commit
-ollama-git-commit -d . --auto-commit --quite
+ollama-git-commit -d . --auto-commit --quiet
+
+# Test quiet mode with verbose for debugging
+ollama-git-commit -d . --quiet --verbose
 ```
 
 ## Pull Request Process
@@ -439,7 +442,7 @@ Recent major improvements include:
 - **Enhanced Testing**: Comprehensive test coverage with proper mocks and utilities
 - **Multi-Model Support**: Support for multiple model types with role-based configuration
 - **Interactive CLI**: Improved user experience with better prompts and feedback
-- **Quiet Mode**: Added `--quite` flag and configuration option to suppress git command output for cleaner terminal experience
+- **Quiet Mode**: Added `--quiet` flag and configuration option to suppress git command output for cleaner terminal experience with progress indicators
 - **All configuration commands are now type-safe and robust against invalid nested key assignment. TypeScript errors related to config updates are prevented by design, and error handling for config sources is improved.**
 
 ## Release Notes

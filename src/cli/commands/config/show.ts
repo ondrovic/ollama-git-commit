@@ -36,7 +36,7 @@ export const registerShowCommands = (configCommand: Command) => {
           autoStage: sourceInfo.autoStage || 'built-in',
           autoModel: sourceInfo.autoModel || 'built-in',
           autoCommit: sourceInfo.autoCommit || 'built-in',
-          quite: sourceInfo.quite || 'built-in',
+          quiet: sourceInfo.quiet || 'built-in',
           useEmojis: sourceInfo.useEmojis || 'built-in',
           models: sourceInfo.models || 'built-in',
           embeddingsProvider: sourceInfo.embeddingsProvider || 'built-in',
@@ -92,7 +92,7 @@ export const registerShowCommands = (configCommand: Command) => {
             config.autoModel,
             config.autoCommit,
             config.useEmojis,
-            config.quite,
+            config.quiet,
             sourceInfoObj,
           ),
         );

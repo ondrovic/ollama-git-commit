@@ -55,7 +55,7 @@ You can view the status of all workflows in the "Actions" tab of the GitHub repo
 - 🐛 **Debug Mode**: Comprehensive troubleshooting and verbose output
 - 🎨 **Emoji-Rich**: Fun, expressive commit messages with emojis
 - 🎨 **Emoji Control**: Choose whether commit messages include emojis using the `useEmojis` config option
-- 🔇 **Quiet Mode**: Suppress git command output using the `--quite` flag or `quite` config option
+- 🔇 **Quiet Mode**: Suppress git command output using the `--quiet` flag or `quiet` config option
 - ⚡ **Fast**: Optimized git diff parsing and API calls
 - 🔧 **Robust**: Enhanced error handling and validation mechanisms
 - 🎭 **Template System**: Multiple prompt templates (conventional, simple, detailed)
@@ -327,10 +327,10 @@ ollama-git-commit -d /path/to/repo --auto-stage
 ollama-git-commit -d /path/to/repo --auto-commit
 
 # Suppress git command output
-ollama-git-commit -d /path/to/repo --quite
+ollama-git-commit -d /path/to/repo --quiet
 
 # Combine quiet mode with auto-commit
-ollama-git-commit -d /path/to/repo --auto-commit --quite
+ollama-git-commit -d /path/to/repo --auto-commit --quiet
 ```
 
 ### Auto-Staging and Auto-Commit
@@ -434,7 +434,7 @@ export OLLAMA_COMMIT_MODEL=mistral:7b-instruct
 export OLLAMA_COMMIT_USE_EMOJIS=false
 
 # Suppress git command output
-export OLLAMA_COMMIT_QUITE=true
+export OLLAMA_COMMIT_QUIET=true
 
 # Multi-model configuration (JSON string)
 export OLLAMA_COMMIT_MODELS='[{"name":"mistral-7b-instruct","provider":"ollama","model":"mistral:7b-instruct","roles":["chat","edit","autocomplete","apply","summarize"]},{"name":"embeddingsProvider","provider":"ollama","model":"nomic-embed-text","roles":["embed"]}]'
@@ -461,7 +461,7 @@ Create a `.ollama-git-commit.json` file in your project root:
   "autoCommit": false,
   "autoModel": false,
   "useEmojis": false,
-  "quite": false,
+  "quiet": false,
   "promptTemplate": "default",
   "promptFile": "~/.config/ollama-git-commit/prompt.txt",
   "timeouts": {
@@ -487,7 +487,7 @@ Create a `~/.ollama-git-commit.json` file:
   "autoCommit": false,
   "autoModel": false,
   "useEmojis": false,
-  "quite": false,
+  "quiet": false,
   "promptTemplate": "default",
   "promptFile": "~/.config/ollama-git-commit/prompt.txt",
   "configFile": "~/.config/ollama-git-commit/config.json",
@@ -606,22 +606,34 @@ The tool includes advanced message cleaning capabilities:
 
 The tool supports quiet mode to suppress git command output:
 
-- **CLI Flag**: Use `--quite` to suppress git command output for the current run
-- **Configuration**: Set `quite: true` in your config file to enable quiet mode by default
-- **Environment Variable**: Set `OLLAMA_COMMIT_QUITE=true` to enable quiet mode
+- **CLI Flag**: Use `--quiet` to suppress git command output for the current run
+- **Configuration**: Set `quiet: true` in your config file to enable quiet mode by default
+- **Environment Variable**: Set `OLLAMA_COMMIT_QUIET=true` to enable quiet mode
 - **Auto-Commit Integration**: Quiet mode works seamlessly with `--auto-commit` and `--auto-stage` flags
 
-Quiet mode is useful when you want to reduce noise in your terminal output, especially in automated workflows or when running the tool frequently.
+Quiet mode is useful when you want to reduce noise in your terminal output, especially in automated workflows or when running the tool frequently. Progress messages are still shown to keep you informed of the current operation.
 
 ```bash
 # Suppress git output for this run
-ollama-git-commit -d . --quite
+ollama-git-commit -d . --quiet
 
 # Enable quiet mode in config
-ollama-git-commit config set quite true
+ollama-git-commit config set quiet true
 
 # Use with auto-commit for clean output
-ollama-git-commit -d . --auto-commit --quite
+ollama-git-commit -d . --auto-commit --quiet
+```
+
+**Example output with quiet mode:**
+
+```
+🚀 Starting commit process...
+📦 Staging changes...
+✅ Staging completed!
+🔍 Analyzing changes...
+🤖 Generating commit message...
+🚀 Pushing to remote...
+✅ Changes pushed successfully!
 ```
 
 ## 🤝 Contributing
@@ -792,7 +804,7 @@ export OLLAMA_COMMIT_MODEL=mistral:7b-instruct
 export OLLAMA_COMMIT_USE_EMOJIS=false
 
 # Suppress git command output
-export OLLAMA_COMMIT_QUITE=true
+export OLLAMA_COMMIT_QUIET=true
 
 # Multi-model configuration (JSON string)
 export OLLAMA_COMMIT_MODELS='[{"name":"mistral-7b-instruct","provider":"ollama","model":"mistral:7b-instruct","roles":["chat","edit","autocomplete","apply","summarize"]},{"name":"embeddingsProvider","provider":"ollama","model":"nomic-embed-text","roles":["embed"]}]'

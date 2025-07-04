@@ -8,7 +8,7 @@
   "autoCommit": false,
   "autoModel": false,
   "useEmojis": false,
-  "quite": false,
+  "quiet": false,
   "promptTemplate": "default",
   "promptFile": "~/.config/ollama-git-commit/prompt.txt",
   "configFile": "~/.config/ollama-git-commit/config.json",

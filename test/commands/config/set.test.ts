@@ -349,11 +349,11 @@ describe('Config Set Command - Integration', () => {
     expect(mockConfigState.debug).toBe(true);
   });
 
-  test('should parse quite boolean values correctly', async () => {
+  test('should parse quiet boolean values correctly', async () => {
     const consoleSpy = spyOn(console, 'log').mockImplementation(() => {});
 
-    // Test setting quite to true
-    const key = 'quite';
+    // Test setting quiet to true
+    const key = 'quiet';
     const value = 'true';
     const options = { type: 'user' as const };
 
@@ -361,24 +361,24 @@ describe('Config Set Command - Integration', () => {
     const configToUpdate = createConfigUpdate(key, parsedValue);
     await configManager.saveConfig(configToUpdate, options.type);
 
-    expect(mockConfigState.quite).toBe(true);
+    expect(mockConfigState.quiet).toBe(true);
 
-    // Test setting quite to false
+    // Test setting quiet to false
     const value2 = 'false';
     const parsedValue2 = parseValue(key, value2);
     const configToUpdate2 = createConfigUpdate(key, parsedValue2);
     await configManager.saveConfig(configToUpdate2, options.type);
 
-    expect(mockConfigState.quite).toBe(false);
+    expect(mockConfigState.quiet).toBe(false);
 
     consoleSpy.mockRestore();
   });
 
-  test('should handle quite configuration display correctly', async () => {
+  test('should handle quiet configuration display correctly', async () => {
     const consoleSpy = spyOn(console, 'log').mockImplementation(() => {});
 
-    // Set quite configuration
-    const key = 'quite';
+    // Set quiet configuration
+    const key = 'quiet';
     const value = 'true';
     const options = { type: 'user' as const };
 
@@ -386,15 +386,15 @@ describe('Config Set Command - Integration', () => {
     const configToUpdate = createConfigUpdate(key, parsedValue);
     await configManager.saveConfig(configToUpdate, options.type);
 
-    // Update source info to include quite
-    mockConfigSourcesState.quite = 'user';
+    // Update source info to include quiet
+    mockConfigSourcesState.quiet = 'user';
 
     // Simulate the display logic
     const updatedConfig = await configManager.getConfig();
     const sourceInfo = await configManager.getConfigSources();
     displayUpdatedKey(key, updatedConfig, sourceInfo);
 
-    expect(consoleSpy).toHaveBeenCalledWith('  quite: true (from user)');
+    expect(consoleSpy).toHaveBeenCalledWith('  quiet: true (from user)');
 
     consoleSpy.mockRestore();
   });
