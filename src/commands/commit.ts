@@ -383,7 +383,6 @@ export class CommitCommand {
             if (config.autoCommit) {
               // Auto-commit mode: automatically commit with the AI-generated message
               try {
-                const escapedMessage = message.replace(/"/g, '"');
                 // Helper to run a command and await its completion
                 const runSpawn = (cmd: string, args: string[]) =>
                   new Promise<number>((resolve, reject) => {
@@ -396,7 +395,7 @@ export class CommitCommand {
                     child.on('error', err => reject(err));
                   });
 
-                const commitCode = await runSpawn('git', ['commit', '-m', escapedMessage]);
+                const commitCode = await runSpawn('git', ['commit', '-m', message]);
                 if (commitCode === 0) {
                   this.logger.success('Changes committed successfully!');
                   this.logger.info('Pushing changes to remote repository...');
@@ -432,7 +431,7 @@ export class CommitCommand {
               // Auto-stage mode: require manual commit (user types the message)
               console.log('');
               console.log('📋 Copy and run this command:');
-              const escapedMessage = message.replace(/"/g, '"');
+              const escapedMessage = message.replace(/"/g, '\\"');
               console.log(`git commit -m "${escapedMessage}"`);
               result = 0;
             }
@@ -468,7 +467,7 @@ export class CommitCommand {
         // Non-interactive mode: ensure auto-commit always commits AND pushes
         if (config.autoCommit) {
           try {
-            const escapedMessage = message.replace(/"/g, '"');
+            const escapedMessage = message.replace(/"/g, '\\"');
             // Commit changes
             this.gitService.execCommand(`git commit -m "${escapedMessage}"`);
             this.logger.success('Changes committed successfully!');
@@ -502,7 +501,7 @@ export class CommitCommand {
         } else {
           // Auto-stage mode: require manual commit (user types the message)
           console.log('📋 To commit with this message, run:');
-          const escapedMessage = message.replace(/"/g, '"');
+          const escapedMessage = message.replace(/"/g, '\\"');
           console.log(`git commit -m "${escapedMessage}"`);
           console.log('');
           return 0;
@@ -512,7 +511,7 @@ export class CommitCommand {
       // Non-interactive mode: ensure auto-commit always commits AND pushes
       if (config.autoCommit) {
         try {
-          const escapedMessage = message.replace(/"/g, '"');
+          const escapedMessage = message.replace(/"/g, '\\"');
           // Commit changes
           this.gitService.execCommand(`git commit -m "${escapedMessage}"`);
           this.logger.success('Changes committed successfully!');
@@ -546,7 +545,7 @@ export class CommitCommand {
       } else {
         // Auto-stage mode: require manual commit (user types the message)
         console.log('📋 To commit with this message, run:');
-        const escapedMessage = message.replace(/"/g, '"');
+        const escapedMessage = message.replace(/"/g, '\\"');
         console.log(`git commit -m "${escapedMessage}"`);
         console.log('');
         return 0;

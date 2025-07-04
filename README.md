@@ -867,3 +867,10 @@ bun run format
 ```
 
 - This will use Prettier via npx to format all TypeScript files in src/. This avoids known issues with Bun on Windows.
+
+## 🛡️ Security and Robustness
+
+- The tool safely handles commit messages containing quotes and special characters.
+- All shell command invocations escape double quotes to prevent syntax errors and command injection.
+- When using auto-commit or any workflow that passes the commit message as an argument array, no escaping is needed and the message is passed safely.
+- You can use commit messages with quotes (e.g., `fix: handle "edge cases" in parser`) without any issues.

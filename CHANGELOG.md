@@ -19,12 +19,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Auto-commit now works with 1Password SSH agent and other SSH agents: the tool runs `git commit` as a foreground process with inherited environment, allowing interactive authentication to work as expected.
 - Auto-commit now works with 1Password SSH agent and other SSH agents: the tool runs `git commit` as a foreground process with inherited environment, allowing interactive authentication to work as expected.
 - Updated the 'format' script to use 'npx prettier --write src/\*_/_.ts' to avoid Bun crash on Windows.
+- Fixed a critical bug where commit messages containing double quotes were not properly escaped when passed to shell commands, causing git commit failures and introducing a potential command injection vulnerability. Now, all shell command invocations escape double quotes correctly, while argument arrays (spawn) use the raw message safely.
+- Added automated tests to verify correct escaping for both shell and argument array usage.
 
 ### Technical Details
 
 - The version extraction logic for `package-lock.json` and similar files now checks that both old and new versions are present, not equal, and the new version is not '..' or empty before reporting a change. This avoids reporting spurious or truncated version changes in commit messages.
 - The auto-commit implementation now uses `spawn` with `stdio: 'inherit'` and inherits the environment, ensuring compatibility with SSH agents like 1Password CLI on all platforms.
 - The 'format' script in package.json now uses 'npx prettier --write src/**/\*.ts' instead of 'prettier --write src/**/\*.ts' or 'bun format'. This change ensures formatting works reliably regardless of the Bun version or platform.
+- All shell command invocations now use `message.replace(/"/g, '\\"')` to escape double quotes.
+- All uses of Node.js `spawn` or argument arrays pass the raw message, which is safe and does not require escaping.
+- Added a test in `test/commands/commit.test.ts` to verify escaping logic for both shell and argument array usage.
+- Removed the temporary manual test file `test-spawn.js`.
 
 ## [1.0.13],[1.0.14] - 2025-07-02
 

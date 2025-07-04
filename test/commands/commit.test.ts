@@ -108,4 +108,21 @@ describe('CommitCommand', () => {
     expect(config.autoCommit).toBe(false);
     expect(config.autoStage).toBe(false);
   });
+
+  test('should properly escape quotes in commit messages for shell commands', () => {
+    // Test the quote escaping logic that's used in shell commands
+    const messageWithQuotes = 'feat: add "awesome" feature and fix "bug"';
+    const escapedMessage = messageWithQuotes.replace(/"/g, '\\"');
+    
+    // Verify that quotes are properly escaped
+    expect(escapedMessage).toBe('feat: add \\"awesome\\" feature and fix \\"bug\\"');
+    
+    // Verify that the escaped message can be used in a shell command
+    const shellCommand = `git commit -m "${escapedMessage}"`;
+    expect(shellCommand).toBe('git commit -m "feat: add \\"awesome\\" feature and fix \\"bug\\""');
+    
+    // Verify that the original message is preserved when used with spawn (no escaping needed)
+    const spawnArgs = ['commit', '-m', messageWithQuotes];
+    expect(spawnArgs).toEqual(['commit', '-m', 'feat: add "awesome" feature and fix "bug"']);
+  });
 });

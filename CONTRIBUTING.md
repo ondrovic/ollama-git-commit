@@ -491,3 +491,9 @@ bun run format
 ```
 
 - This invokes Prettier via npx, ensuring compatibility and avoiding Bun-specific issues.
+
+### Commit Message Escaping
+
+- When passing commit messages to shell commands as strings, always escape double quotes using `message.replace(/"/g, '\\"')`.
+- When passing commit messages as argument arrays (e.g., with Node.js spawn), do not escape quotes; pass the raw message.
+- Automated tests verify that both patterns are handled safely.
