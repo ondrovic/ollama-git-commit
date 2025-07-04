@@ -45,15 +45,10 @@ export class GitService implements IGitService {
       const options: ExecSyncOptions = { cwd: this.directory };
 
       if (quiet) {
-        // Redirect output to /dev/null (Unix) or NUL (Windows)
-        const nullDevice = process.platform === 'win32' ? 'NUL' : '/dev/null';
+        // Suppress output in terminal, but capture output for program
         options.stdio = ['pipe', 'pipe', 'pipe'];
-        options.shell = process.platform === 'win32' ? 'cmd.exe' : '/bin/sh';
-
-        // Modify command to redirect output
-        const redirectCommand = `${command} > ${nullDevice} 2>&1`;
-        const result = execSync(redirectCommand, options);
-        return result.toString().trim();
+        // Do NOT modify the command string or add shell redirection
+        return execSync(command, options).toString().trim();
       } else {
         return execSync(command, options).toString().trim();
       }
