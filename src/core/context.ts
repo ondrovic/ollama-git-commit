@@ -22,9 +22,11 @@ export interface IContextService {
 
 export class ContextService implements IContextService {
   private logger: ILogger;
+  private quiet: boolean;
 
-  constructor(logger: ILogger = Logger.getDefault()) {
+  constructor(logger: ILogger = Logger.getDefault(), quiet = false) {
     this.logger = logger;
+    this.quiet = quiet;
   }
 
   async gatherContext(
@@ -311,20 +313,24 @@ export class ContextService implements IContextService {
     return new Promise((resolve, reject) => {
       const child = spawn(command, args, {
         cwd,
-        stdio: ['pipe', 'pipe', 'pipe'],
+        stdio: this.quiet ? ['pipe', 'pipe', 'pipe'] : ['pipe', 'inherit', 'pipe'],
         shell: true,
       });
 
       let stdout = '';
       let stderr = '';
 
-      child.stdout.on('data', data => {
-        stdout += data.toString();
-      });
+      if (child.stdout) {
+        child.stdout.on('data', data => {
+          stdout += data.toString();
+        });
+      }
 
-      child.stderr.on('data', data => {
-        stderr += data.toString();
-      });
+      if (child.stderr) {
+        child.stderr.on('data', data => {
+          stderr += data.toString();
+        });
+      }
 
       child.on('close', code => {
         if (code === 0) {

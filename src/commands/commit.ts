@@ -41,7 +41,7 @@ export class CommitCommand {
     this.quiet = quiet;
     this.gitService = gitService || new GitService(this.directory, this.logger, this.quiet);
     this.ollamaService = ollamaService || new OllamaService(this.logger);
-    this.promptService = promptService || new PromptService(this.logger);
+    this.promptService = promptService || new PromptService(this.logger, this.quiet);
     this.modelsCommand = new ModelsCommand();
     this.testCommand = new TestCommand();
     this.configProvider = configProvider || (async () => await getConfig());

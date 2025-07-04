@@ -179,13 +179,13 @@ index e2b836d..b62d39a 100644
       
       const gitService = new GitService(process.cwd(), new Logger(), false, mockExecSync);
       
-      // Test quiet mode
+      // Test quiet mode - should capture output without display
       gitService.execCommand('git status', true);
       expect(capturedOptions.stdio).toEqual(['pipe', 'pipe', 'pipe']);
       
-      // Test non-quiet mode - should always capture output for parsing
+      // Test non-quiet mode - should capture stderr for error handling while displaying stdout naturally
       gitService.execCommand('git status', false);
-      expect(capturedOptions.stdio).toEqual(['pipe', 'pipe', 'pipe']);
+      expect(capturedOptions.stdio).toEqual(['pipe', 'inherit', 'pipe']);
     });
 
     test('should use instance quiet setting when parameter is omitted', () => {
@@ -200,10 +200,10 @@ index e2b836d..b62d39a 100644
       quietGitService.execCommand('git status');
       expect(capturedOptions.stdio).toEqual(['pipe', 'pipe', 'pipe']);
       
-      // Test with instance quiet = false - should always capture output for parsing
+      // Test with instance quiet = false - should capture stderr for error handling while displaying stdout naturally
       const nonQuietGitService = new GitService(process.cwd(), new Logger(), false, mockExecSync);
       nonQuietGitService.execCommand('git status');
-      expect(capturedOptions.stdio).toEqual(['pipe', 'pipe', 'pipe']);
+      expect(capturedOptions.stdio).toEqual(['pipe', 'inherit', 'pipe']);
     });
   });
 });

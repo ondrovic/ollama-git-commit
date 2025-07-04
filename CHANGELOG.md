@@ -46,9 +46,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Renamed test file from `quite.test.ts` to `quiet.test.ts` to fix spelling consistency
 - Fixed GitService.execCommand method to respect instance quiet setting when parameter is omitted
 - Removed unused `stage-and-commit` script and package.json entry for cleaner codebase
-- **GitService.execCommand Implementation**: Simplified to use appropriate `stdio` configuration for each mode:
+- **GitService.execCommand Implementation**: Optimized to use appropriate `stdio` configuration for each mode:
   - Quiet mode: `stdio: ['pipe', 'pipe', 'pipe']` (captures output without display)
-  - Non-quiet mode: `stdio: 'inherit'` (preserves natural git behavior with stderr, colors, and interactivity)
+  - Non-quiet mode: `stdio: ['pipe', 'inherit', 'pipe']` (captures stderr for error handling while displaying stdout naturally, preserving git behavior and detailed error messages)
 
 ## [1.0.15] - 2025-07-04
 
