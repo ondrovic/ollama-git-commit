@@ -58,6 +58,9 @@ mock.module('../core/git', () => ({
     hasStagedChanges() {
       return true;
     }
+    setQuiet() {
+      // Mock implementation
+    }
   },
   GitRepositoryError: class extends Error {
     constructor(message: string) {
@@ -90,6 +93,8 @@ const mockGitService = {
   getCurrentBranch: () => 'main',
   stageAll: () => true,
   hasStagedChanges: () => true,
+  setQuiet: () => {},
+  execCommand: () => '',
 };
 
 const mockPromptService = {

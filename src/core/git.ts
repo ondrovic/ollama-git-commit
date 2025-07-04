@@ -40,6 +40,10 @@ export class GitService implements IGitService {
     this.quiet = quiet;
   }
 
+  public setQuiet(quiet: boolean): void {
+    this.quiet = quiet;
+  }
+
   public execCommand(command: string, quiet = false): string {
     try {
       const options: ExecSyncOptions = { cwd: this.directory };

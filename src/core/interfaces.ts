@@ -16,6 +16,7 @@ export interface IGitService {
   getRepositoryRoot(): string;
   isGitRepository(): boolean;
   execCommand(command: string, quiet?: boolean): string;
+  setQuiet(quiet: boolean): void;
 }
 
 export interface IOllamaService {

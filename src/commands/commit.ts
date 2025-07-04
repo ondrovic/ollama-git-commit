@@ -53,6 +53,15 @@ export class CommitCommand {
 
     // Update the quiet property from the resolved config
     this.quiet = config.quiet;
+    // Update GitService quiet setting to match the resolved configuration
+    if (
+      typeof (this.gitService as IGitService & { setQuiet?: (quiet: boolean) => void }).setQuiet ===
+      'function'
+    ) {
+      (this.gitService as IGitService & { setQuiet: (quiet: boolean) => void }).setQuiet(
+        config.quiet,
+      );
+    }
 
     this.logger.debug('Configuration:', config);
 

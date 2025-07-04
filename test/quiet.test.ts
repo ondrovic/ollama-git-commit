@@ -42,6 +42,7 @@ describe('Quiet Functionality', () => {
       getRoot: () => '/mock/repo',
       getCurrentBranch: () => 'main',
       hasStagedChanges: () => true,
+      setQuiet: () => {},
     };
 
     // Mock Ollama service
