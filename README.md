@@ -153,17 +153,16 @@ When contributing to the project, use the following workflow:
 
    - `precommit` (script): Run before committing. Lints, tests, and checks types to catch errors that could break the release script.
    - `stage` (script): The main project workflow script for formatting, linting, building type declarations, and staging as part of the release/development workflow.
-   - `stage-and-commit` (script): Formats, lints, tests, stages files, and then auto-commits with an AI-generated message using the tool.
 
 4. **Commit your changes:**
 
    ```bash
-   # Option 1: Stage files only (format, lint, build types, stage), then commit manually
+   # Stage files only (format, lint, build types, stage), then commit manually
    bun run stage
    git commit -m "your message"
 
-   # Option 2: Stage files and auto-commit with AI-generated message
-   bun run stage-and-commit
+   # Or use the tool directly for auto-commit
+   ollama-git-commit -d . --auto-commit
    ```
 
 5. **Create a pull request**
@@ -352,8 +351,8 @@ bun dev:run commit -d . --auto-stage
 # Stage files, generate AI message, auto-commit if approved, and push to remote
 bun dev:run commit -d . --auto-commit
 
-# Alternative: Use the standalone script (same as --auto-commit)
-bun run stage-and-commit
+# Alternative: Use the tool directly (same as --auto-commit)
+ollama-git-commit -d . --auto-commit
 ```
 
 ### Model Management

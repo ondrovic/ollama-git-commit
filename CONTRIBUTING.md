@@ -102,8 +102,8 @@ We use an automated release process for publishing to NPM. Here's the complete w
    # Option 3: Stage files and auto-commit with AI-generated message
    bun dev:run commit -d . --auto-commit
 
-   # Option 4: Use the standalone script (same as --auto-commit)
-   bun run stage-and-commit
+   # Option 4: Use the tool directly (same as --auto-commit)
+   ollama-git-commit -d . --auto-commit
    ```
 
 4. Commit your changes (if using option 1 or 2):
@@ -492,7 +492,7 @@ For development, you can use:
 
 - `bun dev:run commit -d . --auto-stage` - Stage files, generate AI message, show interactive prompt (manual commit)
 - `bun dev:run commit -d . --auto-commit` - Stage files, generate AI message, auto-commit if approved, and push to remote
-- `bun run stage-and-commit` - Alternative standalone script (same as --auto-commit)
+- `ollama-git-commit -d . --auto-commit` - Direct tool usage (same as --auto-commit)
 
 - Code formatting is handled by running:
 

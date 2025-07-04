@@ -47,18 +47,21 @@ export class GitService implements IGitService {
     this.quiet = quiet;
   }
 
-  public execCommand(command: string, quiet = false): string {
+  public execCommand(command: string, quiet?: boolean): string {
     try {
       const options: ExecSyncOptions = { cwd: this.directory };
 
-      if (quiet) {
+      // Use the provided quiet parameter or fall back to the instance's quiet setting
+      const shouldBeQuiet = quiet !== undefined ? quiet : this.quiet;
+
+      if (shouldBeQuiet) {
         // Suppress output in terminal, but capture output for program
         options.stdio = ['pipe', 'pipe', 'pipe'];
         // Do NOT modify the command string or add shell redirection
         return this.execSyncFn(command, options).toString().trim();
       } else {
-        // For non-quiet mode, we need to both capture the output and display it
-        // We'll capture it first, then display it manually
+        // For non-quiet mode, we need to capture output while ensuring stderr is displayed
+        // We'll use separate handling for stdout and stderr
         options.stdio = ['pipe', 'pipe', 'pipe'];
         const output = this.execSyncFn(command, options).toString().trim();
 

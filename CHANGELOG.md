@@ -23,6 +23,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Modified stage and release scripts to respect `QUIET` environment variable for git output suppression
 - Improved quiet mode progress messages to avoid duplicate output and provide cleaner user experience
 - Fixed Git file rename handling to properly stage file deletions and additions
+- Removed unused `stage-and-commit` script and package.json entry for cleaner codebase
 
 ### Technical Details
 
@@ -34,6 +35,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Fixed test pollution issues in validation tests to ensure reliable test execution
 - Optimized progress message display to use `console.log()` for quiet mode to avoid redundant checkmarks
 - Renamed test file from `quite.test.ts` to `quiet.test.ts` to fix spelling consistency
+- Fixed GitService.execCommand method to respect instance quiet setting when parameter is omitted
+- Removed unused `stage-and-commit` script and package.json entry for cleaner codebase
 
 ## [1.0.15] - 2025-07-04
 
