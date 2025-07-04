@@ -74,8 +74,8 @@ You can view the status of all workflows in the "Actions" tab of the GitHub repo
 - 🛡️ **Type-Safe Configuration**: Configuration commands now feature improved type safety and robust error handling, especially for nested key assignment and config source tracking. TypeScript errors related to config updates are now prevented by design.
 - 📦 **Version Change Detection**: Detects and reports version changes in both `package.json` and `package-lock.json` for full transparency. This helps catch accidental mismatches or manual edits that could cause inconsistencies between the two files.
 - ⚡ **Auto-Commit with SSH Agent Support**: Auto-commit works seamlessly with 1Password SSH agent and other SSH agents, as long as the agent is running and the environment is inherited. If you use 1Password, ensure the 1Password CLI is running and SSH_AUTH_SOCK is set.
-- 🔄 **Smart Auto-Staging**: The `--auto-stage` flag runs the full staging script (`bun run stage`) which formats, lints, tests, builds type declarations, and stages files, then generates an AI commit message. No commit is made - user must copy and run the git commit command manually.
-- 🤖 **Intelligent Auto-Commit**: The `--auto-commit` flag runs the full staging script, generates a commit message, and if approved, automatically commits and pushes to the remote repository. Staging is only done once, before message generation.
+- 🔄 **Smart Auto-Staging**: The `--auto-stage` flag runs the full staging script (`bun run stage`) which formats, lints, tests, builds type declarations, and stages files, then generates an AI commit message. If the staging script is not available, it falls back to simple `git add -A`. No commit is made - user must copy and run the git commit command manually.
+- 🤖 **Intelligent Auto-Commit**: The `--auto-commit` flag runs the full staging script, generates a commit message, and if approved, automatically commits and pushes to the remote repository. If the staging script is not available, it falls back to simple `git add -A`. Staging is only done once, before message generation.
 
 ## 🚀 Installation
 
@@ -875,3 +875,11 @@ If you encounter issues with auto-commit and 1Password SSH agent, make sure the 
 ## Technical Details
 
 - **Version Change Reporting**: The tool analyzes git diffs for both `package.json` and `package-lock.json`. It only reports a version change if the version actually changes and the new version is valid (not '..' or empty). This ensures commit messages are accurate and avoids false positives when the version is unchanged or truncated. Both files are checked to help catch accidental mismatches or manual edits that could cause inconsistencies between them.
+
+- To format code, run:
+
+```sh
+bun run format
+```
+
+- This will use Prettier via npx to format all TypeScript files in src/. This avoids known issues with Bun on Windows.

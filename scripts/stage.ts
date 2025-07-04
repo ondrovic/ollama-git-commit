@@ -10,17 +10,17 @@ try {
 
   console.log('💅 Running code formatting...');
   execSync('bun format', { stdio: 'inherit' });
-  
+
   console.log('🔍 Running linting with auto-fix...');
   execSync('bun lint:fix', { stdio: 'inherit' });
-  
+
   console.log('🔨 Building type declarations...');
   execSync('bun run build:types', { stdio: 'inherit' });
-  
+
   console.log('📝 Staging all files...');
-  execSync('git add -A', { 
+  execSync('git add -A', {
     stdio: 'inherit',
-    env: { ...process.env, GIT_SKIP_HOOKS: '1' }
+    env: { ...process.env, GIT_SKIP_HOOKS: '1' },
   });
 
   console.log('✅ Staging checks completed!');
@@ -31,4 +31,4 @@ try {
     console.error('❌ Staging checks failed:', error);
   }
   process.exit(1);
-} 
+}

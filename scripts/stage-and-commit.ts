@@ -10,11 +10,11 @@ const child = spawn('bun', ['dev:run', 'commit', '-d', '.', '--auto-commit'], {
   env: process.env,
 });
 
-child.on('exit', (code) => {
+child.on('exit', code => {
   if (code === 0) {
     console.log('✅ Auto-commit completed successfully!');
   } else {
     console.error('❌ Auto-commit failed with code:', code);
     process.exit(code || 1);
   }
-}); 
+});

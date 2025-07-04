@@ -12,14 +12,14 @@ class MockConfigManager {
       host: 'http://localhost:11434',
       verbose: false,
       timeouts: { connection: 10000, generation: 120000, modelPull: 300000 },
-      context: []
+      context: [],
     };
     mockConfigSourcesState = {
       model: 'user',
       host: 'user',
       verbose: 'user',
       timeouts: { connection: 'user', generation: 'user', modelPull: 'user' },
-      context: 'user'
+      context: 'user',
     };
   }
 
@@ -31,9 +31,7 @@ class MockConfigManager {
     return {
       user: '/mock/user/config.json',
       local: '/mock/local/config.json',
-      active: [
-        { type: 'user', path: '/mock/user/config.json', 'in-use': true }
-      ]
+      active: [{ type: 'user', path: '/mock/user/config.json', 'in-use': true }],
     };
   }
 
@@ -67,7 +65,7 @@ class MockConfigManager {
       host: 'http://localhost:11434',
       verbose: false,
       timeouts: { connection: 10000, generation: 120000, modelPull: 300000 },
-      context: []
+      context: [],
     };
   }
 
@@ -78,11 +76,15 @@ class MockConfigManager {
 
 // Mock the exact path that the CLI command uses
 mock.module('../../../src/core/config', () => ({
-  ConfigManager: MockConfigManager
+  ConfigManager: MockConfigManager,
 }));
 
 // Now import the CLI command after the mock is set up
-import { createConfigUpdate, displayUpdatedKey, parseValue } from '../../../src/cli/commands/config/set';
+import {
+  createConfigUpdate,
+  displayUpdatedKey,
+  parseValue,
+} from '../../../src/cli/commands/config/set';
 
 describe('Config Set Command - Utility Functions', () => {
   test('parseValue should handle boolean values', () => {
@@ -118,33 +120,33 @@ describe('Config Set Command - Utility Functions', () => {
 
   test('createConfigUpdate should handle nested keys', () => {
     expect(createConfigUpdate('timeouts.connection', 5000)).toEqual({
-      timeouts: { connection: 5000 }
+      timeouts: { connection: 5000 },
     });
-    
+
     expect(createConfigUpdate('nested.deep.key', 'value')).toEqual({
-      nested: { deep: { key: 'value' } }
+      nested: { deep: { key: 'value' } },
     });
   });
 
   test('createConfigUpdate should handle keys with empty parts', () => {
     // Test key with empty part in middle: "a..b"
     expect(createConfigUpdate('a..b', 'value')).toEqual({
-      a: { '': { b: 'value' } }
+      a: { '': { b: 'value' } },
     });
-    
+
     // Test key ending with empty part: "a."
     expect(createConfigUpdate('a.', 'value')).toEqual({
-      a: { '': 'value' }
+      a: { '': 'value' },
     });
-    
+
     // Test key starting with empty part: ".a"
     expect(createConfigUpdate('.a', 'value')).toEqual({
-      '': { a: 'value' }
+      '': { a: 'value' },
     });
-    
+
     // Test key with multiple empty parts: "a..b..c"
     expect(createConfigUpdate('a..b..c', 'value')).toEqual({
-      a: { '': { b: { '': { c: 'value' } } } }
+      a: { '': { b: { '': { c: 'value' } } } },
     });
   });
 
@@ -152,9 +154,9 @@ describe('Config Set Command - Utility Functions', () => {
     const consoleSpy = spyOn(console, 'log').mockImplementation(() => {});
     const config = { model: 'llama3' };
     const sourceInfo = { model: 'user' };
-    
+
     displayUpdatedKey('model', config, sourceInfo);
-    
+
     expect(consoleSpy).toHaveBeenCalledWith('  model: "llama3" (from user)');
     consoleSpy.mockRestore();
   });
@@ -163,9 +165,9 @@ describe('Config Set Command - Utility Functions', () => {
     const consoleSpy = spyOn(console, 'log').mockImplementation(() => {});
     const config = { timeouts: { connection: 5000 } };
     const sourceInfo = { timeouts: { connection: 'user' } };
-    
+
     displayUpdatedKey('timeouts.connection', config, sourceInfo);
-    
+
     expect(consoleSpy).toHaveBeenCalledWith('  timeouts.connection: 5000 (from user)');
     consoleSpy.mockRestore();
   });
@@ -181,9 +183,9 @@ describe('Config Set Command - Integration', () => {
       host: 'http://localhost:11434',
       verbose: false,
       timeouts: { connection: 10000, generation: 120000, modelPull: 300000 },
-      context: []
+      context: [],
     };
-    
+
     // Create a fresh ConfigManager instance for each test
     configManager = new MockConfigManager();
     await configManager.initialize();
@@ -191,139 +193,139 @@ describe('Config Set Command - Integration', () => {
 
   test('should set a simple configuration value', async () => {
     const consoleSpy = spyOn(console, 'log').mockImplementation(() => {});
-    
+
     // Simulate the action logic directly
     const key = 'model';
     const value = 'llama3';
     const options = { type: 'user' as const };
-    
+
     const parsedValue = parseValue(key, value);
     const configToUpdate = createConfigUpdate(key, parsedValue);
     await configManager.saveConfig(configToUpdate, options.type);
-    
+
     expect(mockConfigState.model).toBe('llama3');
-    
+
     consoleSpy.mockRestore();
   });
 
   test('should set a nested configuration value', async () => {
     const consoleSpy = spyOn(console, 'log').mockImplementation(() => {});
-    
+
     // Simulate the action logic directly
     const key = 'timeouts.connection';
     const value = '5000';
     const options = { type: 'user' as const };
-    
+
     const parsedValue = parseValue(key, value);
     const configToUpdate = createConfigUpdate(key, parsedValue);
     await configManager.saveConfig(configToUpdate, options.type);
-    
+
     expect(mockConfigState.timeouts.connection).toBe(5000);
-    
+
     consoleSpy.mockRestore();
   });
 
   test('should parse boolean values correctly', async () => {
     const consoleSpy = spyOn(console, 'log').mockImplementation(() => {});
-    
+
     // Simulate the action logic directly
     const key = 'verbose';
     const value = 'true';
     const options = { type: 'user' as const };
-    
+
     const parsedValue = parseValue(key, value);
     const configToUpdate = createConfigUpdate(key, parsedValue);
     await configManager.saveConfig(configToUpdate, options.type);
-    
+
     expect(mockConfigState.verbose).toBe(true);
-    
+
     consoleSpy.mockRestore();
   });
 
   test('should parse numeric values correctly', async () => {
     const consoleSpy = spyOn(console, 'log').mockImplementation(() => {});
-    
+
     // Simulate the action logic directly
     const key = 'timeouts.generation';
     const value = '60000';
     const options = { type: 'user' as const };
-    
+
     const parsedValue = parseValue(key, value);
     const configToUpdate = createConfigUpdate(key, parsedValue);
     await configManager.saveConfig(configToUpdate, options.type);
-    
+
     expect(mockConfigState.timeouts.generation).toBe(60000);
-    
+
     consoleSpy.mockRestore();
   });
 
   test('should parse array values correctly', async () => {
     const consoleSpy = spyOn(console, 'log').mockImplementation(() => {});
-    
+
     // Simulate the action logic directly
     const key = 'context';
     const value = 'code,diff,terminal';
     const options = { type: 'user' as const };
-    
+
     const parsedValue = parseValue(key, value);
     const configToUpdate = createConfigUpdate(key, parsedValue);
     await configManager.saveConfig(configToUpdate, options.type);
-    
+
     expect(mockConfigState.context).toEqual(['code', 'diff', 'terminal']);
-    
+
     consoleSpy.mockRestore();
   });
 
   test('should update all active configs when --all flag is used', async () => {
     const consoleSpy = spyOn(console, 'log').mockImplementation(() => {});
-    
+
     // Mock multiple active configs
     spyOn(configManager, 'getConfigFiles').mockResolvedValue({
       user: '/mock/user/config.json',
       local: '/mock/local/config.json',
       active: [
         { type: 'user', path: '/mock/user/config.json', 'in-use': true },
-        { type: 'local', path: '/mock/local/config.json', 'in-use': true }
-      ]
+        { type: 'local', path: '/mock/local/config.json', 'in-use': true },
+      ],
     });
-    
+
     // Simulate the action logic directly
     const key = 'model';
     const value = 'llama3';
     const options = { type: 'user' as const, all: true };
-    
+
     const parsedValue = parseValue(key, value);
     const configToUpdate = createConfigUpdate(key, parsedValue);
-    
+
     // This would normally update multiple configs, but for simplicity we just update one
     await configManager.saveConfig(configToUpdate, options.type);
-    
+
     expect(mockConfigState.model).toBe('llama3');
-    
+
     consoleSpy.mockRestore();
   });
 
   test('should display updated configuration after setting value', async () => {
     const consoleSpy = spyOn(console, 'log').mockImplementation(() => {});
-    
+
     // Simulate the action logic directly
     const key = 'model';
     const value = 'llama3';
     const options = { type: 'user' as const };
-    
+
     const parsedValue = parseValue(key, value);
     const configToUpdate = createConfigUpdate(key, parsedValue);
     await configManager.saveConfig(configToUpdate, options.type);
-    
+
     // Simulate the display logic
     console.log('\n📋 Updated configuration:');
     const updatedConfig = await configManager.getConfig();
     const sourceInfo = await configManager.getConfigSources();
     displayUpdatedKey(key, updatedConfig, sourceInfo);
-    
+
     expect(consoleSpy).toHaveBeenCalledWith('\n📋 Updated configuration:');
     expect(consoleSpy).toHaveBeenCalledWith('  model: "llama3" (from user)');
-    
+
     consoleSpy.mockRestore();
   });
 
@@ -346,4 +348,4 @@ describe('Config Set Command - Integration', () => {
     // And new key is set
     expect(mockConfigState.debug).toBe(true);
   });
-}); 
+});

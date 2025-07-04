@@ -6,10 +6,10 @@ import tseslint from 'typescript-eslint';
 const config = [
   // Base JavaScript recommended rules
   js.configs.recommended,
-  
+
   // TypeScript recommended rules
   ...tseslint.configs.recommended,
-  
+
   // Custom configuration
   {
     files: ['src/**/*.ts'],
@@ -28,7 +28,7 @@ const config = [
       '@typescript-eslint/explicit-function-return-type': 'off',
       '@typescript-eslint/explicit-module-boundary-types': 'off',
       '@typescript-eslint/no-non-null-assertion': 'warn',
-      
+
       // JavaScript rules
       'prefer-const': 'error',
       'no-var': 'error',
@@ -38,35 +38,33 @@ const config = [
       'no-unused-expressions': 'error',
       'prefer-template': 'error',
       'prefer-arrow-callback': 'error',
-      
+
       // Style rules
       'arrow-spacing': 'error',
       'comma-dangle': ['error', 'always-multiline'],
-      'semi': ['error', 'always'],
-      'quotes': ['error', 'single', { avoidEscape: true }],
-      'indent': ['error', 2, { SwitchCase: 1 }],
+      semi: ['error', 'always'],
+      quotes: ['error', 'single', { avoidEscape: true }],
+      indent: ['error', 2, { SwitchCase: 1 }],
       'object-curly-spacing': ['error', 'always'],
       'array-bracket-spacing': ['error', 'never'],
-      'space-before-function-paren': ['error', {
-        anonymous: 'always',
-        named: 'never',
-        asyncArrow: 'always',
-      }],
+      'space-before-function-paren': [
+        'error',
+        {
+          anonymous: 'always',
+          named: 'never',
+          asyncArrow: 'always',
+        },
+      ],
       'keyword-spacing': 'error',
       'space-infix-ops': 'error',
       'eol-last': 'error',
       'no-trailing-spaces': 'error',
     },
   },
-  
+
   // Ignore patterns
   {
-    ignores: [
-      'dist/**/*',
-      'node_modules/**/*',
-      '*.js',
-      'test/**/*',
-    ],
+    ignores: ['dist/**/*', 'node_modules/**/*', '*.js', 'test/**/*'],
   },
 ];
 

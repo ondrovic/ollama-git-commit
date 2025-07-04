@@ -483,3 +483,11 @@ For development, you can use:
 - `bun dev:run commit -d . --auto-stage` - Stage files, generate AI message, show interactive prompt (manual commit)
 - `bun dev:run commit -d . --auto-commit` - Stage files, generate AI message, auto-commit if approved, and push to remote
 - `bun run stage-and-commit` - Alternative standalone script (same as --auto-commit)
+
+- Code formatting is handled by running:
+
+```sh
+bun run format
+```
+
+- This invokes Prettier via npx, ensuring compatibility and avoiding Bun-specific issues.

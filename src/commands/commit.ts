@@ -1,4 +1,5 @@
 import { execSync, spawn } from 'child_process';
+import { readFileSync } from 'fs';
 import { homedir } from 'os';
 import { join } from 'path';
 import { VALID_TEMPLATES, type VALID_TEMPLATE } from '../constants/prompts';
@@ -51,13 +52,49 @@ export class CommitCommand {
 
     // Run staging script for both auto-stage and auto-commit
     if (config.autoStage || config.autoCommit) {
-      this.logger.info('Running staging script (format, lint, test, stage)...');
-      execSync('bun run stage', {
-        cwd: this.directory,
-        stdio: 'inherit',
-        env: process.env,
-      });
-      this.logger.success('Staging completed!');
+      // Check if staging script exists
+      const packageJsonPath = join(this.directory, 'package.json');
+      let hasStageScript = false;
+
+      try {
+        const packageJson = JSON.parse(readFileSync(packageJsonPath, 'utf8'));
+        hasStageScript = packageJson.scripts && packageJson.scripts.stage;
+      } catch {
+        // If package.json doesn't exist or is invalid, assume no stage script
+        hasStageScript = false;
+      }
+
+      if (hasStageScript) {
+        // Run the full staging script
+        this.logger.info('Running staging script (format, lint, test, stage)...');
+        execSync('bun run stage', {
+          cwd: this.directory,
+          stdio: 'inherit',
+          env: process.env,
+        });
+        this.logger.success('Staging completed!');
+      } else {
+        // Fall back to simple git add if no staging script exists
+        this.logger.info('No staging script found, using simple git add...');
+        this.logger.info(
+          'Note: For full formatting, linting, and testing, ensure your project has a "stage" script in package.json',
+        );
+
+        try {
+          execSync('git add -A', {
+            cwd: this.directory,
+            stdio: 'inherit',
+            env: { ...process.env, GIT_SKIP_HOOKS: '1' },
+          });
+          this.logger.success('Files staged successfully!');
+        } catch (addError) {
+          this.logger.error(
+            'Failed to stage files:',
+            addError instanceof Error ? addError.message : String(addError),
+          );
+          throw addError;
+        }
+      }
     }
 
     // Validate environment

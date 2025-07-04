@@ -18,11 +18,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Improved version change detection logic for `package-lock.json`: now only reports a version change if the version actually changes and the new version is valid (not '..' or empty). Prevents false positives in commit messages.
 - Auto-commit now works with 1Password SSH agent and other SSH agents: the tool runs `git commit` as a foreground process with inherited environment, allowing interactive authentication to work as expected.
 - Auto-commit now works with 1Password SSH agent and other SSH agents: the tool runs `git commit` as a foreground process with inherited environment, allowing interactive authentication to work as expected.
+- Updated the 'format' script to use 'npx prettier --write src/\*_/_.ts' to avoid Bun crash on Windows.
 
 ### Technical Details
 
 - The version extraction logic for `package-lock.json` and similar files now checks that both old and new versions are present, not equal, and the new version is not '..' or empty before reporting a change. This avoids reporting spurious or truncated version changes in commit messages.
 - The auto-commit implementation now uses `spawn` with `stdio: 'inherit'` and inherits the environment, ensuring compatibility with SSH agents like 1Password CLI on all platforms.
+- The 'format' script in package.json now uses 'npx prettier --write src/**/\*.ts' instead of 'prettier --write src/**/\*.ts' or 'bun format'. This change ensures formatting works reliably regardless of the Bun version or platform.
 
 ## [1.0.13],[1.0.14] - 2025-07-02
 
@@ -335,6 +337,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Fixed duplicate execution of staging script: removed redundant `bun run stage` calls from `src/core/git.ts` that were causing tests, formatting, and linting to run multiple times during `--auto-stage` and `--auto-commit` operations.
 - Removed legacy `.git-hooks/pre-stage` file that was causing additional duplication in the staging workflow.
 - Fixed duplicate git push execution in `--auto-commit` non-interactive mode: removed redundant `git push` call that was causing the push operation to run twice.
+- Fixed portability issue: `--auto-stage` and `--auto-commit` now gracefully fall back to simple `git add -A` if the staging script is not available in the target repository.
 
 ### Technical Details
 
@@ -342,3 +345,4 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Now only the commit command calls `bun run stage` once, and the git service only analyzes git changes without running staging scripts.
 - Added `GIT_SKIP_HOOKS=1` environment variable to prevent git hooks from triggering during staging operations.
 - The non-interactive fallback in `--auto-commit` mode had duplicate `git push` calls, which would cause the push operation to execute twice. This has been fixed to ensure push only happens once.
+- Added graceful fallback for staging script: if `bun run stage` fails (e.g., script doesn't exist in target repository), the tool now falls back to simple `git add -A` and continues with the commit process.

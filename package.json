@@ -27,7 +27,7 @@
     "test:watch": "bun test --watch",
     "lint": "eslint",
     "lint:fix": "eslint --fix",
-    "format": "prettier --write src/**/*.ts",
+    "format": "npx prettier --write src/**/*.ts",
     "format:check": "prettier --check src/**/*.ts",
     "clean": "rm -rf dist",
     "release": "bun run scripts/release.ts",
