@@ -398,6 +398,45 @@ ollama-git-commit test benchmark
 
 ### Configuration Commands
 
+The `config` command provides advanced configuration management for the tool. You can manage models, set options, and now list and view prompt templates.
+
+#### List Available Prompt Templates
+
+You can list all available built-in prompt templates:
+
+```bash
+ollama-git-commit config list-prompt-templates
+```
+
+Example output:
+
+```
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+📝 Available Prompt Templates
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+• default
+• conventional
+• simple
+• detailed
+
+To view a specific template, use:
+  ollama-git-commit config list-prompt-templates --name <template>
+
+Example:
+  ollama-git-commit config list-prompt-templates --name conventional
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+```
+
+#### View the Contents of a Prompt Template
+
+To view the full contents of a specific template:
+
+```bash
+ollama-git-commit config list-prompt-templates --name detailed
+```
+
+This will print the full text of the selected prompt template, so you can see exactly what the AI will use.
+
 ```bash
 # Initialize default configuration
 ollama-git-commit config create user

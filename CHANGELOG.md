@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **config list-prompt-templates**: New subcommand to list all available built-in prompt templates and view the contents of any template. This makes it easy for users to discover and inspect the prompt templates used for commit message generation.
+
 ## [1.0.18] - 2025-07-05
 
 ## [1.0.17] - 2025-07-05
