@@ -183,9 +183,10 @@ index e2b836d..b62d39a 100644
       gitService.execCommand('git status', true);
       expect(capturedOptions.stdio).toEqual(['pipe', 'pipe', 'pipe']);
       
-      // Test non-quiet mode - should capture output for programmatic use and display to user
+      // Test non-quiet mode - should capture output AND display to user
+      // Updated expectation: both modes now use ['pipe', 'pipe', 'pipe'] for consistency
       gitService.execCommand('git status', false);
-      expect(capturedOptions.stdio).toEqual(['pipe', 'pipe', 'inherit']);
+      expect(capturedOptions.stdio).toEqual(['pipe', 'pipe', 'pipe']);
     });
 
     test('should use instance quiet setting when parameter is omitted', () => {
@@ -200,10 +201,45 @@ index e2b836d..b62d39a 100644
       quietGitService.execCommand('git status');
       expect(capturedOptions.stdio).toEqual(['pipe', 'pipe', 'pipe']);
       
-      // Test with instance quiet = false - should capture output for programmatic use and display to user
+      // Test with instance quiet = false - should capture output for both programmatic use and user display
       const nonQuietGitService = new GitService(process.cwd(), new Logger(), false, mockExecSync);
       nonQuietGitService.execCommand('git status');
-      expect(capturedOptions.stdio).toEqual(['pipe', 'pipe', 'inherit']);
+      expect(capturedOptions.stdio).toEqual(['pipe', 'pipe', 'pipe']);
+    });
+
+    test('should return actual command output in both quiet and non-quiet modes', () => {
+      const mockOutput = 'mocked git output';
+      const mockExecSync = () => Buffer.from(mockOutput);
+      const gitService = new GitService(process.cwd(), new Logger(), false, mockExecSync);
+      
+      // Both modes should return the actual output (this was the bug!)
+      const quietResult = gitService.execCommand('git status', true);
+      expect(quietResult).toBe(mockOutput);
+      
+      const nonQuietResult = gitService.execCommand('git status', false);
+      expect(nonQuietResult).toBe(mockOutput);
+    });
+
+    test('should return actual output for analysis methods', () => {
+      const mockExecSync = (command: string) => {
+        if (command.includes('branch --show-current')) {
+          return Buffer.from('main');
+        }
+        if (command.includes('rev-parse HEAD')) {
+          return Buffer.from('abc123');
+        }
+        if (command.includes('rev-parse --show-toplevel')) {
+          return Buffer.from('/path/to/repo');
+        }
+        return Buffer.from('');
+      };
+      
+      const gitService = new GitService(process.cwd(), new Logger(), false, mockExecSync);
+      
+      // These methods should return actual values, not empty strings
+      expect(gitService.getBranchName()).toBe('main');
+      expect(gitService.getLastCommitHash()).toBe('abc123');
+      expect(gitService.getRepositoryRoot()).toBe('/path/to/repo');
     });
   });
 });
