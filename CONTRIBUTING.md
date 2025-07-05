@@ -425,3 +425,9 @@ This invokes Prettier via npx, ensuring compatibility and avoiding Bun-specific 
 By contributing to Ollama Git Commit, you agree that your contributions will be licensed under the project's MIT License.
 
 - When adding new config subcommands (e.g., under `src/cli/commands/config/`), update the README.md with usage and examples, and add an entry to CHANGELOG.md under [Unreleased].
+
+## CLI Option Guidelines
+
+- All new CLI options should provide both a short (single dash) and long (double dash) flag, unless a short flag would conflict or is not conventional.
+- When adding or changing CLI options, update the README and CHANGELOG with usage examples and details.
+- Ensure all new/changed options are covered by tests.

@@ -207,4 +207,18 @@ describe('ConfigManager', () => {
     // Check total count (should be 3: chat + embeddings + summarize)
     expect(updatedConfig.models?.length).toBe(3);
   });
+
+  test('should get configuration by type', async () => {
+    configManager = new MockedConfigManager(logger);
+    await configManager.initialize();
+    
+    const userConfig = await configManager.getConfigByType('user');
+    const localConfig = await configManager.getConfigByType('local');
+    
+    // Both should return valid configurations
+    expect(userConfig).toBeDefined();
+    expect(localConfig).toBeDefined();
+    expect(userConfig.model).toBeDefined();
+    expect(localConfig.model).toBeDefined();
+  });
 });

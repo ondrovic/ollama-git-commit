@@ -26,6 +26,11 @@ export class MockedConfigManager implements IConfigManager {
     return this.config;
   }
 
+  async getConfigByType(type: 'user' | 'local'): Promise<OllamaCommitConfig> {
+    // For mock, return the same config regardless of type
+    return this.config;
+  }
+
   async saveConfig(config: Partial<OllamaCommitConfig>, type?: 'user' | 'local'): Promise<void> {
     // Merge new config
     this.config = { ...this.config, ...config };
