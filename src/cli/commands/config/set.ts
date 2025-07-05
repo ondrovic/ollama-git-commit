@@ -41,7 +41,7 @@ export const registerSetCommands = (configCommand: Command) => {
               const configToUpdate = createConfigUpdate(key, parsedValue);
               await configManager.saveConfig(configToUpdate, configFile.type);
               Logger.success(
-                `✅ Updated ${configFile.type} config: ${key} = ${JSON.stringify(parsedValue)}`,
+                `Updated ${configFile.type} config: ${key} = ${JSON.stringify(parsedValue)}`,
               );
             }
           } else {
@@ -49,7 +49,7 @@ export const registerSetCommands = (configCommand: Command) => {
             const configToUpdate = createConfigUpdate(key, parsedValue);
             await configManager.saveConfig(configToUpdate, options.type);
             Logger.success(
-              `✅ Updated ${options.type} config: ${key} = ${JSON.stringify(parsedValue)}`,
+              `Updated ${options.type} config: ${key} = ${JSON.stringify(parsedValue)}`,
             );
           }
 

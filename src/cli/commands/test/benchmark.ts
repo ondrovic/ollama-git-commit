@@ -32,7 +32,7 @@ export const registerBenchmarkTestCommand = (testCommand: Command) => {
         const endTime = Date.now();
         const duration = endTime - startTime;
 
-        Logger.success(`✅ Benchmark completed in ${duration}ms`);
+        Logger.success(`Benchmark completed in ${duration}ms`);
       } catch (error) {
         Logger.error('Benchmark test failed:', error);
         process.exit(1);

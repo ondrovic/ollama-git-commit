@@ -38,7 +38,7 @@ export const registerModelsCommands = (configCommand: Command) => {
 
         await configManager.saveConfig({ models }, options.type as 'user' | 'local');
 
-        Logger.success(`✅ Model '${name}' added successfully`);
+        Logger.success(`Model '${name}' added successfully`);
         Logger.info(`  Provider: ${provider}`);
         Logger.info(`  Model: ${model}`);
         Logger.info(`  Roles: ${roles.join(', ')}`);
@@ -71,7 +71,7 @@ export const registerModelsCommands = (configCommand: Command) => {
           { models: filteredModels },
           options.type as 'user' | 'local',
         );
-        Logger.success(`✅ Model '${name}' removed successfully`);
+        Logger.success(`Model '${name}' removed successfully`);
       } catch (error) {
         Logger.error('Failed to remove model:', error);
         process.exit(1);
@@ -130,8 +130,11 @@ export const registerModelsCommands = (configCommand: Command) => {
           process.exit(1);
         }
 
-        await configManager.saveConfig({ model: name }, options.type as 'user' | 'local');
-        Logger.success(`✅ Primary model set to '${name}'`);
+        await configManager.saveConfig(
+          { model: targetModel.model },
+          options.type as 'user' | 'local',
+        );
+        Logger.success(`Primary model set to '${name}' (${targetModel.model})`);
       } catch (error) {
         Logger.error('Failed to set primary model:', error);
         process.exit(1);
@@ -166,7 +169,7 @@ export const registerModelsCommands = (configCommand: Command) => {
           { embeddingsProvider: name },
           options.type as 'user' | 'local',
         );
-        Logger.success(`✅ Embeddings provider set to '${name}'`);
+        Logger.success(`Embeddings provider set to '${name}'`);
       } catch (error) {
         Logger.error('Failed to set embeddings provider:', error);
         process.exit(1);
