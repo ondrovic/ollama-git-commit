@@ -48,14 +48,14 @@ export class GitService implements IGitService {
   }
 
   /**
-   * Execute a git command for analysis purposes (always captures output)
-   * This is used internally for programmatic operations that need the command output
+   * Execute a git command for analysis purposes - ALWAYS returns output
+   * Use this for commands that need to return data (getBranchName, getChanges, etc.)
    */
-  private execCommandForAnalysis(command: string): string {
+  private execForAnalysis(command: string): string {
     try {
       const options: ExecSyncOptions = {
         cwd: this.directory,
-        stdio: ['pipe', 'pipe', 'pipe'], // Always capture output for analysis
+        stdio: ['pipe', 'pipe', 'pipe'], // Always capture everything
       };
       return this.execSyncFn(command, options).toString().trim();
     } catch (error: unknown) {
@@ -70,31 +70,23 @@ export class GitService implements IGitService {
   }
 
   /**
-   * Execute a git command with user-facing behavior (respects quiet setting)
-   * This is used for operations where the user should see the output
+   * Execute a git command for user interaction - respects quiet mode
+   * Use this for commands where user needs to see real-time output (commit, push, etc.)
    */
   public execCommand(command: string, forceQuiet?: boolean): string {
     try {
       const options: ExecSyncOptions = { cwd: this.directory };
-
-      // Use the provided forceQuiet parameter or fall back to the instance's quiet setting
       const shouldBeQuiet = forceQuiet !== undefined ? forceQuiet : this.quiet;
 
       if (shouldBeQuiet) {
-        // Quiet mode: capture output and return it
+        // Quiet mode: capture everything, return stdout
         options.stdio = ['pipe', 'pipe', 'pipe'];
         return this.execSyncFn(command, options).toString().trim();
       } else {
-        // Non-quiet mode: show output to user and capture it
-        options.stdio = ['pipe', 'pipe', 'pipe'];
-        const output = this.execSyncFn(command, options).toString().trim();
-
-        // Display the output to the user (preserving the user experience)
-        if (output) {
-          console.log(output);
-        }
-
-        return output;
+        // Non-quiet mode: inherit stderr for real-time output, capture stdout
+        options.stdio = ['pipe', 'pipe', 'inherit'];
+        const result = this.execSyncFn(command, options);
+        return result ? result.toString().trim() : '';
       }
     } catch (error: unknown) {
       if (typeof error === 'object' && error && 'message' in error) {
@@ -109,7 +101,7 @@ export class GitService implements IGitService {
 
   isGitRepository(): boolean {
     try {
-      this.execCommandForAnalysis('git rev-parse --git-dir');
+      this.execForAnalysis('git rev-parse --git-dir');
       this.logger.debug(`Git repository check for ${this.directory}: Success`);
       return true;
     } catch (error) {
@@ -127,12 +119,9 @@ export class GitService implements IGitService {
     let diff = '';
     let staged = true;
 
-    // Note: Staging is handled by the commit command, not here
-    // This method only analyzes git changes
-
     // First check for staged changes
     try {
-      diff = this.execCommandForAnalysis('git diff --cached');
+      diff = this.execForAnalysis('git diff --cached');
     } catch (error: unknown) {
       if (typeof error === 'object' && error && 'message' in error) {
         throw new GitCommandError(
@@ -147,7 +136,7 @@ export class GitService implements IGitService {
       // No staged changes, check for unstaged changes
       let unstagedDiff = '';
       try {
-        unstagedDiff = this.execCommandForAnalysis('git diff');
+        unstagedDiff = this.execForAnalysis('git diff');
       } catch (error: unknown) {
         if (typeof error === 'object' && error && 'message' in error) {
           throw new GitCommandError(
@@ -159,12 +148,9 @@ export class GitService implements IGitService {
       }
 
       if (!unstagedDiff.trim()) {
-        // No staged or unstaged changes found - this is NOT a retryable error
         throw new GitNoChangesError('No changes found (staged or unstaged).');
       }
 
-      // We have unstaged changes - use them for analysis
-      // Note: Staging is handled by the commit command, not here
       diff = unstagedDiff;
       staged = false;
       if (verbose) {
@@ -175,7 +161,6 @@ export class GitService implements IGitService {
       Logger.info('Using staged changes for commit message generation');
     }
 
-    // Final check - this should not happen but just in case
     if (!diff.trim()) {
       throw new GitNoChangesError('No changes to commit.');
     }
@@ -206,7 +191,7 @@ export class GitService implements IGitService {
 
     try {
       const statsCommand = staged ? 'git diff --cached --stat' : 'git diff --stat';
-      const statsOutput = this.execCommandForAnalysis(statsCommand);
+      const statsOutput = this.execForAnalysis(statsCommand);
 
       if (statsOutput) {
         const lines = statsOutput.split('\n');
@@ -231,7 +216,7 @@ export class GitService implements IGitService {
   private analyzeFileChanges(verbose: boolean, staged: boolean): string {
     try {
       const command = staged ? 'git diff --cached --name-status' : 'git diff --name-status';
-      const output = this.execCommandForAnalysis(command);
+      const output = this.execForAnalysis(command);
 
       if (!output.trim()) {
         return '📁 0 files changed';
@@ -243,9 +228,8 @@ export class GitService implements IGitService {
 
       lines.forEach(line => {
         const [status, ...pathParts] = line.split('\t');
-        const path = pathParts.join('\t'); // Handle paths with tabs
+        const path = pathParts.join('\t');
 
-        // Skip .git and its contents
         if (path === '.git' || path.startsWith('.git/') || path.startsWith('.git\\')) {
           return;
         }
@@ -271,12 +255,11 @@ export class GitService implements IGitService {
           }
         }
 
-        // Get change details for this file
         let changeSummary = '';
         if (action !== 'deleted') {
           try {
             const fileCommand = staged ? `git diff --cached "${path}"` : `git diff "${path}"`;
-            const fileDiff = this.execCommandForAnalysis(fileCommand);
+            const fileDiff = this.execForAnalysis(fileCommand);
 
             if (fileDiff) {
               const additions = (fileDiff.match(/^\+/gm) || []).length;
@@ -291,7 +274,6 @@ export class GitService implements IGitService {
               }
               changeSummary += ')';
 
-              // Extract version changes for specific files
               const versionInfo = this.extractVersionChanges(path, fileDiff);
               if (versionInfo) {
                 versionChanges += `${versionInfo}\n`;
@@ -304,11 +286,10 @@ export class GitService implements IGitService {
 
         detailedInfo += `📄 ${path} (${action}) ${changeSummary}\n`;
 
-        // Show key changes for verbose mode
         if (verbose && action !== 'deleted') {
           try {
             const fileCommand = staged ? `git diff --cached "${path}"` : `git diff "${path}"`;
-            const fileDiff = this.execCommandForAnalysis(fileCommand);
+            const fileDiff = this.execForAnalysis(fileCommand);
 
             if (fileDiff) {
               const keyChanges = fileDiff
@@ -331,7 +312,6 @@ export class GitService implements IGitService {
 
       let result = `📁 ${lines.length} files changed:\n${detailedInfo}`;
 
-      // Add version changes section if any were found
       if (versionChanges.trim()) {
         result += `\n📦 Version Changes:\n${versionChanges}`;
       }
@@ -343,7 +323,6 @@ export class GitService implements IGitService {
   }
 
   private extractVersionChanges(filePath: string, fileDiff: string): string | null {
-    // Check if this is a package.json file
     if (filePath.endsWith('package.json')) {
       const oldVersion = fileDiff.match(/^[-]+[\s]*"version":\s*"([^"]+)"/m)?.[1];
       const newVersion = fileDiff.match(/^[+]+[\s]*"version":\s*"([^"]+)"/m)?.[1];
@@ -356,23 +335,19 @@ export class GitService implements IGitService {
       return null;
     }
 
-    // Check for package-lock.json version changes
     if (filePath.endsWith('package-lock.json')) {
       const oldVersion = fileDiff.match(/^[-]+[\s]*"version":\s*"([^"]+)"/m)?.[1];
       const newVersion = fileDiff.match(/^[+]+[\s]*"version":\s*"([^"]+)"/m)?.[1];
 
-      // Only report if both versions are present, not equal, and newVersion is not '..'
       if (oldVersion && newVersion && oldVersion !== newVersion && newVersion !== '..') {
         return `📦 package-lock.json: Updated version from ${oldVersion} to ${newVersion}`;
       }
-      // Only report set if newVersion is present, not '..', and oldVersion is missing
       if (!oldVersion && newVersion && newVersion !== '..') {
         return `📦 package-lock.json: Set version to ${newVersion}`;
       }
       return null;
     }
 
-    // Check for other common version files
     if (filePath.includes('version') || filePath.includes('VERSION')) {
       const oldVersion = fileDiff.match(/^[-]+[\s]*([0-9]+\.[0-9]+\.[0-9]+)/m)?.[1];
       const newVersion = fileDiff.match(/^[+]+[\s]*([0-9]+\.[0-9]+\.[0-9]+)/m)?.[1];
@@ -390,7 +365,7 @@ export class GitService implements IGitService {
 
   getBranchName(): string {
     try {
-      return this.execCommandForAnalysis('git branch --show-current');
+      return this.execForAnalysis('git branch --show-current');
     } catch {
       return 'unknown';
     }
@@ -398,7 +373,7 @@ export class GitService implements IGitService {
 
   getLastCommitHash(): string {
     try {
-      return this.execCommandForAnalysis('git rev-parse HEAD');
+      return this.execForAnalysis('git rev-parse HEAD');
     } catch {
       return '';
     }
@@ -406,7 +381,7 @@ export class GitService implements IGitService {
 
   getRepositoryRoot(): string {
     try {
-      return this.execCommandForAnalysis('git rev-parse --show-toplevel');
+      return this.execForAnalysis('git rev-parse --show-toplevel');
     } catch {
       return process.cwd();
     }

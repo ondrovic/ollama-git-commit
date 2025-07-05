@@ -156,7 +156,7 @@ index e2b836d..b62d39a 100644
 
   describe('Quiet Functionality', () => {
     test('should handle quiet parameter correctly', () => {
-      const mockExecSync = () => Buffer.from('mocked output');
+      const mockExecSync: any = (command: string, options?: any) => 'mocked output';
       const gitService = new GitService(process.cwd(), new Logger(), false, mockExecSync);
       expect(() => gitService.execCommand('git status', true)).not.toThrow();
       expect(() => gitService.execCommand('git status', false)).not.toThrow();
@@ -172,9 +172,9 @@ index e2b836d..b62d39a 100644
 
     test('should use correct stdio configuration for quiet mode', () => {
       let capturedOptions: any = null;
-      const mockExecSync = (command: string, options: any) => {
+      const mockExecSync: any = (command: string, options: any) => {
         capturedOptions = options;
-        return Buffer.from('mocked output');
+        return 'mocked output';
       };
       
       const gitService = new GitService(process.cwd(), new Logger(), false, mockExecSync);
@@ -183,17 +183,16 @@ index e2b836d..b62d39a 100644
       gitService.execCommand('git status', true);
       expect(capturedOptions.stdio).toEqual(['pipe', 'pipe', 'pipe']);
       
-      // Test non-quiet mode - should capture output AND display to user
-      // Updated expectation: both modes now use ['pipe', 'pipe', 'pipe'] for consistency
+      // Test non-quiet mode - should inherit stderr for real-time output
       gitService.execCommand('git status', false);
-      expect(capturedOptions.stdio).toEqual(['pipe', 'pipe', 'pipe']);
+      expect(capturedOptions.stdio).toEqual(['pipe', 'pipe', 'inherit']);
     });
 
     test('should use instance quiet setting when parameter is omitted', () => {
       let capturedOptions: any = null;
-      const mockExecSync = (command: string, options: any) => {
+      const mockExecSync: any = (command: string, options: any) => {
         capturedOptions = options;
-        return Buffer.from('mocked output');
+        return 'mocked output';
       };
       
       // Test with instance quiet = true
@@ -201,15 +200,15 @@ index e2b836d..b62d39a 100644
       quietGitService.execCommand('git status');
       expect(capturedOptions.stdio).toEqual(['pipe', 'pipe', 'pipe']);
       
-      // Test with instance quiet = false - should capture output for both programmatic use and user display
+      // Test with instance quiet = false - should inherit stderr for real-time output
       const nonQuietGitService = new GitService(process.cwd(), new Logger(), false, mockExecSync);
       nonQuietGitService.execCommand('git status');
-      expect(capturedOptions.stdio).toEqual(['pipe', 'pipe', 'pipe']);
+      expect(capturedOptions.stdio).toEqual(['pipe', 'pipe', 'inherit']);
     });
 
     test('should return actual command output in both quiet and non-quiet modes', () => {
       const mockOutput = 'mocked git output';
-      const mockExecSync = () => Buffer.from(mockOutput);
+      const mockExecSync: any = () => mockOutput;
       const gitService = new GitService(process.cwd(), new Logger(), false, mockExecSync);
       
       // Both modes should return the actual output (this was the bug!)
@@ -221,17 +220,17 @@ index e2b836d..b62d39a 100644
     });
 
     test('should return actual output for analysis methods', () => {
-      const mockExecSync = (command: string) => {
+      const mockExecSync: any = (command: string) => {
         if (command.includes('branch --show-current')) {
-          return Buffer.from('main');
+          return 'main';
         }
         if (command.includes('rev-parse HEAD')) {
-          return Buffer.from('abc123');
+          return 'abc123';
         }
         if (command.includes('rev-parse --show-toplevel')) {
-          return Buffer.from('/path/to/repo');
+          return '/path/to/repo';
         }
-        return Buffer.from('');
+        return '';
       };
       
       const gitService = new GitService(process.cwd(), new Logger(), false, mockExecSync);
