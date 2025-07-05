@@ -1,7 +1,7 @@
 import { Command } from 'commander';
 import { CommitCommand } from '../../commands/commit';
-import { ServiceFactory } from '../../core/factory';
 import { getConfig } from '../../core/config';
+import { ServiceFactory } from '../../core/factory';
 import { Logger } from '../../utils/logger';
 import { validateEnvironment } from '../../utils/validation';
 
@@ -24,7 +24,20 @@ export const registerCommitCommand = (program: Command) => {
     .action(async options => {
       try {
         // Validate environment before proceeding
-        validateEnvironment();
+        const validation = validateEnvironment(options.directory);
+        if (!validation.valid) {
+          Logger.error('❌ Environment validation failed:');
+          validation.errors.forEach(error => Logger.error(`  ${error}`));
+          if (validation.warnings.length > 0) {
+            Logger.warn('⚠️  Warnings:');
+            validation.warnings.forEach(warning => Logger.warn(`  ${warning}`));
+          }
+          process.exit(1);
+        }
+        if (validation.warnings.length > 0) {
+          Logger.warn('⚠️  Environment warnings:');
+          validation.warnings.forEach(warning => Logger.warn(`  ${warning}`));
+        }
 
         // Create services using the factory
         const factory = ServiceFactory.getInstance();

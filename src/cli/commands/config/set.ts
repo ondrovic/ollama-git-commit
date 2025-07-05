@@ -38,18 +38,28 @@ export const registerSetCommands = (configCommand: Command) => {
           if (options.all && activeConfigs.length > 1) {
             // Update all active configs
             for (const configFile of activeConfigs) {
-              await configManager.saveConfig({ [key]: parsedValue }, configFile.type);
+              const configToUpdate = createConfigUpdate(key, parsedValue);
+              await configManager.saveConfig(configToUpdate, configFile.type);
               Logger.success(
                 `✅ Updated ${configFile.type} config: ${key} = ${JSON.stringify(parsedValue)}`,
               );
             }
           } else {
             // Update single config
-            await configManager.saveConfig({ [key]: parsedValue }, options.type);
+            const configToUpdate = createConfigUpdate(key, parsedValue);
+            await configManager.saveConfig(configToUpdate, options.type);
             Logger.success(
               `✅ Updated ${options.type} config: ${key} = ${JSON.stringify(parsedValue)}`,
             );
           }
+
+          // Show the updated configuration
+          console.log('\n📋 Updated configuration:');
+          const updatedConfig = await configManager.getConfig();
+          const sourceInfo = await configManager.getConfigSources();
+
+          // Display the specific key that was updated
+          displayUpdatedKey(key, updatedConfig, sourceInfo as Record<string, unknown>);
         } catch (error) {
           Logger.error('Failed to set configuration:', error);
           process.exit(1);

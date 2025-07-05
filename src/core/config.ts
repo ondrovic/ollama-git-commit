@@ -334,6 +334,28 @@ export class ConfigManager implements IConfigManager {
     return { ...this.config };
   }
 
+  /**
+   * Get configuration from a specific type (user or local) without merging
+   * @param type - Configuration type ('user' or 'local')
+   * @returns Configuration from the specified type, merged with defaults
+   */
+  async getConfigByType(type: 'user' | 'local'): Promise<Readonly<OllamaCommitConfig>> {
+    if (!this.initialized) {
+      await this.initialize();
+    }
+
+    const defaults = this.getDefaults();
+    const configFile = type === 'local' ? this.localConfigFile : this.defaultConfigFile;
+
+    // Load the specific config file
+    const fileConfig = await this.loadConfigFile(configFile);
+
+    // Merge with defaults to ensure all required fields are present
+    const mergedConfig = this.deepMerge(defaults, fileConfig);
+
+    return { ...mergedConfig };
+  }
+
   get<K extends keyof OllamaCommitConfig>(key: K): OllamaCommitConfig[K] {
     if (!this.initialized) {
       throw new Error('ConfigManager not initialized. Call initialize() first.');

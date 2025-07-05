@@ -1097,7 +1097,16 @@ ollama-git-commit commit --directory . --model llama3 --verbose --quiet
 - `ollama-git-commit config models list [-t <type>]`
 - `ollama-git-commit config models set-primary <name> [-t <type>]`
 
-... (add similar tables/examples for all config/test/list-models commands) ...
+#### List Models by Config Type
+
+You can list models from either the user or local configuration file:
+
+```sh
+ollama-git-commit config models list -t user   # List models from the user config (~/.config/ollama-git-commit/config.json)
+ollama-git-commit config models list -t local  # List models from the local config (.ollama-git-commit.json in project)
+```
+
+The `-t, --type` option is respected for all model-related config commands that support it.
 
 ## Changelog
 

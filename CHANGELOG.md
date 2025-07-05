@@ -36,6 +36,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Resolved TypeScript errors in build process
   - Enhanced type checking for service dependencies
 - **Linter and TypeScript errors related to CLI option handling and documentation**:
+- **config models list**: The `-t, --type` option now correctly lists models from the specified configuration type (`user` or `local`) instead of always showing the merged config. This prevents misleading output and matches user expectations.
 
 ### Technical Details
 
@@ -69,6 +70,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Improved code consistency and reduced linting warnings
 - **Audited all `.option()` calls in CLI command registration to ensure non-conflicting, conventional short flags**:
 - **Updated tests and documentation to reflect new CLI option structure**:
+- Added `getConfigByType(type: 'user' | 'local')` to `ConfigManager` to fetch config from a specific file, used by the models list command.
 
 ## [1.0.18] - 2025-07-05
 

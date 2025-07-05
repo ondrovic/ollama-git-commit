@@ -3,8 +3,12 @@ import { ServiceFactory } from '../../../core/factory';
 import { ILogger } from '../../../core/interfaces';
 
 // Helper function to validate template name
-function validateTemplateName(templateName: string, logger: ILogger): string {
-  const validTemplates = ['default', 'conventional', 'detailed', 'simple'];
+function validateTemplateName(
+  templateName: string,
+  logger: ILogger,
+  templates: Record<string, string>,
+): string {
+  const validTemplates = Object.keys(templates);
   const normalizedName = templateName.toLowerCase();
 
   if (validTemplates.includes(normalizedName)) {
@@ -50,7 +54,7 @@ export const registerPromptsCommands = (configCommand: Command) => {
           const templateName = options.name.toLowerCase();
 
           // Validate template name using the actual service keys
-          const validatedTemplateName = validateTemplateName(templateName, logger);
+          const validatedTemplateName = validateTemplateName(templateName, logger, templates);
           const templateContent = templates[validatedTemplateName];
 
           // Additional safety check

@@ -82,20 +82,20 @@ export const registerModelsCommands = (configCommand: Command) => {
     .command('list')
     .description('List all model configurations')
     .option('-t, --type <type>', 'Configuration type (user, local)', 'user')
-    .action(async _options => {
+    .action(async options => {
       try {
         const configManager = ConfigManager.getInstance();
         await configManager.initialize();
 
-        const config = await configManager.getConfig();
+        const config = await configManager.getConfigByType(options.type as 'user' | 'local');
         const models = config.models || [];
 
         if (models.length === 0) {
-          Logger.info('No models configured');
+          Logger.info(`No models configured in ${options.type} configuration`);
           return;
         }
 
-        console.log('📋 Configured Models:');
+        console.log(`📋 Configured Models (${options.type}):`);
         models.forEach(model => {
           console.log(`  ${model.name.padEnd(20)} - ${model.provider}/${model.model}`);
           console.log(`    Roles: ${model.roles.join(', ')}`);
