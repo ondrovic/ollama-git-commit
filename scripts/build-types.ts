@@ -17,13 +17,20 @@ async function main() {
     }
   }
 
+  // Create environment with QUIET propagation
+  const env = { 
+    ...process.env, 
+    ...(isQuiet && { QUIET: 'true' }) 
+  };
+
   try {
     if (!isQuiet) {
       console.log('🔨 Building type declarations...');
     }
     
     execSync('tsc --emitDeclarationOnly --outDir dist', {
-      stdio: isQuiet ? ['pipe', 'pipe', 'pipe'] : 'inherit'
+      stdio: isQuiet ? ['pipe', 'pipe', 'pipe'] : 'inherit',
+      env
     });
     
     if (!isQuiet) {
@@ -40,4 +47,4 @@ async function main() {
 main().catch(error => {
   console.error('❌ Script failed:', error);
   process.exit(1);
-}); 
+});

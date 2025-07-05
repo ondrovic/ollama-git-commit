@@ -37,12 +37,21 @@ function incrementVersion(type: 'patch' | 'minor' | 'major' = 'patch'): string {
   }
 }
 
-function regenerateVersionFile(): void {
+function regenerateVersionFile(isQuiet: boolean): void {
   console.log(`🔄 Regenerating version file...`);
 
   try {
+    // Create environment with QUIET propagation
+    const env = { 
+      ...process.env, 
+      ...(isQuiet && { QUIET: 'true' }) 
+    };
+
     // Run the prebuild script to regenerate the version file
-    execSync('bun run prebuild', { stdio: 'inherit' });
+    execSync('bun run prebuild', { 
+      stdio: 'inherit',
+      env
+    });
     console.log(`✅ Version file regenerated`);
   } catch (error) {
     console.error('❌ Failed to regenerate version file:', error);
@@ -74,12 +83,21 @@ function updateChangelog(version: string): void {
   }
 }
 
-function testBuild(): void {
+function testBuild(isQuiet: boolean): void {
   console.log(`🧪 Testing build process...`);
 
   try {
+    // Create environment with QUIET propagation
+    const env = { 
+      ...process.env, 
+      ...(isQuiet && { QUIET: 'true' }) 
+    };
+
     // Clean and build to ensure everything works
-    execSync('bun run clean && bun run build', { stdio: 'inherit' });
+    execSync('bun run clean && bun run build', { 
+      stdio: 'inherit',
+      env
+    });
     console.log(`✅ Build test successful`);
   } catch (error) {
     console.error('❌ Build test failed:', error);
@@ -108,6 +126,12 @@ async function createAndPushTag(version: string): Promise<void> {
   const tag = `v${version}`;
   const isQuiet = await getQuietSetting();
 
+  // Create environment with QUIET propagation
+  const env = { 
+    ...process.env, 
+    ...(isQuiet && { QUIET: 'true' }) 
+  };
+
   console.log(`🏷️ Creating and pushing tag ${tag}...`);
 
   try {
@@ -115,39 +139,44 @@ async function createAndPushTag(version: string): Promise<void> {
     updateChangelog(version);
 
     // Regenerate version file for local testing
-    regenerateVersionFile();
+    regenerateVersionFile(isQuiet);
 
     // Test the build process
-    testBuild();
+    testBuild(isQuiet);
 
     // Stage version changes (note: we don't stage the generated version file)
     console.log(`📦 Staging package.json and CHANGELOG.md...`);
     execSync('git add package.json CHANGELOG.md', { 
-      stdio: isQuiet ? ['pipe', 'pipe', 'pipe'] : 'inherit' 
+      stdio: isQuiet ? ['pipe', 'pipe', 'pipe'] : 'inherit',
+      env
     });
 
     // Commit changes
     console.log(`💾 Committing version ${version}...`);
     execSync(`git commit -m "chore: release version ${version}"`, { 
-      stdio: isQuiet ? ['pipe', 'pipe', 'pipe'] : 'inherit' 
+      stdio: isQuiet ? ['pipe', 'pipe', 'pipe'] : 'inherit',
+      env
     });
 
     // Create tag
     console.log(`🏷️ Creating tag ${tag}...`);
     execSync(`git tag ${tag}`, { 
-      stdio: isQuiet ? ['pipe', 'pipe', 'pipe'] : 'inherit' 
+      stdio: isQuiet ? ['pipe', 'pipe', 'pipe'] : 'inherit',
+      env
     });
 
     // Push tag first
     console.log(`🚀 Pushing tag ${tag}...`);
     execSync(`git push origin ${tag}`, { 
-      stdio: isQuiet ? ['pipe', 'pipe', 'pipe'] : 'inherit' 
+      stdio: isQuiet ? ['pipe', 'pipe', 'pipe'] : 'inherit',
+      env
     });
 
     // Push commits
     console.log(`🚀 Pushing commits to main...`);
     execSync('git push origin main', { 
-      stdio: isQuiet ? ['pipe', 'pipe', 'pipe'] : 'inherit' 
+      stdio: isQuiet ? ['pipe', 'pipe', 'pipe'] : 'inherit',
+      env
     });
 
     console.log(`✅ Successfully created and pushed tag ${tag}`);

@@ -19,6 +19,13 @@ async function main() {
     }
   }
 
+  // Create environment with QUIET propagation
+  const env = { 
+    ...process.env, 
+    ...(isQuiet && { QUIET: 'true' }),
+    GIT_SKIP_HOOKS: '1' // Prevent git hooks during staging
+  };
+
   // Check if we're in the ollama-git-commit repository
   let isOllamaGitCommitRepo = false;
   try {
@@ -49,7 +56,10 @@ async function main() {
   if (hasPrecommitScript) {
     if (!isQuiet) console.log('🔍 Running precommit checks...');
     try {
-      execSync('bun run precommit', { stdio: isQuiet ? ['pipe', 'pipe', 'pipe'] : 'inherit' });
+      execSync('bun run precommit', { 
+        stdio: isQuiet ? ['pipe', 'pipe', 'pipe'] : 'inherit',
+        env
+      });
     } catch (error) {
       if (!isQuiet) console.error('❌ Precommit failed:', error);
       process.exit(1);
@@ -65,7 +75,10 @@ async function main() {
     if (scripts[name]) {
       if (!isQuiet) console.log(label);
       try {
-        execSync(`bun run ${name}`, { stdio: isQuiet ? ['pipe', 'pipe', 'pipe'] : 'inherit' });
+        execSync(`bun run ${name}`, { 
+          stdio: isQuiet ? ['pipe', 'pipe', 'pipe'] : 'inherit',
+          env
+        });
       } catch (error) {
         if (!isQuiet) console.error(`❌ ${name} failed:`, error);
         process.exit(1);
@@ -114,7 +127,7 @@ async function main() {
     }
     execSync('git add -A', {
       stdio: isQuiet ? ['pipe', 'pipe', 'pipe'] : 'inherit',
-      env: { ...process.env, GIT_SKIP_HOOKS: '1' },
+      env,
     });
 
     if (!isQuiet) {

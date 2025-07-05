@@ -17,6 +17,12 @@ async function main() {
     }
   }
 
+  // Create environment with QUIET propagation
+  const env = { 
+    ...process.env, 
+    ...(isQuiet && { QUIET: 'true' }) 
+  };
+
   try {
     if (!isQuiet) {
       console.log('🔨 Building project...');
@@ -24,12 +30,14 @@ async function main() {
     
     // Run bun build
     execSync('bun build src/cli.ts --outdir dist --target node --format esm', {
-      stdio: isQuiet ? ['pipe', 'pipe', 'pipe'] : 'inherit'
+      stdio: isQuiet ? ['pipe', 'pipe', 'pipe'] : 'inherit',
+      env
     });
     
     // Run build:types (which handles its own quiet mode)
     execSync('bun run build:types', {
-      stdio: 'inherit' // build:types script handles quiet mode internally
+      stdio: 'inherit', // build:types script handles quiet mode internally
+      env
     });
     
     if (!isQuiet) {
@@ -46,4 +54,4 @@ async function main() {
 main().catch(error => {
   console.error('❌ Script failed:', error);
   process.exit(1);
-}); 
+});
