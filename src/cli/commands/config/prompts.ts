@@ -1,7 +1,6 @@
 import { Command } from 'commander';
 import { VALID_TEMPLATES } from '../../../constants/prompts';
 import { ServiceFactory } from '../../../core/factory';
-import { Logger } from '../../../utils/logger';
 
 export const registerPromptsCommands = (configCommand: Command) => {
   configCommand
@@ -10,12 +9,13 @@ export const registerPromptsCommands = (configCommand: Command) => {
     .option('-n, --name <template>', 'Show contents of specific template')
     .option('-v, --verbose', 'Show detailed output')
     .action(async options => {
+      // Create services using the factory
+      const factory = ServiceFactory.getInstance();
+      const logger = factory.createLogger({
+        verbose: options.verbose,
+      });
+
       try {
-        // Create services using the factory
-        const factory = ServiceFactory.getInstance();
-        const logger = factory.createLogger({
-          verbose: options.verbose,
-        });
         const promptService = factory.createPromptService({
           verbose: options.verbose,
         });
@@ -70,7 +70,7 @@ export const registerPromptsCommands = (configCommand: Command) => {
           );
         }
       } catch (error) {
-        Logger.error('Failed to list prompt templates:', error);
+        logger.error('Failed to list prompt templates:', error);
         process.exit(1);
       }
     });

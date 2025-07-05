@@ -11,6 +11,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - **config list-prompt-templates**: New subcommand to list all available built-in prompt templates and view the contents of any template. This makes it easy for users to discover and inspect the prompt templates used for commit message generation.
 
+### Fixed
+
+- **config list-prompt-templates**: Fixed inconsistent logger usage where the catch block was using the static `Logger.error` method instead of the configured logger instance. This ensures error logging properly respects the `--verbose` flag configuration.
+
 ## [1.0.18] - 2025-07-05
 
 ## [1.0.17] - 2025-07-05
