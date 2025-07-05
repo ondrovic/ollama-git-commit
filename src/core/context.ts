@@ -29,6 +29,10 @@ export class ContextService implements IContextService {
     this.quiet = quiet;
   }
 
+  setQuiet(quiet: boolean): void {
+    this.quiet = quiet;
+  }
+
   async gatherContext(
     providers: ContextProvider[],
     options: { directory: string; diff?: string; verbose?: boolean },

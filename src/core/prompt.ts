@@ -16,6 +16,10 @@ export class PromptService implements IPromptService {
     this.quiet = quiet;
   }
 
+  setQuiet(quiet: boolean): void {
+    this.quiet = quiet;
+  }
+
   getSystemPrompt(promptFile: string, verbose: boolean, promptTemplate?: string): string {
     // Create prompt directory if it doesn't exist
     const promptDir = dirname(promptFile);

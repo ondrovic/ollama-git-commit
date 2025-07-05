@@ -55,6 +55,7 @@ export interface IPromptService {
   validatePrompt(prompt: string): { valid: boolean; errors: string[] };
   getPromptTemplates(): Record<string, string>;
   createPromptFromTemplate(templateName: string): string;
+  setQuiet(quiet: boolean): void;
 }
 
 export interface ILogger {
