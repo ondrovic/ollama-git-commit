@@ -1,25 +1,31 @@
 import { Command } from 'commander';
-import { TestCommand } from '../../../commands/test';
-import { OllamaService } from '../../../core/ollama';
+import { ServiceFactory } from '../../../core/factory';
 import { Logger } from '../../../utils/logger';
 
-export const registerModelTest = (testCommand: Command) => {
+export const registerModelTestCommand = (testCommand: Command) => {
   testCommand
     .command('model')
     .description('Test specific model on Ollama server')
-    .option('-m, --model <model>', 'Model to test')
+    .requiredOption('-m, --model <model>', 'Model name to test')
     .option('-H, --host <host>', 'Ollama server URL')
     .option('-v, --verbose', 'Show detailed output')
     .action(async options => {
-      const logger = new Logger();
-      logger.setVerbose(options.verbose);
-      logger.setDebug(options.verbose);
       try {
-        const ollamaService = new OllamaService(logger);
-        const test = new TestCommand(ollamaService, logger);
-        await test.testModel(options.model, options.host, options.verbose);
+        // Create services using the factory
+        const factory = ServiceFactory.getInstance();
+        const ollamaService = factory.createOllamaService({
+          verbose: options.verbose,
+        });
+
+        const success = await ollamaService.isModelAvailable(options.host, options.model);
+        if (success) {
+          Logger.success(`✅ Model '${options.model}' is available`);
+        } else {
+          Logger.error(`❌ Model '${options.model}' is not available`);
+          process.exit(1);
+        }
       } catch (error) {
-        Logger.error('Test failed:', error);
+        Logger.error('Model test failed:', error);
         process.exit(1);
       }
     });

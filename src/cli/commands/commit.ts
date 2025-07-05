@@ -1,6 +1,6 @@
 import { Command } from 'commander';
 import { CommitCommand } from '../../commands/commit';
-import { ConfigManager } from '../../core/config';
+import { ServiceFactory } from '../../core/factory';
 import { Logger } from '../../utils/logger';
 import { validateEnvironment } from '../../utils/validation';
 
@@ -22,24 +22,27 @@ export const registerCommitCommand = (program: Command) => {
     .option('--quiet', 'Suppress git command output')
     .action(async options => {
       try {
-        const logger = new Logger();
-        logger.setVerbose(options.verbose);
-        logger.setDebug(options.debug);
-
         await validateEnvironment();
 
-        const configManager = ConfigManager.getInstance(logger);
-        await configManager.initialize();
+        // Create services using the factory
+        const factory = ServiceFactory.getInstance();
+        const services = await factory.createCommitServices({
+          directory: options.directory,
+          quiet: options.quiet,
+          verbose: options.verbose,
+          debug: options.debug,
+        });
 
         const commitCommand = new CommitCommand(
           options.directory,
+          services.gitService,
+          services.ollamaService,
+          services.promptService,
+          services.logger,
           undefined,
-          undefined,
-          undefined,
-          logger,
-          undefined,
-          false, // quiet will be determined from config
+          options.quiet,
         );
+
         await commitCommand.execute({
           directory: options.directory,
           model: options.model,

@@ -2,19 +2,17 @@ import { MODELS } from '../constants/models';
 import { TROUBLE_SHOOTING } from '../constants/troubleshooting';
 import { getConfig } from '../core/config';
 import { ILogger, IOllamaService } from '../core/interfaces';
-import { OllamaService } from '../core/ollama';
 import type { ModelInfo } from '../types';
 import { formatFileSize } from '../utils/formatFileSize';
-import { Logger } from '../utils/logger';
 import { normalizeHost } from '../utils/url';
 
 export class ModelsCommand {
   private logger: ILogger;
   private ollamaService: IOllamaService;
 
-  constructor(ollamaService?: IOllamaService, logger: ILogger = Logger.getDefault()) {
+  constructor(ollamaService: IOllamaService, logger: ILogger) {
     this.logger = logger;
-    this.ollamaService = ollamaService || new OllamaService(this.logger, undefined, false);
+    this.ollamaService = ollamaService;
   }
 
   async listModels(host?: string, verbose = false): Promise<void> {
