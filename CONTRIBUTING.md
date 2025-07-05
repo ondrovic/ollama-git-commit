@@ -423,3 +423,5 @@ This invokes Prettier via npx, ensuring compatibility and avoiding Bun-specific 
 ## License
 
 By contributing to Ollama Git Commit, you agree that your contributions will be licensed under the project's MIT License.
+
+- When adding new config subcommands (e.g., under `src/cli/commands/config/`), update the README.md with usage and examples, and add an entry to CHANGELOG.md under [Unreleased].
