@@ -25,7 +25,7 @@ export const registerAllTestCommand = (testCommand: Command) => {
           Logger.error('❌ Connection test failed');
           process.exit(1);
         }
-        Logger.success('✅ Connection test passed');
+        Logger.success('Connection test passed');
 
         // Test model availability
         const modelSuccess = await ollamaService.isModelAvailable(
@@ -36,7 +36,7 @@ export const registerAllTestCommand = (testCommand: Command) => {
           Logger.error('❌ Model availability test failed');
           process.exit(1);
         }
-        Logger.success('✅ Model availability test passed');
+        Logger.success('Model availability test passed');
 
         // Test simple prompt
         const testPrompt = 'Write a commit message for: "Add new feature"';
@@ -46,7 +46,7 @@ export const registerAllTestCommand = (testCommand: Command) => {
           testPrompt,
           options.verbose,
         );
-        Logger.success('✅ Simple prompt test passed');
+        Logger.success('Simple prompt test passed');
 
         Logger.success('🎉 All tests passed!');
       } catch (error) {

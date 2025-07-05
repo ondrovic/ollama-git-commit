@@ -277,7 +277,7 @@ export class OllamaService implements IOllamaService {
         if (done) break;
       }
 
-      this.logger.success(`✅ Model '${_model}' pulled successfully.`);
+      this.logger.success(`Model '${_model}' pulled successfully.`);
     } catch (error: unknown) {
       this.logger.error(`❌ Failed to pull model '${_model}':`);
       if (typeof error === 'object' && error && 'message' in error) {

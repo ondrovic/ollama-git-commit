@@ -88,6 +88,7 @@ export interface ILogger {
 export interface IConfigManager {
   initialize(): Promise<void>;
   getConfig(): Promise<OllamaCommitConfig>;
+  getConfigByType(type: 'user' | 'local'): Promise<OllamaCommitConfig>;
   saveConfig(config: Partial<OllamaCommitConfig>, type?: 'user' | 'local'): Promise<void>;
   removeConfig(type: 'user' | 'local'): Promise<void>;
   getConfigFiles(): Promise<{

@@ -38,7 +38,7 @@ export const registerModelsCommands = (configCommand: Command) => {
 
         await configManager.saveConfig({ models }, options.type as 'user' | 'local');
 
-        Logger.success(`✅ Model '${name}' added successfully`);
+        Logger.success(`Model '${name}' added successfully`);
         Logger.info(`  Provider: ${provider}`);
         Logger.info(`  Model: ${model}`);
         Logger.info(`  Roles: ${roles.join(', ')}`);
@@ -71,7 +71,7 @@ export const registerModelsCommands = (configCommand: Command) => {
           { models: filteredModels },
           options.type as 'user' | 'local',
         );
-        Logger.success(`✅ Model '${name}' removed successfully`);
+        Logger.success(`Model '${name}' removed successfully`);
       } catch (error) {
         Logger.error('Failed to remove model:', error);
         process.exit(1);
@@ -80,43 +80,63 @@ export const registerModelsCommands = (configCommand: Command) => {
 
   modelsCommand
     .command('list')
-    .description('List all configured models')
-    .action(async () => {
+    .description('List all model configurations')
+    .option('-t, --type <type>', 'Configuration type (user, local)', 'user')
+    .action(async options => {
+      try {
+        const configManager = ConfigManager.getInstance();
+        await configManager.initialize();
+
+        const config = await configManager.getConfigByType(options.type as 'user' | 'local');
+        const models = config.models || [];
+
+        if (models.length === 0) {
+          Logger.info(`No models configured in ${options.type} configuration`);
+          return;
+        }
+
+        console.log(`📋 Configured Models (${options.type}):`);
+        models.forEach(model => {
+          console.log(`  ${model.name.padEnd(20)} - ${model.provider}/${model.model}`);
+          console.log(`    Roles: ${model.roles.join(', ')}`);
+        });
+      } catch (error) {
+        Logger.error('Failed to list models:', error);
+        process.exit(1);
+      }
+    });
+
+  modelsCommand
+    .command('set-primary')
+    .description('Set the primary model for commit generation')
+    .argument('<name>', 'Model name (must have chat role)')
+    .option('-t, --type <type>', 'Configuration type (user, local)', 'user')
+    .action(async (name, options) => {
       try {
         const configManager = ConfigManager.getInstance();
         await configManager.initialize();
 
         const config = await configManager.getConfig();
         const models = config.models || [];
+        const targetModel = models.find(m => m.name === name);
 
-        if (models.length === 0) {
-          Logger.info('No models configured');
-          return;
+        if (!targetModel) {
+          Logger.error(`❌ Model '${name}' not found`);
+          process.exit(1);
         }
 
-        console.log(
-          '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━',
-        );
-        console.log('📦 Configured Models');
-        console.log(
-          '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━',
-        );
-
-        models.forEach(model => {
-          const isEmbeddings = model.roles.includes('embed') ? ' 🔍' : '';
-          const isChat = model.roles.includes('chat') ? ' 💬' : '';
-          console.log(`  ${model.name}${isEmbeddings}${isChat}`);
-          console.log(`    Provider: ${model.provider}`);
-          console.log(`    Model: ${model.model}`);
-          console.log(`    Roles: ${model.roles.join(', ')}`);
-          console.log('');
-        });
-
-        if (config.embeddingsProvider) {
-          console.log(`🔍 Embeddings Provider: ${config.embeddingsProvider}`);
+        if (!targetModel.roles.includes('chat')) {
+          Logger.error(`❌ Model '${name}' does not have chat role`);
+          process.exit(1);
         }
+
+        await configManager.saveConfig(
+          { model: targetModel.model },
+          options.type as 'user' | 'local',
+        );
+        Logger.success(`Primary model set to '${name}' (${targetModel.model})`);
       } catch (error) {
-        Logger.error('Failed to list models:', error);
+        Logger.error('Failed to set primary model:', error);
         process.exit(1);
       }
     });
@@ -149,7 +169,7 @@ export const registerModelsCommands = (configCommand: Command) => {
           { embeddingsProvider: name },
           options.type as 'user' | 'local',
         );
-        Logger.success(`✅ Embeddings provider set to '${name}'`);
+        Logger.success(`Embeddings provider set to '${name}'`);
       } catch (error) {
         Logger.error('Failed to set embeddings provider:', error);
         process.exit(1);

@@ -8,7 +8,7 @@ export const registerSetCommands = (configCommand: Command) => {
     .command('set <key> <value>')
     .description('Set a configuration value')
     .option('-t, --type <type>', 'Config type (user|local)', 'user')
-    .option('--all', 'Update all active configs (user and local if both exist)')
+    .option('-a, --all', 'Update all active configs (user and local if both exist)')
     .action(
       async (key: string, value: string, options: { type: 'user' | 'local'; all?: boolean }) => {
         try {
@@ -37,21 +37,20 @@ export const registerSetCommands = (configCommand: Command) => {
 
           if (options.all && activeConfigs.length > 1) {
             // Update all active configs
-            console.log(`🔧 Updating ${activeConfigs.length} active configuration files...`);
-
             for (const configFile of activeConfigs) {
-              try {
-                const configToUpdate = createConfigUpdate(key, parsedValue);
-                await configManager.saveConfig(configToUpdate, configFile.type);
-                console.log(`✅ Updated ${configFile.type} config (${configFile.path})`);
-              } catch (error) {
-                Logger.error(`Failed to update ${configFile.type} config:`, error);
-              }
+              const configToUpdate = createConfigUpdate(key, parsedValue);
+              await configManager.saveConfig(configToUpdate, configFile.type);
+              Logger.success(
+                `Updated ${configFile.type} config: ${key} = ${JSON.stringify(parsedValue)}`,
+              );
             }
           } else {
             // Update single config
             const configToUpdate = createConfigUpdate(key, parsedValue);
             await configManager.saveConfig(configToUpdate, options.type);
+            Logger.success(
+              `Updated ${options.type} config: ${key} = ${JSON.stringify(parsedValue)}`,
+            );
           }
 
           // Show the updated configuration

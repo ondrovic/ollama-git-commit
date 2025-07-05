@@ -19,13 +19,17 @@ export const registerModelTestCommand = (testCommand: Command) => {
 
         const success = await ollamaService.isModelAvailable(options.host, options.model);
         if (success) {
-          Logger.success(`✅ Model '${options.model}' is available`);
+          Logger.success(`Model ${options.model} is available`);
         } else {
-          Logger.error(`❌ Model '${options.model}' is not available`);
+          Logger.error(`Model '${options.model}' is not available`);
           process.exit(1);
         }
       } catch (error) {
-        Logger.error('Model test failed:', error);
+        if (error instanceof Error) {
+          Logger.error(`Error testing model: ${error.message}`);
+        } else {
+          Logger.error(`Error testing model: ${String(error)}`);
+        }
         process.exit(1);
       }
     });

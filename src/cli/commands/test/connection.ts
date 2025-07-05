@@ -18,7 +18,7 @@ export const registerConnectionTestCommand = (testCommand: Command) => {
 
         const success = await ollamaService.testConnection(options.host, options.verbose);
         if (success) {
-          Logger.success('✅ Connection test passed');
+          Logger.success('Connection test passed');
         } else {
           Logger.error('❌ Connection test failed');
           process.exit(1);
