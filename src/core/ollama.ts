@@ -33,15 +33,15 @@ export class OllamaService implements IOllamaService {
     const formattedHost = normalizeHost(host);
 
     if (verbose) {
-      this.logger.info(`Generating commit message with ${_model}...`);
-      this.logger.info(`Ollama host: ${formattedHost}`);
-      this.logger.info(`Prompt length: ${prompt.length} characters`);
+      console.log(`ℹ️ Generating commit message with ${_model}...`);
+      console.log(`ℹ️ Ollama host: ${formattedHost}`);
+      console.log(`ℹ️ Prompt length: ${prompt.length} characters`);
+      // Add a small delay to ensure logger messages are displayed before spinner starts
+      await new Promise(resolve => setTimeout(resolve, 100));
     }
 
-    // Show spinner for non-verbose mode
-    if (!verbose) {
-      this.spinner.start('🤖 Generating commit message');
-    }
+    // Show spinner for visual feedback (both verbose and non-verbose modes)
+    this.spinner.start('🤖 Generating commit message');
 
     try {
       const payload = {
@@ -71,9 +71,7 @@ export class OllamaService implements IOllamaService {
         signal: AbortSignal.timeout(config.timeouts.generation),
       });
 
-      if (!verbose) {
-        this.spinner.stop();
-      }
+      this.spinner.stop();
 
       if (!response.ok) {
         throw new Error(`HTTP ${response.status}: ${response.statusText}`);
@@ -110,9 +108,7 @@ export class OllamaService implements IOllamaService {
 
       return message;
     } catch (error: unknown) {
-      if (!verbose) {
-        this.spinner.stop();
-      }
+      this.spinner.stop();
 
       if (
         typeof error === 'object' &&

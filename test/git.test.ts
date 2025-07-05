@@ -1,4 +1,4 @@
-import { describe, expect, test } from 'bun:test';
+import { describe, expect, spyOn, test } from 'bun:test';
 import * as path from 'path';
 import { GitService } from '../src/core/git';
 import { Logger } from '../src/utils/logger';
@@ -563,6 +563,76 @@ index 1234567..abcdefg 100644
       expect(gitService.getBranchName()).toBe('main');
       expect(gitService.getLastCommitHash()).toBe('abc123');
       expect(gitService.getRepositoryRoot()).toBe('/path/to/repo');
+    });
+
+    test('should suppress change statistics in quiet mode', () => {
+      const consoleSpy = spyOn(console, 'log').mockImplementation(() => {});
+      const mockLogger = new Logger();
+      const loggerSpy = spyOn(mockLogger, 'info').mockImplementation(() => {});
+      
+      const mockExecSync: any = (command: string) => {
+        if (command.includes('git diff --cached') && !command.includes('--name-status') && !command.includes('--stat')) {
+          return 'diff --git a/test.js b/test.js\nindex 123..456 100644\n--- a/test.js\n+++ b/test.js\n@@ -1 +1,2 @@\n+new line';
+        }
+        if (command.includes('git diff --cached --name-status')) {
+          return 'M\ttest.js';
+        }
+        if (command.includes('git diff --cached --stat')) {
+          return ' test.js | 1 +\n 1 file changed, 1 insertion(+)\n';
+        }
+        if (command.includes('git rev-parse --git-dir')) {
+          return '.git';
+        }
+        return '';
+      };
+
+      // Test with quiet mode enabled
+      const quietGitService = new GitService(process.cwd(), mockLogger, true, mockExecSync);
+      quietGitService.getChanges(true); // verbose = true, but quiet = true
+      
+      // Should not display change statistics in quiet mode
+      expect(consoleSpy).not.toHaveBeenCalledWith('   Files changed: 1');
+      expect(consoleSpy).not.toHaveBeenCalledWith('   Insertions: 1');
+      expect(consoleSpy).not.toHaveBeenCalledWith('   Deletions: 0');
+      expect(loggerSpy).not.toHaveBeenCalledWith('Change Statistics:');
+      
+      consoleSpy.mockRestore();
+      loggerSpy.mockRestore();
+    });
+
+    test('should display change statistics in non-quiet mode', () => {
+      const consoleSpy = spyOn(console, 'log').mockImplementation(() => {});
+      const mockLogger = new Logger();
+      const loggerSpy = spyOn(mockLogger, 'info').mockImplementation(() => {});
+      
+      const mockExecSync: any = (command: string) => {
+        if (command.includes('git diff --cached') && !command.includes('--name-status') && !command.includes('--stat')) {
+          return 'diff --git a/test.js b/test.js\nindex 123..456 100644\n--- a/test.js\n+++ b/test.js\n@@ -1 +1,2 @@\n+new line';
+        }
+        if (command.includes('git diff --cached --name-status')) {
+          return 'M\ttest.js';
+        }
+        if (command.includes('git diff --cached --stat')) {
+          return ' test.js | 1 +\n 1 file changed, 1 insertion(+)\n';
+        }
+        if (command.includes('git rev-parse --git-dir')) {
+          return '.git';
+        }
+        return '';
+      };
+
+      // Test with quiet mode disabled
+      const nonQuietGitService = new GitService(process.cwd(), mockLogger, false, mockExecSync);
+      nonQuietGitService.getChanges(true); // verbose = true, quiet = false
+      
+      // Should display change statistics in non-quiet mode
+      expect(consoleSpy).toHaveBeenCalledWith('   Files changed: 1');
+      expect(consoleSpy).toHaveBeenCalledWith('   Insertions: 1');
+      expect(consoleSpy).toHaveBeenCalledWith('   Deletions: 0');
+      expect(loggerSpy).toHaveBeenCalledWith('Change Statistics:');
+      
+      consoleSpy.mockRestore();
+      loggerSpy.mockRestore();
     });
   });
 });

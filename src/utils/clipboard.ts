@@ -64,6 +64,8 @@ export async function copyToClipboard(text: string): Promise<void> {
   }
 
   Logger.error('No clipboard tool found (pbcopy, xclip, wl-copy, or clip)');
+  // Note: This is a utility function, so we'll keep the static logger
+  // but ensure it's called before any spinner operations
   Logger.info('You can manually copy the commit message above');
 }
 

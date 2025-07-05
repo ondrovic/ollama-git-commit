@@ -78,6 +78,16 @@ You can view the status of all workflows in the "Actions" tab of the GitHub repo
 - 🔄 **Smart Auto-Staging**: The `--auto-stage` flag runs the full staging script (`bun run stage`) which formats, lints, tests, builds type declarations, and stages files, then generates an AI commit message. If the staging script is not available, it falls back to simple `git add -A`. No commit is made - user must copy and run the git commit command manually.
 - 🤖 **Intelligent Auto-Commit**: The `--auto-commit` flag runs the full staging script, generates a commit message, and if approved, automatically commits and pushes to the remote repository. If the staging script is not available, it falls back to simple `git add -A`. Staging is only done once, before message generation.
 - 🏠 **Repository Compatibility**: Works seamlessly with any repository, automatically adapting to available scripts and workflows. The tool detects whether it's running in the ollama-git-commit repository or external repositories and adjusts its behavior accordingly. Scripts are only executed if they exist in the target repository's package.json.
+- 🔍 **Enhanced Git Analysis**: Improved handling of complex git operations including renamed and copied files
+  - Proper parsing of git status output for renamed files (R100 status) with clear old → new path display
+  - Support for copied files (C100 status) with appropriate action labeling
+  - Enhanced error handling and debug logging for failed git operations
+  - Robust parsing that handles malformed git output gracefully
+- ✅ **Configuration Validation**: Intelligent validation for configuration commands
+  - Validates configuration keys before setting values to prevent invalid configurations
+  - Provides smart suggestions for similar keys when invalid keys are provided
+  - Detects common typos and suggests corrections (e.g., "quite" → "quiet")
+  - Limits suggestions to 5 options to avoid overwhelming users
 
 ## 🚀 Installation
 
@@ -400,7 +410,7 @@ ollama-git-commit config remove user
 # or
 ollama-git-commit config remove local
 
-# `config set <key> <value>`: Set a configuration value. Example:
+# `config set <key> <value>`: Set a configuration value with validation. Example:
 ollama-git-commit config set model llama3
 ollama-git-commit config set timeouts.connection 5000
 ollama-git-commit config set context code,diff,terminal
@@ -413,6 +423,39 @@ ollama-git-commit config models add <name> ollama <model> --roles chat,edit,embe
 ollama-git-commit config models remove <name>
 ollama-git-commit config models list
 ollama-git-commit config models set-embeddings <name>
+```
+
+### Configuration Validation
+
+The `config set` command now includes intelligent validation to help you configure the tool correctly:
+
+- **Key Validation**: Validates configuration keys before setting values to prevent invalid configurations
+- **Smart Suggestions**: Provides helpful suggestions for similar keys when an invalid key is provided
+- **Common Typo Detection**: Automatically detects and suggests corrections for common typos (e.g., "quite" → "quiet")
+- **Limited Suggestions**: Shows up to 5 suggestions to avoid overwhelming users
+
+**Example usage with validation:**
+
+```bash
+# Valid key - works as expected
+ollama-git-commit config set model llama3
+
+# Invalid key - shows helpful suggestions
+ollama-git-commit config set quite true
+# Output:
+# ❌ Invalid configuration key: "quite"
+# 💡 Did you mean one of these?
+#    quiet
+#    useEmojis
+#    autoCommit
+#    autoStage
+#    autoModel
+#
+# 💡 Run 'ollama-git-commit config keys' to see all available keys.
+
+# List all available configuration keys
+ollama-git-commit config keys
+# Shows all available keys with descriptions and default values
 ```
 
 ### Configuration Sources
@@ -927,6 +970,29 @@ If you set the `model` field to an empty or invalid value, the auto-sync logic w
 ### 1Password SSH Agent
 
 If you encounter issues with auto-commit and 1Password SSH agent, make sure the 1Password CLI is running and SSH_AUTH_SOCK is set in your environment. The tool runs `git commit` as a foreground process with inherited environment, so interactive authentication should work as expected.
+
+### Verbose Output and Logging
+
+The tool provides comprehensive logging for debugging and troubleshooting:
+
+- **Verbose Mode**: Use `-v` flag or set `"verbose": true` in config to see detailed information about context gathering, model selection, and API calls
+- **Debug Mode**: Set `"debug": true` in config for additional debug information
+- **Logger Consistency**: All services use consistent logger instances with proper verbosity settings
+- **Spinner Timing**: Logger messages are properly timed to avoid interference with progress spinners
+- **Quiet Mode**: Use `--quiet` flag or set `"quiet": true` to suppress git command output while preserving essential status messages
+
+For troubleshooting configuration or connection issues, use the debug commands:
+
+```bash
+# Show detailed configuration information
+ollama-git-commit config debug
+
+# Test connection to Ollama server
+ollama-git-commit test connection
+
+# Test specific model
+ollama-git-commit test model -m your-model-name
+```
 
 ## Technical Details
 

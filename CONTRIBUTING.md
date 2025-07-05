@@ -72,6 +72,14 @@ To help ensure code quality and consistency, the project provides a `precommit` 
 - `precommit`: Manual script for lint, test, and type checks before commit (recommended to run or hook before every commit)
 - `stage`: Main staging script for formatting, linting, and staging
 
+### Recent Enhancements
+
+The project has recently added several improvements to enhance user experience and code quality:
+
+- **Configuration Validation**: The `config set` command now validates keys and provides smart suggestions for typos
+- **Enhanced Git Analysis**: Improved handling of renamed and copied files with better error handling
+- **Comprehensive Testing**: Added extensive test coverage for new features including git rename scenarios
+
 ## Release Workflow
 
 We use an automated release process for publishing to NPM. Here's the complete workflow:

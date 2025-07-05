@@ -153,12 +153,12 @@ export class GitService implements IGitService {
 
       diff = unstagedDiff;
       staged = false;
-      if (verbose) {
-        Logger.info('Using unstaged changes for commit message generation');
-        Logger.warn("Note: You'll need to stage these changes before committing");
+      if (verbose && !this.quiet) {
+        this.logger.info('Using unstaged changes for commit message generation');
+        this.logger.warn("Note: You'll need to stage these changes before committing");
       }
-    } else if (verbose) {
-      Logger.info('Using staged changes for commit message generation');
+    } else if (verbose && !this.quiet) {
+      this.logger.info('Using staged changes for commit message generation');
     }
 
     if (!diff.trim()) {
@@ -168,8 +168,8 @@ export class GitService implements IGitService {
     // Get stats
     const stats = this.getChangeStats(staged);
 
-    if (verbose && stats.files > 0) {
-      Logger.info('Change Statistics:');
+    if (verbose && !this.quiet && stats.files > 0) {
+      this.logger.info('Change Statistics:');
       console.log(`   Files changed: ${stats.files}`);
       console.log(`   Insertions: ${stats.insertions}`);
       console.log(`   Deletions: ${stats.deletions}`);
