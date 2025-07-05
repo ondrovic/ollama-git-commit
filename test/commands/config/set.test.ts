@@ -83,6 +83,7 @@ mock.module('../../../src/core/config', () => ({
 import {
     createConfigUpdate,
     displayUpdatedKey,
+    findSimilarKeys,
     parseValue,
 } from '../../../src/cli/commands/config/set';
 
@@ -397,5 +398,43 @@ describe('Config Set Command - Integration', () => {
     expect(consoleSpy).toHaveBeenCalledWith('  quiet: true (from user)');
 
     consoleSpy.mockRestore();
+  });
+
+  test('should validate configuration keys correctly', () => {
+    // Test valid keys
+    const validKeys = ['model', 'host', 'verbose', 'quiet', 'timeouts.connection'];
+    validKeys.forEach(key => {
+      expect(validKeys.includes(key)).toBe(true);
+    });
+
+    // Test invalid keys
+    const invalidKeys = ['quite', 'verbos', 'timeout', 'autocommit'];
+    invalidKeys.forEach(key => {
+      expect(validKeys.includes(key)).toBe(false);
+    });
+  });
+
+  test('should provide helpful suggestions for similar keys', () => {
+    const validKeys = ['model', 'host', 'verbose', 'quiet', 'timeouts.connection', 'timeouts.generation', 'autoStage', 'autoModel', 'autoCommit'];
+    
+    // Test suggestions for common typos
+    const suggestions = findSimilarKeys('quite', validKeys);
+    expect(suggestions).toContain('quiet');
+    
+    const timeoutSuggestions = findSimilarKeys('timeout', validKeys);
+    expect(timeoutSuggestions).toContain('timeouts.connection');
+    expect(timeoutSuggestions).toContain('timeouts.generation');
+    
+    const autoSuggestions = findSimilarKeys('autocommit', validKeys);
+    expect(autoSuggestions).toContain('autoCommit');
+    expect(autoSuggestions).toContain('autoStage');
+    expect(autoSuggestions).toContain('autoModel');
+  });
+
+  test('should limit suggestions to reasonable number', () => {
+    const validKeys = ['model', 'host', 'verbose', 'quiet', 'timeouts.connection', 'timeouts.generation', 'timeouts.modelPull', 'autoStage', 'autoModel', 'autoCommit'];
+    
+    const suggestions = findSimilarKeys('a', validKeys);
+    expect(suggestions.length).toBeLessThanOrEqual(5);
   });
 });

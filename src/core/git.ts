@@ -227,15 +227,41 @@ export class GitService implements IGitService {
       let versionChanges = '';
 
       lines.forEach(line => {
-        const [status, ...pathParts] = line.split('\t');
-        const path = pathParts.join('\t');
+        const parts = line.split('\t');
+        const status = parts[0];
 
-        if (path === '.git' || path.startsWith('.git/') || path.startsWith('.git\\')) {
+        if (!status) return;
+
+        // Skip .git directory changes
+        if (
+          parts.some(
+            part => part === '.git' || part.startsWith('.git/') || part.startsWith('.git\\'),
+          )
+        ) {
           return;
         }
 
         let action = 'modified';
-        if (status) {
+        let displayPath = '';
+        let diffPath = ''; // Path to use for git diff command
+
+        // Handle different git status codes
+        if (status.startsWith('R') && parts.length >= 3) {
+          // Renamed file: R100	old_path	new_path
+          action = 'renamed';
+          const oldPath = parts[1] || '';
+          const newPath = parts[2] || '';
+          displayPath = `${oldPath} → ${newPath}`;
+          diffPath = newPath;
+        } else if (status.startsWith('C') && parts.length >= 3) {
+          // Copied file: C100	original_path	new_path
+          action = 'copied';
+          const originalPath = parts[1] || '';
+          const newPath = parts[2] || '';
+          displayPath = `${originalPath} → ${newPath}`;
+          diffPath = newPath;
+        } else {
+          // Regular file operations: A, D, M, etc.
           switch (status.charAt(0)) {
             case 'A':
               action = 'added';
@@ -246,19 +272,19 @@ export class GitService implements IGitService {
             case 'M':
               action = 'modified';
               break;
-            case 'R':
-              action = 'renamed';
-              break;
-            case 'C':
-              action = 'copied';
-              break;
+            default:
+              action = 'modified';
           }
+          displayPath = parts[1] || '';
+          diffPath = parts[1] || '';
         }
 
         let changeSummary = '';
-        if (action !== 'deleted') {
+        if (action !== 'deleted' && diffPath) {
           try {
-            const fileCommand = staged ? `git diff --cached "${path}"` : `git diff "${path}"`;
+            const fileCommand = staged
+              ? `git diff --cached "${diffPath}"`
+              : `git diff "${diffPath}"`;
             const fileDiff = this.execForAnalysis(fileCommand);
 
             if (fileDiff) {
@@ -274,21 +300,25 @@ export class GitService implements IGitService {
               }
               changeSummary += ')';
 
-              const versionInfo = this.extractVersionChanges(path, fileDiff);
+              // For version extraction, use the display path (might be old path for renames)
+              const versionInfo = this.extractVersionChanges(diffPath, fileDiff);
               if (versionInfo) {
                 versionChanges += `${versionInfo}\n`;
               }
             }
-          } catch {
+          } catch (error) {
             // File diff failed, continue without details
+            this.logger.debug(`Failed to get diff for ${diffPath}:`, error);
           }
         }
 
-        detailedInfo += `📄 ${path} (${action}) ${changeSummary}\n`;
+        detailedInfo += `📄 ${displayPath} (${action}) ${changeSummary}\n`;
 
-        if (verbose && action !== 'deleted') {
+        if (verbose && action !== 'deleted' && diffPath) {
           try {
-            const fileCommand = staged ? `git diff --cached "${path}"` : `git diff "${path}"`;
+            const fileCommand = staged
+              ? `git diff --cached "${diffPath}"`
+              : `git diff "${diffPath}"`;
             const fileDiff = this.execForAnalysis(fileCommand);
 
             if (fileDiff) {
@@ -304,8 +334,9 @@ export class GitService implements IGitService {
                 });
               }
             }
-          } catch {
+          } catch (error) {
             // Error getting file diff, continue
+            this.logger.debug(`Failed to get verbose diff for ${diffPath}:`, error);
           }
         }
       });
@@ -317,7 +348,8 @@ export class GitService implements IGitService {
       }
 
       return result;
-    } catch {
+    } catch (error) {
+      this.logger.debug('Error analyzing file changes:', error);
       return '📁 Error analyzing file changes';
     }
   }
