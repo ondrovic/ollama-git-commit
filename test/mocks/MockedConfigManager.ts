@@ -1,12 +1,12 @@
 import { CONFIGURATIONS } from '../../src/constants/configurations';
 import { IConfigManager, ILogger } from '../../src/core/interfaces';
 import {
-  ActiveFile,
-  ConfigSources,
-  ContextProvider,
-  ModelConfig,
-  ModelRole,
-  OllamaCommitConfig,
+    ActiveFile,
+    ConfigSources,
+    ContextProvider,
+    ModelConfig,
+    ModelRole,
+    OllamaCommitConfig,
 } from '../../src/types';
 
 export class MockedConfigManager implements IConfigManager {
@@ -125,6 +125,7 @@ export class MockedConfigManager implements IConfigManager {
       autoStage: 'mock',
       autoModel: 'mock',
       autoCommit: 'mock',
+      quiet: 'mock',
       promptFile: 'mock',
       promptTemplate: 'mock',
       useEmojis: 'mock',

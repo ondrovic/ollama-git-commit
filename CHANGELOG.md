@@ -7,11 +7,76 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **Enhanced Quiet Mode Support**: Improved quiet mode configuration handling across all services
+  - Added `setQuiet` method to Context Service and Prompt Service interfaces
+  - Enhanced quiet mode propagation from configuration to all service layers
+  - Improved quiet mode consistency across git operations and context gathering
+
+### Changed
+
+- **Git Service Output Handling**: Optimized stdio configuration for better git command output management
+  - Modified non-quiet mode to use `['pipe', 'pipe', 'pipe']` for consistent output capture
+  - Enhanced error handling for stdout/stderr capture in git operations
+  - Improved output display logic to maintain git behavior while enabling programmatic access
+- **Repository Compatibility**: Enhanced staging scripts to work with any repository, not just ollama-git-commit
+  - Added repository detection to use different workflows for internal vs external repositories
+  - Implemented script existence checks before execution to prevent failures
+  - Added graceful fallbacks when target repositories lack expected scripts
+
+### Fixed
+
+- **Git Service stdio Configuration**: Fixed critical issue in non-quiet mode that was breaking git command behavior
+  - **Loss of stderr**: Fixed issue where important warnings and error messages were captured but discarded
+  - **Degraded user experience**: Fixed broken interactive commands, real-time output, and stripped formatting/colors
+  - **Excessive noise**: Fixed internal git commands printing unwanted output
+  - **Hidden errors**: Removed overly aggressive `.git` line filtering that could hide critical diagnostic messages
+  - **Solution**: Non-quiet mode now uses `stdio: ['pipe', 'pipe', 'pipe']` to capture output for programmatic use while manually displaying it to the user, preserving natural git behavior
+- **Repository Script Compatibility**: Fixed issues when running in repositories without expected scripts
+  - **Staging Script Failures**: Fixed `scripts/stage.ts` and `scripts/precommit.ts` failing when target repositories lack `lint:fix`, `build:types`, or other scripts
+  - **Context Service Errors**: Fixed `ContextService.detectProblems()` failing when target repositories don't have `lint` or `build` scripts
+  - **Script Existence Checks**: Added robust checks to verify scripts exist before execution
+  - **Graceful Degradation**: Implemented fallback behavior when scripts are missing
+
+### Technical Details
+
+- Added `setQuiet` method to IPromptService interface and PromptService implementation
+- Enhanced ContextService with `setQuiet` method for dynamic quiet mode updates
+- Updated commit command to properly propagate quiet settings to all service layers
+- Optimized GitService.execCommand to use appropriate `stdio` configuration for each mode:
+  - Quiet mode: `stdio: ['pipe', 'pipe', 'pipe']` (captures output without display)
+  - Non-quiet mode: `stdio: ['pipe', 'pipe', 'pipe']` (captures output for programmatic use and manually displays to user)
+- **Auto-commit Implementation**: Uses `spawn` with `stdio: 'inherit'` for user-facing git commands (commit, push) to preserve natural git behavior, colors, and interactive prompts
+- **Repository Detection Logic**: Added package.json name checking to identify ollama-git-commit repository vs external repositories
+- **Script Validation**: Implemented package.json parsing to check script availability before execution
+- **Context Service Robustness**: Enhanced `detectProblems()` method to read available scripts from package.json before attempting execution
+- Updated test cases to reflect new stdio configuration expectations
+- Enhanced MockedConfigManager to include quiet property for test consistency
+
+## Release Process
+
+### Version Management
+
+As of version 1.0.4, we've streamlined our version management:
+
+- **Single source of truth**: `package.json` is the only place version is stored
+- **Automatic version detection**: `metadata.ts` uses `npm_package_version` with smart fallbacks
+- **Simplified release process**: One command handles everything
+
+### Automated Publishing
+
+The project uses GitHub Actions for automated NPM publishing:
+
+- **Triggered by git tags**: When you run `bun run release`, a tag is created and pushed
+- **Automatic validation**: Ensures version doesn't already exist on NPM
+- **Build and test**: Runs full test suite before publishing
+- **Zero manual intervention**: Everything happens automatically
+
 ## [1.0.15] - 2025-07-04
 
 ### Added
 
-- New `stage-and-commit` script that is a shortcut for running the tool with `--auto-commit` (runs the full staging script, generates a commit message, and commits the currently staged files).
 - Enhanced `--auto-stage` flag now runs the full staging script, generates an AI commit message, and shows an interactive prompt, but requires manual commit (user must copy and run the git commit command).
 - Enhanced `--auto-commit` flag now runs the full staging script, generates an AI commit message, and if the user approves with 'y', automatically commits with the AI-generated message and pushes to the remote repository. Staging is only done once, before message generation.
 

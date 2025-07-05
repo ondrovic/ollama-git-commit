@@ -1,35 +1,64 @@
 #!/usr/bin/env bun
-import { readFileSync, writeFileSync, ensureDirSync } from 'fs-extra';
+
+import { mkdir, writeFile } from 'fs/promises';
 import { join } from 'path';
+import { ConfigManager } from '../src/core/config';
 
-try {
-  // Read version from package.json
-  const packageJson = JSON.parse(readFileSync('package.json', 'utf-8'));
-  const version = packageJson.version;
-
-  if (!version) {
-    throw new Error('No version found in package.json');
+async function main() {
+  let isQuiet = process.env.QUIET === 'true';
+  
+  if (!isQuiet) {
+    try {
+      const configManager = ConfigManager.getInstance();
+      const config = await configManager.getConfig();
+      isQuiet = config.quiet;
+    } catch {
+      // Fallback to false if config can't be read
+      isQuiet = false;
+    }
   }
 
-  // Ensure the generated directory exists
-  const generatedDir = join('src', 'generated');
-  console.log(`📁 Creating directory: ${generatedDir}`);
-  ensureDirSync(generatedDir);
+  try {
+    // Read package.json to get version
+    const packageJson = JSON.parse(await Bun.file('package.json').text());
+    const version = packageJson.version;
 
-  // Generate version file
-  const versionFileContent = `// Auto-generated file - do not edit manually
-// This file is generated during the build process from package.json
+    // Create generated directory
+    const generatedDir = join(process.cwd(), 'src', 'generated');
+    
+    if (!isQuiet) {
+      console.log(`📁 Creating directory: ${generatedDir}`);
+    }
+    
+    await mkdir(generatedDir, { recursive: true });
+
+    // Generate version file content
+    const versionContent = `// Auto-generated file - do not edit manually
 export const VERSION = '${version}';
+export const BUILD_DATE = '${new Date().toISOString()}';
 `;
 
-  // Write to src/generated directory
-  const outputPath = join('src', 'generated', 'version.ts');
-  console.log(`📝 Writing version file: ${outputPath}`);
-  writeFileSync(outputPath, versionFileContent);
+    // Write version file
+    const versionFilePath = join(generatedDir, 'version.ts');
+    
+    if (!isQuiet) {
+      console.log(`📝 Writing version file: ${versionFilePath}`);
+    }
+    
+    await writeFile(versionFilePath, versionContent);
 
-  console.log(`✅ Generated version file: ${outputPath} (v${version})`);
-} catch (error) {
-  console.error('❌ Failed to generate version file:', error.message);
-  console.error('Stack trace:', error.stack);
-  process.exit(1);
+    if (!isQuiet) {
+      console.log(`✅ Generated version file: ${versionFilePath} (v${version})`);
+    }
+  } catch (error) {
+    if (error instanceof Error) {
+      console.error('❌ Failed to generate version file:', error.message);
+    }
+    process.exit(1);
+  }
 }
+
+main().catch(error => {
+  console.error('❌ Script failed:', error);
+  process.exit(1);
+});

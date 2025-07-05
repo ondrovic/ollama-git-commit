@@ -9,9 +9,15 @@ import { ILogger, IOllamaService, IPromptService } from './interfaces';
 export class PromptService implements IPromptService {
   private readonly defaultPrompt = PROMPTS.DEFAULT;
   private logger: ILogger;
+  private quiet: boolean;
 
-  constructor(logger: ILogger = Logger.getDefault()) {
+  constructor(logger: ILogger = Logger.getDefault(), quiet = false) {
     this.logger = logger;
+    this.quiet = quiet;
+  }
+
+  setQuiet(quiet: boolean): void {
+    this.quiet = quiet;
   }
 
   getSystemPrompt(promptFile: string, verbose: boolean, promptTemplate?: string): string {
@@ -142,7 +148,7 @@ IMPORTANT: Maintain a professional, factual tone throughout. Focus on what was c
     }
 
     try {
-      const contextService = new ContextService(this.logger);
+      const contextService = new ContextService(this.logger, this.quiet);
       const contextData = await contextService.gatherContext(contextProviders, {
         directory,
         diff,

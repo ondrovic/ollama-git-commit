@@ -15,7 +15,8 @@ export interface IGitService {
   getLastCommitHash(): string;
   getRepositoryRoot(): string;
   isGitRepository(): boolean;
-  execCommand(command: string): string;
+  execCommand(command: string, quiet?: boolean): string;
+  setQuiet(quiet: boolean): void;
 }
 
 export interface IOllamaService {
@@ -54,6 +55,7 @@ export interface IPromptService {
   validatePrompt(prompt: string): { valid: boolean; errors: string[] };
   getPromptTemplates(): Record<string, string>;
   createPromptFromTemplate(templateName: string): string;
+  setQuiet(quiet: boolean): void;
 }
 
 export interface ILogger {

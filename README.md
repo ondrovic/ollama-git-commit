@@ -55,6 +55,7 @@ You can view the status of all workflows in the "Actions" tab of the GitHub repo
 - 🐛 **Debug Mode**: Comprehensive troubleshooting and verbose output
 - 🎨 **Emoji-Rich**: Fun, expressive commit messages with emojis
 - 🎨 **Emoji Control**: Choose whether commit messages include emojis using the `useEmojis` config option
+- 🔇 **Quiet Mode**: Suppress git command output using the `--quiet` flag or `quiet` config option
 - ⚡ **Fast**: Optimized git diff parsing and API calls
 - 🔧 **Robust**: Enhanced error handling and validation mechanisms
 - 🎭 **Template System**: Multiple prompt templates (conventional, simple, detailed)
@@ -76,6 +77,7 @@ You can view the status of all workflows in the "Actions" tab of the GitHub repo
 - ⚡ **Auto-Commit with SSH Agent Support**: Auto-commit works seamlessly with 1Password SSH agent and other SSH agents, as long as the agent is running and the environment is inherited. If you use 1Password, ensure the 1Password CLI is running and SSH_AUTH_SOCK is set.
 - 🔄 **Smart Auto-Staging**: The `--auto-stage` flag runs the full staging script (`bun run stage`) which formats, lints, tests, builds type declarations, and stages files, then generates an AI commit message. If the staging script is not available, it falls back to simple `git add -A`. No commit is made - user must copy and run the git commit command manually.
 - 🤖 **Intelligent Auto-Commit**: The `--auto-commit` flag runs the full staging script, generates a commit message, and if approved, automatically commits and pushes to the remote repository. If the staging script is not available, it falls back to simple `git add -A`. Staging is only done once, before message generation.
+- 🏠 **Repository Compatibility**: Works seamlessly with any repository, automatically adapting to available scripts and workflows. The tool detects whether it's running in the ollama-git-commit repository or external repositories and adjusts its behavior accordingly. Scripts are only executed if they exist in the target repository's package.json.
 
 ## 🚀 Installation
 
@@ -152,17 +154,16 @@ When contributing to the project, use the following workflow:
 
    - `precommit` (script): Run before committing. Lints, tests, and checks types to catch errors that could break the release script.
    - `stage` (script): The main project workflow script for formatting, linting, building type declarations, and staging as part of the release/development workflow.
-   - `stage-and-commit` (script): Formats, lints, tests, stages files, and then auto-commits with an AI-generated message using the tool.
 
 4. **Commit your changes:**
 
    ```bash
-   # Option 1: Stage files only (format, lint, build types, stage), then commit manually
+   # Stage files only (format, lint, build types, stage), then commit manually
    bun run stage
    git commit -m "your message"
 
-   # Option 2: Stage files and auto-commit with AI-generated message
-   bun run stage-and-commit
+   # Or use the tool directly for auto-commit
+   ollama-git-commit -d . --auto-commit
    ```
 
 5. **Create a pull request**
@@ -324,6 +325,12 @@ ollama-git-commit -d /path/to/repo --auto-stage
 
 # Auto-stage and auto-commit with AI-generated message
 ollama-git-commit -d /path/to/repo --auto-commit
+
+# Suppress git command output
+ollama-git-commit -d /path/to/repo --quiet
+
+# Combine quiet mode with auto-commit
+ollama-git-commit -d /path/to/repo --auto-commit --quiet
 ```
 
 ### Auto-Staging and Auto-Commit
@@ -345,8 +352,8 @@ bun dev:run commit -d . --auto-stage
 # Stage files, generate AI message, auto-commit if approved, and push to remote
 bun dev:run commit -d . --auto-commit
 
-# Alternative: Use the standalone script (same as --auto-commit)
-bun run stage-and-commit
+# Alternative: Use the tool directly (same as --auto-commit)
+ollama-git-commit -d . --auto-commit
 ```
 
 ### Model Management
@@ -400,6 +407,12 @@ ollama-git-commit config set context code,diff,terminal
 
 # `config keys`: List all available configuration keys with descriptions and defaults
 ollama-git-commit config keys
+
+# Model management commands
+ollama-git-commit config models add <name> ollama <model> --roles chat,edit,embed
+ollama-git-commit config models remove <name>
+ollama-git-commit config models list
+ollama-git-commit config models set-embeddings <name>
 ```
 
 ### Configuration Sources
@@ -426,6 +439,9 @@ export OLLAMA_COMMIT_MODEL=mistral:7b-instruct
 # Disable emojis
 export OLLAMA_COMMIT_USE_EMOJIS=false
 
+# Suppress git command output
+export OLLAMA_COMMIT_QUIET=true
+
 # Multi-model configuration (JSON string)
 export OLLAMA_COMMIT_MODELS='[{"name":"mistral-7b-instruct","provider":"ollama","model":"mistral:7b-instruct","roles":["chat","edit","autocomplete","apply","summarize"]},{"name":"embeddingsProvider","provider":"ollama","model":"nomic-embed-text","roles":["embed"]}]'
 
@@ -451,6 +467,7 @@ Create a `.ollama-git-commit.json` file in your project root:
   "autoCommit": false,
   "autoModel": false,
   "useEmojis": false,
+  "quiet": false,
   "promptTemplate": "default",
   "promptFile": "~/.config/ollama-git-commit/prompt.txt",
   "timeouts": {
@@ -476,6 +493,7 @@ Create a `~/.ollama-git-commit.json` file:
   "autoCommit": false,
   "autoModel": false,
   "useEmojis": false,
+  "quiet": false,
   "promptTemplate": "default",
   "promptFile": "~/.config/ollama-git-commit/prompt.txt",
   "configFile": "~/.config/ollama-git-commit/config.json",
@@ -589,6 +607,42 @@ The tool includes advanced message cleaning capabilities:
 - **Think Tag Removal**: Automatically removes `<think></think>` content from model responses
 - **Formatting**: Consistent message formatting with proper spacing and punctuation
 - **Content Filtering**: Removes unwanted artifacts and improves readability
+
+### Quiet Mode
+
+The tool supports quiet mode to suppress git command output:
+
+- **CLI Flag**: Use `--quiet` to suppress git command output for the current run
+- **Configuration**: Set `quiet: true` in your config file to enable quiet mode by default
+- **Environment Variable**: Set `OLLAMA_COMMIT_QUIET=true` to enable quiet mode
+- **Auto-Commit Integration**: Quiet mode works seamlessly with `--auto-commit` and `--auto-stage` flags
+
+Quiet mode is useful when you want to reduce noise in your terminal output, especially in automated workflows or when running the tool frequently. Progress messages are still shown to keep you informed of the current operation.
+
+**Note**: Non-quiet mode preserves the natural git experience by capturing output for programmatic use and then displaying it to the user. The tool intelligently switches between output modes to provide the best user experience.
+
+```bash
+# Suppress git output for this run
+ollama-git-commit -d . --quiet
+
+# Enable quiet mode in config
+ollama-git-commit config set quiet true
+
+# Use with auto-commit for clean output
+ollama-git-commit -d . --auto-commit --quiet
+```
+
+**Example output with quiet mode:**
+
+```
+🚀 Starting commit process...
+📦 Staging changes...
+✅ Staging completed!
+🔍 Analyzing changes...
+🤖 Generating commit message...
+🚀 Pushing to remote...
+✅ Changes pushed successfully!
+```
 
 ## 🤝 Contributing
 
@@ -741,6 +795,18 @@ ollama-git-commit config models list
 
 # Set the embeddings provider
 ollama-git-commit config models set-embeddings <name>
+
+# Set configuration values
+ollama-git-commit config set <key> <value>
+
+# List all available configuration keys
+ollama-git-commit config keys
+
+# Show current configuration
+ollama-git-commit config show
+
+# Show debug information
+ollama-git-commit config debug
 ```
 
 ## 🌱 Environment Variables
@@ -753,6 +819,12 @@ export OLLAMA_HOST=http://localhost:11434
 
 # Set default model
 export OLLAMA_COMMIT_MODEL=mistral:7b-instruct
+
+# Disable emojis
+export OLLAMA_COMMIT_USE_EMOJIS=false
+
+# Suppress git command output
+export OLLAMA_COMMIT_QUIET=true
 
 # Multi-model configuration (JSON string)
 export OLLAMA_COMMIT_MODELS='[{"name":"mistral-7b-instruct","provider":"ollama","model":"mistral:7b-instruct","roles":["chat","edit","autocomplete","apply","summarize"]},{"name":"embeddingsProvider","provider":"ollama","model":"nomic-embed-text","roles":["embed"]}]'
