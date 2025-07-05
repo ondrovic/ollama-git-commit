@@ -13,7 +13,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **config list-prompt-templates**: Fixed template validation bug where the command could display "undefined" for template content due to a mismatch between `VALID_TEMPLATES` and actual service keys. Added proper validation similar to config keys with helpful suggestions for similar template names.
 - **config list-prompt-templates**: Fixed inconsistent logger usage where the catch block was using the static `Logger.error` method instead of the configured logger instance. This ensures error logging properly respects the `--verbose` flag configuration.
+- **config list-prompt-templates**: Removed unsafe `as any` type assertion and improved type safety throughout the template validation process.
 
 ## [1.0.18] - 2025-07-05
 

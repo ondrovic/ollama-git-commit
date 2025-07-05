@@ -1,6 +1,59 @@
 import { Command } from 'commander';
-import { VALID_TEMPLATES } from '../../../constants/prompts';
 import { ServiceFactory } from '../../../core/factory';
+import { ILogger } from '../../../core/interfaces';
+
+// Helper function to get template keys from the service
+function getTemplateKeys(): string[] {
+  const factory = ServiceFactory.getInstance();
+  const promptService = factory.createPromptService({ verbose: false });
+  const templates = promptService.getPromptTemplates();
+  return Object.keys(templates);
+}
+
+// Helper function to find similar template names
+function findSimilarTemplates(invalidTemplate: string, validTemplates: string[]): string[] {
+  const suggestions: string[] = [];
+
+  // Check for exact substring matches
+  for (const validTemplate of validTemplates) {
+    if (validTemplate.includes(invalidTemplate) || invalidTemplate.includes(validTemplate)) {
+      suggestions.push(validTemplate);
+    }
+  }
+
+  // Check for templates with similar length and common characters
+  for (const validTemplate of validTemplates) {
+    if (Math.abs(validTemplate.length - invalidTemplate.length) <= 2) {
+      const commonChars = [...invalidTemplate].filter(char => validTemplate.includes(char)).length;
+      const similarity = commonChars / Math.max(invalidTemplate.length, validTemplate.length);
+      if (similarity >= 0.6) {
+        suggestions.push(validTemplate);
+      }
+    }
+  }
+
+  // Remove duplicates and limit to 5 suggestions
+  return [...new Set(suggestions)].slice(0, 5);
+}
+
+// Helper function to validate template name
+function validateTemplateName(templateName: string, logger: ILogger): string {
+  const templateKeys = getTemplateKeys();
+
+  // Check if the template exists in the actual service
+  if (!templateKeys.includes(templateName)) {
+    const suggestions = findSimilarTemplates(templateName, templateKeys);
+    logger.error(`❌ Template '${templateName}' not found.`);
+    if (suggestions.length > 0) {
+      console.log('💡 Did you mean one of these?');
+      suggestions.forEach(suggestion => console.log(`   ${suggestion}`));
+    }
+    console.log(`\n💡 Available templates: ${templateKeys.join(', ')}`);
+    process.exit(1);
+  }
+
+  return templateName;
+}
 
 export const registerPromptsCommands = (configCommand: Command) => {
   configCommand
@@ -26,18 +79,21 @@ export const registerPromptsCommands = (configCommand: Command) => {
           // Show specific template contents
           const templateName = options.name.toLowerCase();
 
-          if (!VALID_TEMPLATES.includes(templateName as any)) {
-            logger.error(`Template '${templateName}' not found.`);
-            logger.info(`Available templates: ${VALID_TEMPLATES.join(', ')}`);
+          // Validate template name using the actual service keys
+          const validatedTemplateName = validateTemplateName(templateName, logger);
+          const templateContent = templates[validatedTemplateName];
+
+          // Additional safety check
+          if (!templateContent) {
+            logger.error(`❌ Template content for '${validatedTemplateName}' is undefined.`);
+            console.log(`💡 Available templates: ${Object.keys(templates).join(', ')}`);
             process.exit(1);
           }
-
-          const templateContent = templates[templateName];
 
           console.log(
             '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━',
           );
-          console.log(`📝 Prompt Template: ${templateName}`);
+          console.log(`📝 Prompt Template: ${validatedTemplateName}`);
           console.log(
             '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━',
           );

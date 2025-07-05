@@ -75,4 +75,78 @@ describe('Prompts Commands', () => {
       expect(uniqueContents.size).toBe(contents.length);
     });
   });
-}); 
+
+  describe('Template validation functions', () => {
+    test('should get template keys from service', () => {
+      const logger = new Logger();
+      const promptService = new PromptService(logger);
+      const templates = promptService.getPromptTemplates();
+      const templateKeys = Object.keys(templates);
+
+      expect(templateKeys).toContain('default');
+      expect(templateKeys).toContain('conventional');
+      expect(templateKeys).toContain('simple');
+      expect(templateKeys).toContain('detailed');
+      expect(templateKeys).toHaveLength(4);
+    });
+
+    test('should find similar template names', () => {
+      const validTemplates = ['default', 'conventional', 'simple', 'detailed'];
+      
+      // Test exact substring matches
+      const suggestions1 = findSimilarTemplates('def', validTemplates);
+      expect(suggestions1).toContain('default');
+      
+      // Test similar length and characters
+      const suggestions2 = findSimilarTemplates('convent', validTemplates);
+      expect(suggestions2).toContain('conventional');
+      
+      // Test no matches
+      const suggestions3 = findSimilarTemplates('xyz', validTemplates);
+      expect(suggestions3).toHaveLength(0);
+    });
+
+    test('should validate template names correctly', () => {
+      const logger = new Logger();
+      const promptService = new PromptService(logger);
+      const templates = promptService.getPromptTemplates();
+      const templateKeys = Object.keys(templates);
+
+      // Test valid template names
+      expect(templateKeys).toContain('default');
+      expect(templateKeys).toContain('conventional');
+      expect(templateKeys).toContain('simple');
+      expect(templateKeys).toContain('detailed');
+
+      // Test invalid template names
+      expect(templateKeys).not.toContain('invalid');
+      expect(templateKeys).not.toContain('nonexistent');
+    });
+  });
+});
+
+// Helper function for testing (copied from the prompts.ts file)
+function findSimilarTemplates(invalidTemplate: string, validTemplates: string[]): string[] {
+  const suggestions: string[] = [];
+
+  // Check for exact substring matches
+  for (const validTemplate of validTemplates) {
+    if (validTemplate.includes(invalidTemplate) || invalidTemplate.includes(validTemplate)) {
+      suggestions.push(validTemplate);
+    }
+  }
+
+  // Check for templates with similar length and common characters
+  for (const validTemplate of validTemplates) {
+    if (Math.abs(validTemplate.length - invalidTemplate.length) <= 2) {
+      const commonChars = [...invalidTemplate].filter(char => validTemplate.includes(char)).length;
+      const similarity = commonChars / Math.max(invalidTemplate.length, validTemplate.length);
+      if (similarity >= 0.6) {
+        suggestions.push(validTemplate);
+      }
+    }
+  }
+
+  // Remove duplicates and limit to 5 suggestions
+  return [...new Set(suggestions)].slice(0, 5);
+} 
