@@ -80,8 +80,9 @@ export const registerModelsCommands = (configCommand: Command) => {
 
   modelsCommand
     .command('list')
-    .description('List all configured models')
-    .action(async () => {
+    .description('List all model configurations')
+    .option('-t, --type <type>', 'Configuration type (user, local)', 'user')
+    .action(async _options => {
       try {
         const configManager = ConfigManager.getInstance();
         await configManager.initialize();
@@ -94,29 +95,45 @@ export const registerModelsCommands = (configCommand: Command) => {
           return;
         }
 
-        console.log(
-          '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━',
-        );
-        console.log('📦 Configured Models');
-        console.log(
-          '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━',
-        );
-
+        console.log('📋 Configured Models:');
         models.forEach(model => {
-          const isEmbeddings = model.roles.includes('embed') ? ' 🔍' : '';
-          const isChat = model.roles.includes('chat') ? ' 💬' : '';
-          console.log(`  ${model.name}${isEmbeddings}${isChat}`);
-          console.log(`    Provider: ${model.provider}`);
-          console.log(`    Model: ${model.model}`);
+          console.log(`  ${model.name.padEnd(20)} - ${model.provider}/${model.model}`);
           console.log(`    Roles: ${model.roles.join(', ')}`);
-          console.log('');
         });
-
-        if (config.embeddingsProvider) {
-          console.log(`🔍 Embeddings Provider: ${config.embeddingsProvider}`);
-        }
       } catch (error) {
         Logger.error('Failed to list models:', error);
+        process.exit(1);
+      }
+    });
+
+  modelsCommand
+    .command('set-primary')
+    .description('Set the primary model for commit generation')
+    .argument('<name>', 'Model name (must have chat role)')
+    .option('-t, --type <type>', 'Configuration type (user, local)', 'user')
+    .action(async (name, options) => {
+      try {
+        const configManager = ConfigManager.getInstance();
+        await configManager.initialize();
+
+        const config = await configManager.getConfig();
+        const models = config.models || [];
+        const targetModel = models.find(m => m.name === name);
+
+        if (!targetModel) {
+          Logger.error(`❌ Model '${name}' not found`);
+          process.exit(1);
+        }
+
+        if (!targetModel.roles.includes('chat')) {
+          Logger.error(`❌ Model '${name}' does not have chat role`);
+          process.exit(1);
+        }
+
+        await configManager.saveConfig({ model: name }, options.type as 'user' | 'local');
+        Logger.success(`✅ Primary model set to '${name}'`);
+      } catch (error) {
+        Logger.error('Failed to set primary model:', error);
         process.exit(1);
       }
     });

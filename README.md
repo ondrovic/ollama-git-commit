@@ -1059,3 +1059,46 @@ bun run format
 - All shell command invocations escape double quotes to prevent syntax errors and command injection.
 - When using auto-commit or any workflow that passes the commit message as an argument array, no escaping is needed and the message is passed safely.
 - You can use commit messages with quotes (e.g., `fix: handle "edge cases" in parser`) without any issues.
+
+## CLI Usage
+
+### Commit Command
+
+```
+ollama-git-commit commit -d <dir> [-m <model>] [-H <host>] [-v] [-i] [-p <file>] [-t <template>] [--debug] [--auto-stage] [--auto-commit] [--auto-model] [-q]
+```
+
+| Short | Long              | Description                                     |
+| ----- | ----------------- | ----------------------------------------------- |
+| -d    | --directory       | Git repository directory (required)             |
+| -m    | --model           | Ollama model to use                             |
+| -H    | --host            | Ollama server URL                               |
+| -v    | --verbose         | Show detailed output                            |
+| -i    | --interactive     | Interactive mode                                |
+| -p    | --prompt-file     | Custom prompt file                              |
+| -t    | --prompt-template | Prompt template to use                          |
+|       | --debug           | Enable debug mode                               |
+|       | --auto-stage      | Automatically stage changes                     |
+|       | --auto-commit     | Automatically commit changes and push to remote |
+|       | --auto-model      | Automatically select model                      |
+| -q    | --quiet           | Suppress git command output                     |
+
+#### Example
+
+```
+ollama-git-commit commit -d . -m llama3 -v -q
+ollama-git-commit commit --directory . --model llama3 --verbose --quiet
+```
+
+### Config Commands
+
+- `ollama-git-commit config set <key> <value> [-t <type>] [-a]`
+- `ollama-git-commit config list-prompt-templates [-n <template>] [-v]`
+- `ollama-git-commit config models list [-t <type>]`
+- `ollama-git-commit config models set-primary <name> [-t <type>]`
+
+... (add similar tables/examples for all config/test/list-models commands) ...
+
+## Changelog
+
+See [CHANGELOG.md](./CHANGELOG.md) for details.

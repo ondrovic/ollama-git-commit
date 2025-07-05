@@ -10,12 +10,65 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 - **config list-prompt-templates**: New subcommand to list all available built-in prompt templates and view the contents of any template. This makes it easy for users to discover and inspect the prompt templates used for commit message generation.
+- Short (`-x`) and long (`--xxx`) flags for all CLI commands and options, following best CLI practices.
+- Usage examples in documentation for both short and long forms.
 
-### Fixed
+### Changed
 
 - **config list-prompt-templates**: Fixed template validation bug where the command could display "undefined" for template content due to a mismatch between `VALID_TEMPLATES` and actual service keys. Added proper validation similar to config keys with helpful suggestions for similar template names.
 - **config list-prompt-templates**: Fixed inconsistent logger usage where the catch block was using the static `Logger.error` method instead of the configured logger instance. This ensures error logging properly respects the `--verbose` flag configuration.
 - **config list-prompt-templates**: Removed unsafe `as any` type assertion and improved type safety throughout the template validation process.
+- All CLI commands now support both short and long flags for options where appropriate.
+- Improved consistency and discoverability of CLI options.
+
+### Fixed
+
+- **config list-prompt-templates**: Fixed inconsistent logger usage where the catch block was using the static `Logger.error` method instead of the configured logger instance. This ensures error logging properly respects the `--verbose` flag configuration.
+- **config list-prompt-templates**: Removed unsafe `as any` type assertion and improved type safety throughout the template validation process.
+- **Test Reliability**: Fixed test failures due to missing interface methods
+  - Updated mock OllamaService objects to include all required interface methods
+  - Fixed import/export mismatches in test command modules
+  - Resolved TypeScript compilation errors in test files
+  - Ensured all tests pass with proper mock implementations
+- **Type Safety**: Improved type safety across the codebase
+  - Fixed constructor signature mismatches in command classes
+  - Updated TestCommand to use interface instead of concrete class
+  - Resolved TypeScript errors in build process
+  - Enhanced type checking for service dependencies
+- **Linter and TypeScript errors related to CLI option handling and documentation**:
+
+### Technical Details
+
+- **ServiceFactory Implementation**:
+  - Singleton pattern for consistent service creation
+  - Configurable service creation with options for verbose, quiet, and debug modes
+  - Proper dependency injection for all service layers
+  - Centralized configuration management
+- **Test Infrastructure Improvements**:
+  - Updated test mocks to implement complete IOllamaService interface
+  - Fixed function naming consistency across test command modules
+  - Enhanced test isolation through proper dependency injection
+  - Improved error handling and user feedback in test scenarios
+- **Build Process**:
+
+  - Resolved TypeScript compilation errors
+  - Fixed import/export mismatches
+  - Ensured all type declarations build successfully
+  - Maintained backward compatibility while improving architecture
+
+- **Enhanced Configuration Validation**: Added intelligent key validation to the `config set` command
+  - Validates configuration keys before setting values to prevent invalid configurations
+  - Provides helpful suggestions for similar keys when an invalid key is provided
+  - Shows common typos and suggests correct alternatives (e.g., "quite" → "quiet")
+  - Limits suggestions to 5 options to avoid overwhelming users
+  - Exports `getConfigKeys()` function for reuse across the codebase
+- **Code Quality Improvements**: Enhanced code quality and maintainability
+  - Fixed unused variable declarations across test command files
+  - Removed unused logger instances in favor of static Logger class usage
+  - Cleaned up unused factory variables and parameters
+  - Improved code consistency and reduced linting warnings
+- **Audited all `.option()` calls in CLI command registration to ensure non-conflicting, conventional short flags**:
+- **Updated tests and documentation to reflect new CLI option structure**:
 
 ## [1.0.18] - 2025-07-05
 
@@ -89,6 +142,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Removed unused logger instances in favor of static Logger class usage
   - Cleaned up unused factory variables and parameters
   - Improved code consistency and reduced linting warnings
+- **Audited all `.option()` calls in CLI command registration to ensure non-conflicting, conventional short flags**:
+- **Updated tests and documentation to reflect new CLI option structure**:
 
 ## [1.0.16] - 2025-07-05
 

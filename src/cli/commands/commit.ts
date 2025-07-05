@@ -1,6 +1,7 @@
 import { Command } from 'commander';
 import { CommitCommand } from '../../commands/commit';
 import { ServiceFactory } from '../../core/factory';
+import { getConfig } from '../../core/config';
 import { Logger } from '../../utils/logger';
 import { validateEnvironment } from '../../utils/validation';
 
@@ -19,54 +20,41 @@ export const registerCommitCommand = (program: Command) => {
     .option('--auto-stage', 'Automatically stage changes')
     .option('--auto-commit', 'Automatically commit changes and push to remote')
     .option('--auto-model', 'Automatically select model')
-    .option('--quiet', 'Suppress git command output')
+    .option('-q, --quiet', 'Suppress git command output')
     .action(async options => {
       try {
-        await validateEnvironment();
+        // Validate environment before proceeding
+        validateEnvironment();
 
         // Create services using the factory
         const factory = ServiceFactory.getInstance();
-        const services = await factory.createCommitServices({
-          directory: options.directory,
-          quiet: options.quiet,
+        const logger = factory.createLogger({
           verbose: options.verbose,
-          debug: options.debug,
         });
+        const gitService = factory.createGitService({
+          verbose: options.verbose,
+          quiet: options.quiet,
+        });
+        const ollamaService = factory.createOllamaService({
+          verbose: options.verbose,
+        });
+        const promptService = factory.createPromptService({
+          verbose: options.verbose,
+        });
+        const configProvider = async () => await getConfig();
 
         const commitCommand = new CommitCommand(
           options.directory,
-          services.gitService,
-          services.ollamaService,
-          services.promptService,
-          services.logger,
-          undefined,
-          options.quiet,
+          gitService,
+          ollamaService,
+          promptService,
+          logger,
+          configProvider,
         );
 
-        await commitCommand.execute({
-          directory: options.directory,
-          model: options.model,
-          host: options.host,
-          verbose: options.verbose,
-          interactive: options.interactive,
-          promptFile: options.promptFile,
-          promptTemplate: options.promptTemplate,
-          debug: options.debug,
-          autoStage: options.autoStage,
-          autoModel: options.autoModel,
-          autoCommit: options.autoCommit,
-          quiet: options.quiet,
-        });
-      } catch (error: unknown) {
-        if (options.verbose) {
-          Logger.error('Commit failed:', error);
-        } else {
-          if (error instanceof Error) {
-            Logger.error('Commit failed:', error.message);
-          } else {
-            throw error;
-          }
-        }
+        await commitCommand.execute(options);
+      } catch (error) {
+        Logger.error('Commit failed:', error);
         process.exit(1);
       }
     });

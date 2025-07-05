@@ -8,7 +8,7 @@ export const registerSetCommands = (configCommand: Command) => {
     .command('set <key> <value>')
     .description('Set a configuration value')
     .option('-t, --type <type>', 'Config type (user|local)', 'user')
-    .option('--all', 'Update all active configs (user and local if both exist)')
+    .option('-a, --all', 'Update all active configs (user and local if both exist)')
     .action(
       async (key: string, value: string, options: { type: 'user' | 'local'; all?: boolean }) => {
         try {
@@ -37,30 +37,19 @@ export const registerSetCommands = (configCommand: Command) => {
 
           if (options.all && activeConfigs.length > 1) {
             // Update all active configs
-            console.log(`🔧 Updating ${activeConfigs.length} active configuration files...`);
-
             for (const configFile of activeConfigs) {
-              try {
-                const configToUpdate = createConfigUpdate(key, parsedValue);
-                await configManager.saveConfig(configToUpdate, configFile.type);
-                console.log(`✅ Updated ${configFile.type} config (${configFile.path})`);
-              } catch (error) {
-                Logger.error(`Failed to update ${configFile.type} config:`, error);
-              }
+              await configManager.saveConfig({ [key]: parsedValue }, configFile.type);
+              Logger.success(
+                `✅ Updated ${configFile.type} config: ${key} = ${JSON.stringify(parsedValue)}`,
+              );
             }
           } else {
             // Update single config
-            const configToUpdate = createConfigUpdate(key, parsedValue);
-            await configManager.saveConfig(configToUpdate, options.type);
+            await configManager.saveConfig({ [key]: parsedValue }, options.type);
+            Logger.success(
+              `✅ Updated ${options.type} config: ${key} = ${JSON.stringify(parsedValue)}`,
+            );
           }
-
-          // Show the updated configuration
-          console.log('\n📋 Updated configuration:');
-          const updatedConfig = await configManager.getConfig();
-          const sourceInfo = await configManager.getConfigSources();
-
-          // Display the specific key that was updated
-          displayUpdatedKey(key, updatedConfig, sourceInfo as Record<string, unknown>);
         } catch (error) {
           Logger.error('Failed to set configuration:', error);
           process.exit(1);

@@ -2,57 +2,27 @@ import { Command } from 'commander';
 import { ServiceFactory } from '../../../core/factory';
 import { ILogger } from '../../../core/interfaces';
 
-// Helper function to get template keys from the service
-function getTemplateKeys(): string[] {
-  const factory = ServiceFactory.getInstance();
-  const promptService = factory.createPromptService({ verbose: false });
-  const templates = promptService.getPromptTemplates();
-  return Object.keys(templates);
-}
-
-// Helper function to find similar template names
-function findSimilarTemplates(invalidTemplate: string, validTemplates: string[]): string[] {
-  const suggestions: string[] = [];
-
-  // Check for exact substring matches
-  for (const validTemplate of validTemplates) {
-    if (validTemplate.includes(invalidTemplate) || invalidTemplate.includes(validTemplate)) {
-      suggestions.push(validTemplate);
-    }
-  }
-
-  // Check for templates with similar length and common characters
-  for (const validTemplate of validTemplates) {
-    if (Math.abs(validTemplate.length - invalidTemplate.length) <= 2) {
-      const commonChars = [...invalidTemplate].filter(char => validTemplate.includes(char)).length;
-      const similarity = commonChars / Math.max(invalidTemplate.length, validTemplate.length);
-      if (similarity >= 0.6) {
-        suggestions.push(validTemplate);
-      }
-    }
-  }
-
-  // Remove duplicates and limit to 5 suggestions
-  return [...new Set(suggestions)].slice(0, 5);
-}
-
 // Helper function to validate template name
 function validateTemplateName(templateName: string, logger: ILogger): string {
-  const templateKeys = getTemplateKeys();
+  const validTemplates = ['default', 'conventional', 'detailed', 'simple'];
+  const normalizedName = templateName.toLowerCase();
 
-  // Check if the template exists in the actual service
-  if (!templateKeys.includes(templateName)) {
-    const suggestions = findSimilarTemplates(templateName, templateKeys);
-    logger.error(`❌ Template '${templateName}' not found.`);
-    if (suggestions.length > 0) {
-      console.log('💡 Did you mean one of these?');
-      suggestions.forEach(suggestion => console.log(`   ${suggestion}`));
-    }
-    console.log(`\n💡 Available templates: ${templateKeys.join(', ')}`);
-    process.exit(1);
+  if (validTemplates.includes(normalizedName)) {
+    return normalizedName;
   }
 
-  return templateName;
+  // Find similar templates
+  const suggestions = validTemplates.filter(
+    template => template.includes(normalizedName) || normalizedName.includes(template),
+  );
+
+  logger.error(`❌ Invalid template name: "${templateName}"`);
+  if (suggestions.length > 0) {
+    console.log('💡 Did you mean one of these?');
+    suggestions.forEach(suggestion => console.log(`   ${suggestion}`));
+  }
+  console.log(`💡 Available templates: ${validTemplates.join(', ')}`);
+  process.exit(1);
 }
 
 export const registerPromptsCommands = (configCommand: Command) => {
@@ -102,7 +72,7 @@ export const registerPromptsCommands = (configCommand: Command) => {
             '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━',
           );
         } else {
-          // List all available templates
+          // List all templates
           console.log(
             '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━',
           );
@@ -112,18 +82,19 @@ export const registerPromptsCommands = (configCommand: Command) => {
           );
 
           Object.keys(templates).forEach(templateName => {
-            console.log(`• ${templateName}`);
+            const content = templates[templateName];
+            if (content) {
+              const lineCount = content.split('\n').length;
+              const charCount = content.length;
+              console.log(`\n📋 ${templateName}`);
+              console.log(`   Lines: ${lineCount}, Characters: ${charCount}`);
+              console.log(
+                `   Usage: ollama-git-commit config list-prompt-templates -n ${templateName}`,
+              );
+            }
           });
 
-          console.log('');
-          console.log('To view a specific template, use:');
-          console.log('  ollama-git-commit config list-prompt-templates --name <template>');
-          console.log('');
-          console.log('Example:');
-          console.log('  ollama-git-commit config list-prompt-templates --name conventional');
-          console.log(
-            '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━',
-          );
+          console.log('\n💡 Use -n <template> to view specific template contents');
         }
       } catch (error) {
         logger.error('Failed to list prompt templates:', error);
