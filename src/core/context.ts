@@ -179,14 +179,19 @@ export class ContextService implements IContextService {
   private async findDocFiles(directory: string): Promise<string[]> {
     const docFiles: string[] = [];
 
-    // Use cross-platform approach - just return basic doc files
     try {
-      // For now, just return common documentation files that likely exist
+      // Import modules once outside the loop for efficiency
+      const fs = await import('fs/promises');
+      const path = await import('path');
+
+      // Common documentation files that likely exist
       const commonDocs = ['README.md', 'README.txt', 'CHANGELOG.md', 'CONTRIBUTING.md', 'LICENSE'];
+
       for (const doc of commonDocs) {
         try {
-          const fs = await import('fs/promises');
-          await fs.access(`${directory}/${doc}`);
+          // Use path.join for cross-platform compatibility
+          const docPath = path.join(directory, doc);
+          await fs.access(docPath);
           docFiles.push(doc);
         } catch {
           // File doesn't exist, continue
@@ -342,7 +347,7 @@ export class ContextService implements IContextService {
     return new Promise((resolve, reject) => {
       const child = spawn(command, args, {
         cwd,
-        stdio: ['pipe', 'pipe', 'pipe'], // Always capture output for programmatic use
+        stdio: ['pipe', 'pipe', 'pipe'], // Always capture output, never display to user
         shell: true,
       });
 
@@ -363,16 +368,10 @@ export class ContextService implements IContextService {
 
       child.on('close', code => {
         if (code === 0) {
-          // In non-quiet mode, display the output to the user
-          if (!this.quiet && stdout) {
-            console.log(stdout);
-          }
+          // Never display output - this is internal diagnostic data only
           resolve(stdout.trim());
         } else {
-          // In non-quiet mode, display stderr to the user
-          if (!this.quiet && stderr) {
-            console.error(stderr);
-          }
+          // Never display stderr - this is internal diagnostic data only
           reject(new Error(`Command failed: ${stderr}`));
         }
       });

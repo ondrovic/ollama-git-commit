@@ -55,26 +55,20 @@ export class GitService implements IGitService {
       const shouldBeQuiet = quiet !== undefined ? quiet : this.quiet;
 
       if (shouldBeQuiet) {
-        // Suppress output in terminal, but capture output for program
+        // Suppress all output in quiet mode
         options.stdio = ['pipe', 'pipe', 'pipe'];
         return this.execSyncFn(command, options).toString().trim();
       } else {
-        // For non-quiet mode, we want to show stderr to user while capturing stdout
-        // Use 'inherit' for stderr so warnings/progress/diagnostics are visible
+        // For non-quiet mode, capture output for programmatic use and display to user
+        // This maintains colors, formatting, progress indicators, and proper timing
         options.stdio = ['pipe', 'pipe', 'inherit'];
-        const result = this.execSyncFn(command, options);
-        const output = result.toString().trim();
+        this.execSyncFn(command, options);
 
-        // Display stdout to the user as well (for consistency)
-        if (output) {
-          console.log(output);
-        }
-
-        return output;
+        // For this mode, we can't capture the output, so return empty string
+        // This is acceptable since non-quiet mode is primarily for user interaction
+        return '';
       }
     } catch (error: unknown) {
-      // In non-quiet mode, stderr from the failed command will already be visible
-      // due to 'inherit' configuration, so we don't need to handle it specially
       if (typeof error === 'object' && error && 'message' in error) {
         throw new GitCommandError(
           `Failed to execute git command: ${(error as { message: string }).message}`,

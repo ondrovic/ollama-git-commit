@@ -407,6 +407,12 @@ ollama-git-commit config set context code,diff,terminal
 
 # `config keys`: List all available configuration keys with descriptions and defaults
 ollama-git-commit config keys
+
+# Model management commands
+ollama-git-commit config models add <name> ollama <model> --roles chat,edit,embed
+ollama-git-commit config models remove <name>
+ollama-git-commit config models list
+ollama-git-commit config models set-embeddings <name>
 ```
 
 ### Configuration Sources
@@ -789,6 +795,18 @@ ollama-git-commit config models list
 
 # Set the embeddings provider
 ollama-git-commit config models set-embeddings <name>
+
+# Set configuration values
+ollama-git-commit config set <key> <value>
+
+# List all available configuration keys
+ollama-git-commit config keys
+
+# Show current configuration
+ollama-git-commit config show
+
+# Show debug information
+ollama-git-commit config debug
 ```
 
 ## 🌱 Environment Variables

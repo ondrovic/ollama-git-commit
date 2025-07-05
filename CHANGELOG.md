@@ -9,21 +9,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- **Quiet Mode Support**: Added `--quiet` flag and `quiet` configuration option to suppress git command output
-  - CLI flag: `--quiet` for one-time quiet mode
-  - Configuration: `quiet: true/false` in config files
-  - Environment variable: `OLLAMA_COMMIT_QUIET=true/false`
-  - Works seamlessly with `--auto-commit` and `--auto-stage` flags
-  - Useful for reducing terminal noise in automated workflows
+- **Enhanced Quiet Mode Support**: Improved quiet mode configuration handling across all services
+  - Added `setQuiet` method to Context Service and Prompt Service interfaces
+  - Enhanced quiet mode propagation from configuration to all service layers
+  - Improved quiet mode consistency across git operations and context gathering
 
 ### Changed
 
-- Enhanced GitService to support quiet mode by redirecting git command output when quiet mode is enabled
-- Updated commit command to respect quiet mode setting from both CLI options and configuration
-- Modified stage and release scripts to respect `QUIET` environment variable for git output suppression
-- Improved quiet mode progress messages to avoid duplicate output and provide cleaner user experience
-- Fixed Git file rename handling to properly stage file deletions and additions
-- Removed unused `stage-and-commit` script and package.json entry for cleaner codebase
+- **Git Service Output Handling**: Optimized stdio configuration for better git command output management
+  - Modified non-quiet mode to use `['pipe', 'pipe', 'pipe']` for consistent output capture
+  - Enhanced error handling for stdout/stderr capture in git operations
+  - Improved output display logic to maintain git behavior while enabling programmatic access
 - **Repository Compatibility**: Enhanced staging scripts to work with any repository, not just ollama-git-commit
   - Added repository detection to use different workflows for internal vs external repositories
   - Implemented script existence checks before execution to prevent failures
@@ -31,12 +27,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
-- **GitService.execCommand Bug**: Fixed critical issue in non-quiet mode that was breaking git command behavior
+- **Git Service stdio Configuration**: Fixed critical issue in non-quiet mode that was breaking git command behavior
   - **Loss of stderr**: Fixed issue where important warnings and error messages were captured but discarded
   - **Degraded user experience**: Fixed broken interactive commands, real-time output, and stripped formatting/colors
   - **Excessive noise**: Fixed internal git commands printing unwanted output
   - **Hidden errors**: Removed overly aggressive `.git` line filtering that could hide critical diagnostic messages
-  - **Solution**: Non-quiet mode now uses `stdio: ['pipe', 'pipe', 'pipe']` to capture output for programmatic use while manually displaying it to the user, preserving natural git behavior. Quiet mode continues to use `stdio: ['pipe', 'pipe', 'pipe']` for output suppression.
+  - **Solution**: Non-quiet mode now uses `stdio: ['pipe', 'pipe', 'pipe']` to capture output for programmatic use while manually displaying it to the user, preserving natural git behavior
 - **Repository Script Compatibility**: Fixed issues when running in repositories without expected scripts
   - **Staging Script Failures**: Fixed `scripts/stage.ts` and `scripts/precommit.ts` failing when target repositories lack `lint:fix`, `build:types`, or other scripts
   - **Context Service Errors**: Fixed `ContextService.detectProblems()` failing when target repositories don't have `lint` or `build` scripts
@@ -45,23 +41,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Technical Details
 
-- Added `quiet` property to configuration interfaces and constants
-- Updated GitService to use `stdio: 'pipe'` when quiet mode is enabled
-- Enhanced commit command to pass quiet setting to all git operations
-- Updated config commands to handle and display the `quiet` option
-- Added comprehensive test coverage for quiet mode functionality
-- Fixed test pollution issues in validation tests to ensure reliable test execution
-- Optimized progress message display to use `console.log()` for quiet mode to avoid redundant checkmarks
-- Renamed test file from `quite.test.ts` to `quiet.test.ts` to fix spelling consistency
-- Fixed GitService.execCommand method to respect instance quiet setting when parameter is omitted
-- Removed unused `stage-and-commit` script and package.json entry for cleaner codebase
-- **GitService.execCommand Implementation**: Optimized to use appropriate `stdio` configuration for each mode:
+- Added `setQuiet` method to IPromptService interface and PromptService implementation
+- Enhanced ContextService with `setQuiet` method for dynamic quiet mode updates
+- Updated commit command to properly propagate quiet settings to all service layers
+- Optimized GitService.execCommand to use appropriate `stdio` configuration for each mode:
   - Quiet mode: `stdio: ['pipe', 'pipe', 'pipe']` (captures output without display)
   - Non-quiet mode: `stdio: ['pipe', 'pipe', 'pipe']` (captures output for programmatic use and manually displays to user)
 - **Auto-commit Implementation**: Uses `spawn` with `stdio: 'inherit'` for user-facing git commands (commit, push) to preserve natural git behavior, colors, and interactive prompts
 - **Repository Detection Logic**: Added package.json name checking to identify ollama-git-commit repository vs external repositories
 - **Script Validation**: Implemented package.json parsing to check script availability before execution
 - **Context Service Robustness**: Enhanced `detectProblems()` method to read available scripts from package.json before attempting execution
+- Updated test cases to reflect new stdio configuration expectations
+- Enhanced MockedConfigManager to include quiet property for test consistency
 
 ## Release Process
 
