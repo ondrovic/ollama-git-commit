@@ -1,25 +1,40 @@
 import { Command } from 'commander';
-import { TestCommand } from '../../../commands/test';
-import { OllamaService } from '../../../core/ollama';
+import { ServiceFactory } from '../../../core/factory';
 import { Logger } from '../../../utils/logger';
 
-export const registerBenchmarkTest = (testCommand: Command) => {
+export const registerBenchmarkTestCommand = (testCommand: Command) => {
   testCommand
     .command('benchmark')
-    .description('Benchmark model performance')
-    .option('-m, --model <model>', 'Model to benchmark')
+    .description('Run performance benchmark tests')
+    .option('-m, --model <model>', 'Model to use for benchmarking')
     .option('-H, --host <host>', 'Ollama server URL')
-    .option('-i, --iterations <number>', 'Number of iterations', '3')
+    .option('-v, --verbose', 'Show detailed output')
     .action(async options => {
-      const logger = new Logger();
-      logger.setVerbose(options.verbose);
-      logger.setDebug(options.verbose);
       try {
-        const ollamaService = new OllamaService(logger);
-        const test = new TestCommand(ollamaService, logger);
-        await test.benchmarkModel(options.model, options.host, parseInt(options.iterations));
+        // Create services using the factory
+        const factory = ServiceFactory.getInstance();
+        const ollamaService = factory.createOllamaService({
+          verbose: options.verbose,
+        });
+
+        Logger.info('🚀 Starting benchmark tests...');
+
+        const startTime = Date.now();
+        const testPrompt = 'Write a commit message for: "Performance optimization"';
+
+        await ollamaService.generateCommitMessage(
+          options.model || 'llama3',
+          options.host || 'http://localhost:11434',
+          testPrompt,
+          options.verbose,
+        );
+
+        const endTime = Date.now();
+        const duration = endTime - startTime;
+
+        Logger.success(`✅ Benchmark completed in ${duration}ms`);
       } catch (error) {
-        Logger.error('Test failed:', error);
+        Logger.error('Benchmark test failed:', error);
         process.exit(1);
       }
     });

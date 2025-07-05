@@ -1,8 +1,6 @@
 import { TROUBLE_SHOOTING } from '@/constants/troubleshooting';
 import { getConfig } from '../core/config';
-import { ILogger } from '../core/interfaces';
-import { OllamaService } from '../core/ollama';
-import { Logger } from '../utils/logger';
+import { ILogger, IOllamaService } from '../core/interfaces';
 import { normalizeHost } from '../utils/url';
 
 /**
@@ -11,12 +9,12 @@ import { normalizeHost } from '../utils/url';
  * Note: Automated tests use mocks (MockedConfigManager, mockFs, mockGit, etc.) to isolate tests from real filesystem/network.
  */
 export class TestCommand {
-  private ollamaService: OllamaService;
+  private ollamaService: IOllamaService;
   private logger: ILogger;
 
-  constructor(ollamaService?: OllamaService, logger?: ILogger) {
-    this.logger = logger || Logger.getDefault();
-    this.ollamaService = ollamaService || new OllamaService(this.logger, undefined, false);
+  constructor(ollamaService: IOllamaService, logger: ILogger) {
+    this.logger = logger;
+    this.ollamaService = ollamaService;
   }
 
   async testConnection(host?: string, verbose = false): Promise<boolean> {
@@ -284,8 +282,7 @@ export class TestCommand {
 
   async testModelAvailability(model: string, host: string, verbose = false): Promise<boolean> {
     try {
-      const ollama = new OllamaService(this.logger, undefined, false);
-      const available = await ollama.isModelAvailable(host, model);
+      const available = await this.ollamaService.isModelAvailable(host, model);
       if (available) {
         this.logger.success(`Model '${model}' is available`);
       } else {

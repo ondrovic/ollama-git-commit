@@ -4,14 +4,11 @@ import { homedir } from 'os';
 import { join } from 'path';
 import { VALID_TEMPLATES, type VALID_TEMPLATE } from '../constants/prompts';
 import { ConfigManager, getConfig } from '../core/config';
-import { GitCommandError, GitNoChangesError, GitRepositoryError, GitService } from '../core/git';
+import { GitCommandError, GitNoChangesError, GitRepositoryError } from '../core/git';
 import { IGitService, ILogger, IOllamaService, IPromptService } from '../core/interfaces';
-import { OllamaService } from '../core/ollama';
-import { PromptService } from '../core/prompt';
 import type { CommitConfig, CommitOptions } from '../types';
 import { copyToClipboard } from '../utils/clipboard';
 import { askCommitAction } from '../utils/interactive';
-import { Logger } from '../utils/logger';
 import { validateGitRepository } from '../utils/validation';
 import { ModelsCommand } from './models';
 import { TestCommand } from './test';
@@ -30,20 +27,23 @@ export class CommitCommand {
 
   constructor(
     private directory: string,
-    gitService?: IGitService,
-    ollamaService?: IOllamaService,
-    promptService?: IPromptService,
-    logger: ILogger = Logger.getDefault(),
+    gitService: IGitService,
+    ollamaService: IOllamaService,
+    promptService: IPromptService,
+    logger: ILogger,
     configProvider?: ConfigProvider,
     quiet = false,
   ) {
     this.logger = logger;
     this.quiet = quiet;
-    this.gitService = gitService || new GitService(this.directory, this.logger, this.quiet);
-    this.ollamaService = ollamaService || new OllamaService(this.logger, undefined, this.quiet);
-    this.promptService = promptService || new PromptService(this.logger, this.quiet);
-    this.modelsCommand = new ModelsCommand();
-    this.testCommand = new TestCommand();
+    this.gitService = gitService;
+    this.ollamaService = ollamaService;
+    this.promptService = promptService;
+
+    // Create command instances
+    this.modelsCommand = new ModelsCommand(ollamaService, logger);
+    this.testCommand = new TestCommand(ollamaService, logger);
+
     this.configProvider = configProvider || (async () => await getConfig());
   }
 
@@ -152,7 +152,7 @@ export class CommitCommand {
       this.logger.info(`Testing connection to ${config.host}...`);
     }
 
-    if (!(await this.testCommand.testConnection(config.host, config.verbose))) {
+    if (!(await this.ollamaService.testConnection(config.host, config.verbose))) {
       throw new Error('Failed to connect to Ollama');
     }
 

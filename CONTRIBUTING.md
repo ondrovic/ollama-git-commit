@@ -72,115 +72,6 @@ To help ensure code quality and consistency, the project provides a `precommit` 
 - `precommit`: Manual script for lint, test, and type checks before commit (recommended to run or hook before every commit)
 - `stage`: Main staging script for formatting, linting, and staging
 
-### Recent Enhancements
-
-The project has recently added several improvements to enhance user experience and code quality:
-
-- **Configuration Validation**: The `config set` command now validates keys and provides smart suggestions for typos
-- **Enhanced Git Analysis**: Improved handling of renamed and copied files with better error handling
-- **Comprehensive Testing**: Added extensive test coverage for new features including git rename scenarios
-
-## Release Workflow
-
-We use an automated release process for publishing to NPM. Here's the complete workflow:
-
-### 1. Feature Development
-
-1. Create a new branch for your feature or bugfix:
-
-   ```bash
-   git checkout -b feature/your-feature-name
-   # or
-   git checkout -b fix/your-bugfix-name
-   # or
-   git checkout -b hotfix/your-hotfix-name
-   ```
-
-2. Make your changes
-
-3. Run the staging script to format, lint, build type declarations, and stage your changes:
-
-   ```bash
-   # Option 1: Stage files only
-   bun run stage
-
-   # Option 2: Use the tool's auto-stage functionality
-   bun dev:run commit -d . --auto-stage
-
-   # Option 3: Stage files and auto-commit with AI-generated message
-   bun dev:run commit -d . --auto-commit
-
-   # Option 4: Use the tool directly (same as --auto-commit)
-   ollama-git-commit -d . --auto-commit
-   ```
-
-4. Commit your changes (if using option 1 or 2):
-
-   ```bash
-   git commit -m "feat: your feature description"
-   ```
-
-5. Run tests to ensure everything works:
-
-   ```bash
-   bun test
-   ```
-
-6. Push your changes and create a pull request:
-   ```bash
-   git push origin feature/your-feature-name
-   ```
-
-### 2. Release Process
-
-After your PR is merged into `main`:
-
-1. **Pull the latest changes:**
-
-   ```bash
-   git checkout main
-   git pull origin main
-   ```
-
-2. **Run the release command:**
-
-   ```bash
-   # For patch release (1.0.3 → 1.0.4)
-   bun run release
-
-   # For minor release (1.0.3 → 1.1.0)
-   bun run release minor
-
-   # For major release (1.0.3 → 2.0.0)
-   bun run release major
-   ```
-
-3. **Automated publishing:**
-   - The release script automatically increments the version in `package.json`
-   - Updates the `CHANGELOG.md`
-   - Creates a git tag (e.g., `v1.0.4`)
-   - Pushes the tag and commits to GitHub
-   - GitHub Actions automatically publishes to NPM
-
-### Version Management
-
-Our project uses a **single source of truth** for version management:
-
-- **`package.json`** contains the authoritative version number
-- **`metadata.ts`** automatically reads the version using `npm_package_version`
-- **No manual version syncing** required between files
-- **Automatic fallback** to package.json during development
-- **Note:** The commit message generator also checks for version changes in `package-lock.json` and reports them if the version actually changes and is valid. This helps catch accidental mismatches or manual edits that could cause inconsistencies between the two files, even though `package.json` is the canonical source.
-
-The staging script (`bun stage`) will:
-
-- Run tests to ensure code quality
-- Format your code with Prettier
-- Fix any linting issues with ESLint
-- Build type declarations with `bun run build:types`
-- Stage all files for commit
-- _(No longer manages version numbers - this is handled by the release script)_
-
 ## Project Structure
 
 ```
@@ -197,6 +88,7 @@ ollama-git-commit/
 │   ├── core/          # Core functionality
 │   │   ├── config.ts  # Configuration management
 │   │   ├── context.ts # Context providers (git status, diff, etc.)
+│   │   ├── factory.ts # ServiceFactory for centralized service creation
 │   │   ├── git.ts     # Git operations
 │   │   ├── interfaces.ts # Core interfaces and types
 │   │   ├── ollama.ts  # Ollama API client with message cleaning
@@ -264,6 +156,8 @@ ollama-git-commit/
 - Place tests in the corresponding test directory structure
 - Use the provided test utilities and mocks in `test/mocks/`
 - **Ensure tests cover edge cases for model auto-sync, including invalid/empty model values and preservation of custom models.**
+- **Use proper interface implementations**: All mock services should implement the complete interface (e.g., `IOllamaService` with all required methods)
+- **Dependency Injection**: Use the ServiceFactory for creating services in tests to ensure consistency with production code
 
 ### Git Commit Messages
 
@@ -287,25 +181,37 @@ Types:
 - `test`: Test changes
 - `chore`: Build process or auxiliary tool changes
 
-### Environment Variables
+### Service Architecture and Dependency Injection
 
-When adding new environment variables:
+The project uses a modern dependency injection pattern with a centralized ServiceFactory:
 
-1. Add the variable to `src/constants/environmental.ts`
-2. Update the configuration system in `src/core/config.ts`
-3. Add documentation in `README.md`
-4. Add tests in `test/core/config.test.ts`
+1. **ServiceFactory**: All services are created through `src/core/factory.ts`
 
-> **Note:** The `models` array is now auto-synced with the `model` field. When you update the `model` field (via config file, environment variable, or CLI), only the chat model in `models` will be updated or added, and all other custom models will be preserved. Invalid or empty model values are ignored for auto-sync.
+   - Provides consistent configuration across all services
+   - Ensures proper quiet mode and verbose settings
+   - Uses singleton pattern for consistent service creation
+   - Supports dependency injection for better testability
 
-Example:
+2. **Service Creation**: Use the factory instead of direct instantiation
 
-```typescript
-// src/constants/environmental.ts
-export const ENVIRONMENTAL_VARIABLES = {
-  OLLAMA_COMMIT_NEW_VAR: 'OLLAMA_COMMIT_NEW_VAR',
-} as const;
-```
+   ```typescript
+   // ✅ Good: Use factory
+   const factory = ServiceFactory.getInstance();
+   const services = await factory.createCommitServices({
+     directory: options.directory,
+     quiet: options.quiet,
+     verbose: options.verbose,
+     debug: options.debug,
+   });
+
+   // ❌ Avoid: Direct instantiation
+   const ollamaService = new OllamaService(logger, undefined, false);
+   ```
+
+3. **Command Dependencies**: All commands now require explicit service injection
+   - CommitCommand, ModelsCommand, and TestCommand use injected services
+   - No more fallback instantiation - services must be provided
+   - Improved testability and consistency
 
 ### Constants and Configuration
 
@@ -334,52 +240,103 @@ export const CONTEXTS = [
 ] as const;
 ```
 
-### Debug Mode
+### Environment Variables
 
-When debugging issues, you can use the following commands:
+When adding new environment variables:
 
-```bash
-# Show detailed configuration
-ollama-git-commit config show
+1. Add the variable to `src/constants/environmental.ts`
+2. Update the configuration system in `src/core/config.ts`
+3. Add documentation in `README.md`
+4. Add tests in `test/core/config.test.ts`
 
-# Show debug information
-ollama-git-commit config debug
+Example:
 
-# Test connection to Ollama server
-ollama-git-commit test connection
-
-# Test model availability
-ollama-git-commit test model -m mistral:7b-instruct
-
-# Test all models
-ollama-git-commit test all
-
-# Test with verbose output
-ollama-git-commit test all -v
-
-# Test context providers
-ollama-git-commit test context code
-ollama-git-commit test context diff
-
-# Use quiet mode to reduce git command output
-ollama-git-commit -d . --quiet
-
-# Test quiet mode with auto-commit
-ollama-git-commit -d . --auto-commit --quiet
-
-# Test quiet mode with verbose for debugging
-ollama-git-commit -d . --quiet --verbose
+```typescript
+// src/constants/environmental.ts
+export const ENVIRONMENTAL_VARIABLES = {
+  OLLAMA_COMMIT_NEW_VAR: 'OLLAMA_COMMIT_NEW_VAR',
+} as const;
 ```
 
-## Pull Request Process
+## Development Workflow
 
-1. Update the README.md with details of changes if needed
-2. Update the CONTRIBUTING.md if you've changed the development process
-3. Add or update tests as needed
-4. Ensure all tests pass
-5. Update documentation for any new features or changes
-6. Follow the PR template and checklist
-7. Ensure all constants are centralized and no hardcoded values remain
+### Feature Development
+
+1. Create a new branch for your feature or bugfix:
+
+   ```bash
+   git checkout -b feature/your-feature-name
+   # or
+   git checkout -b fix/your-bugfix-name
+   # or
+   git checkout -b hotfix/your-hotfix-name
+   ```
+
+2. Make your changes
+
+3. Run the staging script to format, lint, build type declarations, and stage your changes:
+
+   ```bash
+   # Option 1: Stage files only
+   bun run stage
+
+   # Option 2: Use the tool's auto-stage functionality
+   bun dev:run commit -d . --auto-stage
+
+   # Option 3: Stage files and auto-commit with AI-generated message
+   bun dev:run commit -d . --auto-commit
+
+   # Option 4: Use the tool directly (same as --auto-commit)
+   ollama-git-commit -d . --auto-commit
+   ```
+
+4. Commit your changes (if using option 1 or 2):
+
+   ```bash
+   git commit -m "feat: your feature description"
+   ```
+
+5. Run tests to ensure everything works:
+
+   ```bash
+   bun test
+   ```
+
+6. Push your changes and create a pull request:
+   ```bash
+   git push origin feature/your-feature-name
+   ```
+
+### Release Process
+
+After your PR is merged into `main`:
+
+1. **Pull the latest changes:**
+
+   ```bash
+   git checkout main
+   git pull origin main
+   ```
+
+2. **Run the release command:**
+
+   ```bash
+   # For patch release (1.0.3 → 1.0.4)
+   bun run release
+
+   # For minor release (1.0.3 → 1.1.0)
+   bun run release minor
+
+   # For major release (1.0.3 → 2.0.0)
+   bun run release major
+   ```
+
+3. **Automated publishing:**
+   - The release script automatically increments the version in `package.json`
+   - Updates the `CHANGELOG.md`
+   - Creates a git tag (e.g., `v1.0.4`)
+   - Pushes the tag and commits to GitHub
+   - GitHub Actions automatically publishes to NPM
 
 ## Development Tips
 
@@ -437,45 +394,32 @@ bun test --verbose
 7. **Context Providers**: Ensure all context providers are properly enabled in configuration
 8. **Message Cleaning**: Test emoji removal and think tag cleaning in `src/core/ollama.ts`
 
-## License
+### Code Formatting
 
-By contributing to Ollama Git Commit, you agree that your contributions will be licensed under the project's MIT License.
-
-## Development Workflow
-
-- All configuration command tests are fully mocked and do not affect real user config files.
-- When adding new configuration features, include isolated, mock-based tests to ensure reliability and safety.
-- When using `config set <key> <value>`, the configuration system now merges the new value with the existing config file, preserving all other keys. Tests should verify that config changes do not overwrite unrelated values.
-- When setting the `model` key via `config set`, the tool will automatically update the `models` array to keep it in sync. Contributors should test that both the `model` field and the `models` array are updated together.
-
-### Troubleshooting SSH Agent (1Password, etc.)
-
-- If you use auto-commit and rely on an SSH agent (such as 1Password CLI), ensure the agent is running and SSH_AUTH_SOCK is set in your environment. The tool runs `git commit` as a foreground process with inherited environment, so interactive authentication (such as 1Password approval) should work as expected.
-
-### Auto-Staging and Auto-Commit
-
-The tool provides intelligent staging and committing workflows:
-
-**`--auto-stage`**: Runs the full staging script, generates an AI commit message, and shows an interactive prompt, but does not commit or push. The user must copy and run the git commit command themselves.
-
-**`--auto-commit`**: Runs the full staging script, generates an AI commit message, and always commits and pushes to the remote repository if approved, regardless of interactive mode. Staging is only done once, before message generation.
-
-For development, you can use:
-
-- `bun dev:run commit -d . --auto-stage` - Stage files, generate AI message, show interactive prompt (manual commit)
-- `bun dev:run commit -d . --auto-commit` - Stage files, generate AI message, auto-commit if approved, and push to remote
-- `ollama-git-commit -d . --auto-commit` - Direct tool usage (same as --auto-commit)
-
-- Code formatting is handled by running:
+Code formatting is handled by running:
 
 ```sh
 bun run format
 ```
 
-- This invokes Prettier via npx, ensuring compatibility and avoiding Bun-specific issues.
+This invokes Prettier via npx, ensuring compatibility and avoiding Bun-specific issues.
 
 ### Commit Message Escaping
 
 - When passing commit messages to shell commands as strings, always escape double quotes using `message.replace(/"/g, '\\"')`.
 - When passing commit messages as argument arrays (e.g., with Node.js spawn), do not escape quotes; pass the raw message.
 - Automated tests verify that both patterns are handled safely.
+
+## Pull Request Process
+
+1. Update the README.md with details of changes if needed
+2. Update the CONTRIBUTING.md if you've changed the development process
+3. Add or update tests as needed
+4. Ensure all tests pass
+5. Update documentation for any new features or changes
+6. Follow the PR template and checklist
+7. Ensure all constants are centralized and no hardcoded values remain
+
+## License
+
+By contributing to Ollama Git Commit, you agree that your contributions will be licensed under the project's MIT License.

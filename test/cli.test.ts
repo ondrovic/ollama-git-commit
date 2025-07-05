@@ -73,6 +73,12 @@ mock.module('../core/git', () => ({
 // Mock services
 const mockOllamaService = {
   generateCommitMessage: async () => 'test commit message',
+  testConnection: async () => true,
+  getModels: async () => [{ name: 'model1' }, { name: 'model2' }],
+  isModelAvailable: async () => true,
+  generateEmbeddings: async () => [0.1, 0.2, 0.3],
+  generateEmbeddingsBatch: async () => [[0.1, 0.2, 0.3], [0.4, 0.5, 0.6]],
+  setQuiet: () => {},
   testModel: async () => true,
   listModels: async () => ['model1', 'model2'],
 };

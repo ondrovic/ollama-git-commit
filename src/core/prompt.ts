@@ -2,7 +2,6 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'fs';
 import { dirname } from 'path';
 import { PROMPTS } from '../constants/prompts';
 import { ContextProvider } from '../types';
-import { Logger } from '../utils/logger';
 import { ContextData, ContextService } from './context';
 import { ILogger, IOllamaService, IPromptService } from './interfaces';
 
@@ -10,10 +9,12 @@ export class PromptService implements IPromptService {
   private readonly defaultPrompt = PROMPTS.DEFAULT;
   private logger: ILogger;
   private quiet: boolean;
+  private contextService: ContextService;
 
-  constructor(logger: ILogger = Logger.getDefault(), quiet = false) {
+  constructor(logger: ILogger, quiet = false, contextService?: ContextService) {
     this.logger = logger;
     this.quiet = quiet;
+    this.contextService = contextService || new ContextService(logger, quiet);
   }
 
   setQuiet(quiet: boolean): void {
@@ -148,8 +149,7 @@ IMPORTANT: Maintain a professional, factual tone throughout. Focus on what was c
     }
 
     try {
-      const contextService = new ContextService(this.logger, this.quiet);
-      const contextData = await contextService.gatherContext(contextProviders, {
+      const contextData = await this.contextService.gatherContext(contextProviders, {
         directory,
         diff,
         verbose,
