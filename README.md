@@ -996,6 +996,9 @@ ollama-git-commit test model -m your-model-name
 
 ## Technical Details
 
+- **Dependency Injection Pattern**: The `ModelsCommand` and related commands now use a constructor signature of `(ollamaService?: IOllamaService, logger?: ILogger)`. This allows you to inject a pre-configured or mock service for testing, or let the command create its own default instance for convenience.
+- **OllamaService Instantiation**: All usages of `OllamaService` now explicitly pass logger and configuration parameters. Allowing an undefined service is a common and viable pattern for CLI tools and libraries, as it enables both flexibility and testability. For larger projects, consider centralizing service instantiation for consistency.
+
 - **Version Change Reporting**: The tool analyzes git diffs for both `package.json` and `package-lock.json`. It only reports a version change if the version actually changes and the new version is valid (not '..' or empty). This ensures commit messages are accurate and avoids false positives when the version is unchanged or truncated. Both files are checked to help catch accidental mismatches or manual edits that could cause inconsistencies between them.
 
 - To format code, run:

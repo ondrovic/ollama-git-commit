@@ -40,7 +40,7 @@ export class CommitCommand {
     this.logger = logger;
     this.quiet = quiet;
     this.gitService = gitService || new GitService(this.directory, this.logger, this.quiet);
-    this.ollamaService = ollamaService || new OllamaService(this.logger);
+    this.ollamaService = ollamaService || new OllamaService(this.logger, undefined, this.quiet);
     this.promptService = promptService || new PromptService(this.logger, this.quiet);
     this.modelsCommand = new ModelsCommand();
     this.testCommand = new TestCommand();
@@ -70,6 +70,16 @@ export class CommitCommand {
         .setQuiet === 'function'
     ) {
       (this.promptService as IPromptService & { setQuiet: (quiet: boolean) => void }).setQuiet(
+        config.quiet,
+      );
+    }
+
+    // Update OllamaService quiet setting to match the resolved configuration
+    if (
+      typeof (this.ollamaService as IOllamaService & { setQuiet?: (quiet: boolean) => void })
+        .setQuiet === 'function'
+    ) {
+      (this.ollamaService as IOllamaService & { setQuiet: (quiet: boolean) => void }).setQuiet(
         config.quiet,
       );
     }

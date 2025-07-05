@@ -10,11 +10,22 @@ export class OllamaService implements IOllamaService {
   private config = getConfig();
   private logger: ILogger;
   private spinner: Spinner;
+  private quiet: boolean;
 
-  constructor(logger: ILogger = Logger.getDefault(), spinner: Spinner = new Spinner()) {
+  constructor(
+    logger: ILogger = Logger.getDefault(),
+    spinner: Spinner = new Spinner(),
+    quiet = false,
+  ) {
     this.logger = logger;
     this.spinner = spinner;
+    this.quiet = quiet;
   }
+
+  public setQuiet(quiet: boolean): void {
+    this.quiet = quiet;
+  }
+
   generateEmbeddings(_model: string, _text: string, _host?: string): Promise<number[]> {
     throw new Error('Method not implemented.');
   }
@@ -32,12 +43,10 @@ export class OllamaService implements IOllamaService {
 
     const formattedHost = normalizeHost(host);
 
-    if (verbose) {
-      console.log(`ℹ️ Generating commit message with ${_model}...`);
-      console.log(`ℹ️ Ollama host: ${formattedHost}`);
-      console.log(`ℹ️ Prompt length: ${prompt.length} characters`);
-      // Add a small delay to ensure logger messages are displayed before spinner starts
-      await new Promise(resolve => setTimeout(resolve, 100));
+    if (verbose && !this.quiet) {
+      this.logger.info(`Generating commit message with ${_model}...`);
+      this.logger.info(`Ollama host: ${formattedHost}`);
+      this.logger.info(`Prompt length: ${prompt.length} characters`);
     }
 
     // Show spinner for visual feedback (both verbose and non-verbose modes)
@@ -50,7 +59,7 @@ export class OllamaService implements IOllamaService {
         stream: false,
       };
 
-      if (verbose) {
+      if (verbose && !this.quiet) {
         this.logger.debug(`JSON payload size: ${JSON.stringify(payload).length} bytes`);
       }
 
@@ -58,7 +67,7 @@ export class OllamaService implements IOllamaService {
       const headers = { 'Content-Type': 'application/json' };
       const body = JSON.stringify(payload);
 
-      if (verbose) {
+      if (verbose && !this.quiet) {
         this.logger.debug(`Full URL: ${url}`);
         this.logger.debug(`Headers: ${JSON.stringify(headers)}`);
         this.logger.debug(`Payload: ${body}`);
@@ -79,7 +88,7 @@ export class OllamaService implements IOllamaService {
 
       const responseText = await response.text();
 
-      if (verbose) {
+      if (verbose && !this.quiet) {
         this.logger.success(`Response received (${responseText.length} characters)`);
         this.logger.debug(`First 200 chars of response: ${responseText.substring(0, 200)}...`);
       }

@@ -25,6 +25,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Improved path handling to use correct file paths for git diff commands
   - Enhanced error handling with detailed debug logging for failed operations
   - More robust parsing that handles malformed git output gracefully
+- **Dependency Injection Consistency**: Updated `ModelsCommand` and related commands to use a consistent constructor signature: `(ollamaService?: IOllamaService, logger?: ILogger)`. This allows for flexible dependency injection and easier testing.
+- **OllamaService Instantiation**: All usages of `OllamaService` now explicitly pass logger and configuration parameters, and allow for an undefined service to be injected for testability and flexibility.
 
 ### Fixed
 
@@ -64,6 +66,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Updated test suite to spy on instance logger methods instead of static methods
   - Ensured all services use injected logger instances with proper verbosity settings
   - Fixed potential spinner interference with logger output by ensuring proper timing
+- The `ModelsCommand` constructor now takes `ollamaService` as the first parameter and `logger` as the second. This enables callers to inject a pre-configured or mock service, or fall back to a default instance if not provided.
+- Allowing an undefined service is a common and viable pattern for CLI tools and libraries, as it enables both flexibility and testability. For larger projects, consider centralizing service instantiation for consistency.
 
 ## [1.0.16] - 2025-07-05
 

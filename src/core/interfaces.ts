@@ -31,6 +31,7 @@ export interface IOllamaService {
   isModelAvailable(host: string, model: string): Promise<boolean>;
   generateEmbeddings(model: string, text: string, host?: string): Promise<number[]>;
   generateEmbeddingsBatch(model: string, texts: string[], host?: string): Promise<number[][]>;
+  setQuiet(quiet: boolean): void;
 }
 
 export interface IPromptService {

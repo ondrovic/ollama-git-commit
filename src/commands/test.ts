@@ -15,8 +15,8 @@ export class TestCommand {
   private logger: ILogger;
 
   constructor(ollamaService?: OllamaService, logger?: ILogger) {
-    this.ollamaService = ollamaService || new OllamaService();
     this.logger = logger || Logger.getDefault();
+    this.ollamaService = ollamaService || new OllamaService(this.logger, undefined, false);
   }
 
   async testConnection(host?: string, verbose = false): Promise<boolean> {
@@ -284,7 +284,7 @@ export class TestCommand {
 
   async testModelAvailability(model: string, host: string, verbose = false): Promise<boolean> {
     try {
-      const ollama = new OllamaService(this.logger);
+      const ollama = new OllamaService(this.logger, undefined, false);
       const available = await ollama.isModelAvailable(host, model);
       if (available) {
         this.logger.success(`Model '${model}' is available`);
