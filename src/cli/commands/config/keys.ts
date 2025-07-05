@@ -55,7 +55,7 @@ export const registerKeysCommands = (configCommand: Command) => {
     });
 };
 
-function getConfigKeys(): ConfigKeyInfo[] {
+export function getConfigKeys(): ConfigKeyInfo[] {
   const defaultConfig = CONFIGURATIONS.DEFAULT;
 
   return [

@@ -10,11 +10,22 @@ export class OllamaService implements IOllamaService {
   private config = getConfig();
   private logger: ILogger;
   private spinner: Spinner;
+  private quiet: boolean;
 
-  constructor(logger: ILogger = Logger.getDefault(), spinner: Spinner = new Spinner()) {
+  constructor(
+    logger: ILogger = Logger.getDefault(),
+    spinner: Spinner = new Spinner(),
+    quiet = false,
+  ) {
     this.logger = logger;
     this.spinner = spinner;
+    this.quiet = quiet;
   }
+
+  public setQuiet(quiet: boolean): void {
+    this.quiet = quiet;
+  }
+
   generateEmbeddings(_model: string, _text: string, _host?: string): Promise<number[]> {
     throw new Error('Method not implemented.');
   }
@@ -32,16 +43,14 @@ export class OllamaService implements IOllamaService {
 
     const formattedHost = normalizeHost(host);
 
-    if (verbose) {
+    if (verbose && !this.quiet) {
       this.logger.info(`Generating commit message with ${_model}...`);
       this.logger.info(`Ollama host: ${formattedHost}`);
       this.logger.info(`Prompt length: ${prompt.length} characters`);
     }
 
-    // Show spinner for non-verbose mode
-    if (!verbose) {
-      this.spinner.start('🤖 Generating commit message');
-    }
+    // Show spinner for visual feedback (both verbose and non-verbose modes)
+    this.spinner.start('🤖 Generating commit message');
 
     try {
       const payload = {
@@ -50,7 +59,7 @@ export class OllamaService implements IOllamaService {
         stream: false,
       };
 
-      if (verbose) {
+      if (verbose && !this.quiet) {
         this.logger.debug(`JSON payload size: ${JSON.stringify(payload).length} bytes`);
       }
 
@@ -58,7 +67,7 @@ export class OllamaService implements IOllamaService {
       const headers = { 'Content-Type': 'application/json' };
       const body = JSON.stringify(payload);
 
-      if (verbose) {
+      if (verbose && !this.quiet) {
         this.logger.debug(`Full URL: ${url}`);
         this.logger.debug(`Headers: ${JSON.stringify(headers)}`);
         this.logger.debug(`Payload: ${body}`);
@@ -71,9 +80,7 @@ export class OllamaService implements IOllamaService {
         signal: AbortSignal.timeout(config.timeouts.generation),
       });
 
-      if (!verbose) {
-        this.spinner.stop();
-      }
+      this.spinner.stop();
 
       if (!response.ok) {
         throw new Error(`HTTP ${response.status}: ${response.statusText}`);
@@ -81,7 +88,7 @@ export class OllamaService implements IOllamaService {
 
       const responseText = await response.text();
 
-      if (verbose) {
+      if (verbose && !this.quiet) {
         this.logger.success(`Response received (${responseText.length} characters)`);
         this.logger.debug(`First 200 chars of response: ${responseText.substring(0, 200)}...`);
       }
@@ -110,9 +117,7 @@ export class OllamaService implements IOllamaService {
 
       return message;
     } catch (error: unknown) {
-      if (!verbose) {
-        this.spinner.stop();
-      }
+      this.spinner.stop();
 
       if (
         typeof error === 'object' &&

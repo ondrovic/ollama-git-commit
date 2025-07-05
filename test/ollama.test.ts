@@ -1,10 +1,18 @@
-import { beforeAll, describe, expect, test } from 'bun:test';
+import { beforeEach, describe, expect, it, test, vi } from 'bun:test';
 import { MODELS } from '../src/constants/models';
 import { OllamaService } from '../src/core/ollama';
 import { Logger } from '../src/utils/logger';
 import { mockConfig, mockOllamaResponses } from './setup';
 
 describe('Ollama Integration', () => {
+  let ollamaService: OllamaService;
+  let mockLogger: Logger;
+
+  beforeEach(() => {
+    mockLogger = new Logger();
+    ollamaService = new OllamaService(mockLogger);
+  });
+
   describe('Model Listing', () => {
     test('should fetch available models', async () => {
       const response = await fetch(`${mockConfig.host}/api/tags`);
@@ -49,12 +57,6 @@ describe('Ollama Integration', () => {
   });
 
   describe('Message Processing', () => {
-    let ollamaService: OllamaService;
-
-    beforeAll(() => {
-      ollamaService = new OllamaService(new Logger());
-    });
-
     test('should remove emojis when useEmojis is false', () => {
       // Access the private method for testing
       const removeEmojis = (ollamaService as any).removeEmojis.bind(ollamaService);
@@ -116,6 +118,48 @@ Updated README.md with new sections and improved contribution steps
       expect(finalResult).toContain('Updated README.md with new sections');
       expect(finalResult).toContain('README.md: Added automated testing');
       expect(finalResult).toContain('src/core/config.ts: Added lines of config magic');
+    });
+  });
+
+  describe('Quiet Mode', () => {
+    it('should respect quiet mode and not output verbose messages when quiet is true', async () => {
+      const quietOllamaService = new OllamaService(mockLogger, undefined, true);
+      const spy = vi.spyOn(mockLogger, 'info');
+
+      // Mock fetch to return a successful response
+      global.fetch = vi.fn().mockResolvedValue({
+        ok: true,
+        text: () => Promise.resolve('{"response": "test commit message"}'),
+      });
+
+      try {
+        await quietOllamaService.generateCommitMessage('test-model', 'http://localhost:11434', 'test prompt', true);
+      } catch (error) {
+        // Expected to fail due to fetch mock, but we're testing the logger calls
+      }
+
+      // Verify that no info messages were logged when quiet mode is enabled
+      expect(spy).not.toHaveBeenCalled();
+    });
+
+    it('should output verbose messages when quiet is false', async () => {
+      const nonQuietOllamaService = new OllamaService(mockLogger, undefined, false);
+      const spy = vi.spyOn(mockLogger, 'info');
+
+      // Mock fetch to return a successful response
+      global.fetch = vi.fn().mockResolvedValue({
+        ok: true,
+        text: () => Promise.resolve('{"response": "test commit message"}'),
+      });
+
+      try {
+        await nonQuietOllamaService.generateCommitMessage('test-model', 'http://localhost:11434', 'test prompt', true);
+      } catch (error) {
+        // Expected to fail due to fetch mock, but we're testing the logger calls
+      }
+
+      // Verify that info messages were logged when quiet mode is disabled
+      expect(spy).toHaveBeenCalled();
     });
   });
 });

@@ -12,9 +12,9 @@ export class ModelsCommand {
   private logger: ILogger;
   private ollamaService: IOllamaService;
 
-  constructor(logger: ILogger = Logger.getDefault(), ollamaService?: IOllamaService) {
+  constructor(ollamaService?: IOllamaService, logger: ILogger = Logger.getDefault()) {
     this.logger = logger;
-    this.ollamaService = ollamaService || new OllamaService(this.logger);
+    this.ollamaService = ollamaService || new OllamaService(this.logger, undefined, false);
   }
 
   async listModels(host?: string, verbose = false): Promise<void> {

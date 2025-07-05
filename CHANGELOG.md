@@ -7,6 +7,68 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **Enhanced Configuration Validation**: Added intelligent key validation to the `config set` command
+  - Validates configuration keys before setting values to prevent invalid configurations
+  - Provides helpful suggestions for similar keys when an invalid key is provided
+  - Shows common typos and suggests correct alternatives (e.g., "quite" → "quiet")
+  - Limits suggestions to 5 options to avoid overwhelming users
+  - Exports `getConfigKeys()` function for reuse across the codebase
+
+### Changed
+
+- **Improved Git File Change Analysis**: Enhanced handling of renamed and copied files
+  - Better parsing of git status output to handle complex file operations
+  - Proper handling of renamed files (R100 status) with clear display of old → new paths
+  - Support for copied files (C100 status) with appropriate action labeling
+  - Improved path handling to use correct file paths for git diff commands
+  - Enhanced error handling with detailed debug logging for failed operations
+  - More robust parsing that handles malformed git output gracefully
+- **Dependency Injection Consistency**: Updated `ModelsCommand` and related commands to use a consistent constructor signature: `(ollamaService?: IOllamaService, logger?: ILogger)`. This allows for flexible dependency injection and easier testing.
+- **OllamaService Instantiation**: All usages of `OllamaService` now explicitly pass logger and configuration parameters, and allow for an undefined service to be injected for testability and flexibility.
+
+### Fixed
+
+- **Configuration Key Validation**: Fixed potential issues with invalid configuration keys
+  - Prevents setting invalid keys that could cause runtime errors
+  - Provides clear error messages with actionable suggestions
+  - Maintains backward compatibility while adding validation layer
+- **Git Status Parsing**: Fixed issues with complex git status output parsing
+  - Resolved ambiguous argument errors when handling renamed files
+  - Improved tab-separated value parsing for git status output
+  - Better handling of edge cases in git status format
+  - Enhanced error recovery when git commands fail
+- **Quiet Mode Output**: Fixed change statistics being displayed in quiet mode
+  - Change statistics (Files changed, Insertions, Deletions) are now properly suppressed in quiet mode
+  - Logger.info messages for git operations now respect quiet mode setting
+  - Maintains functionality while providing cleaner output in quiet mode
+- **Status Message Visibility**: Fixed "Generating commit message" status message not being visible in quiet mode
+  - Status message is now always visible to users, even in quiet mode
+  - Ensures users always see progress feedback during commit message generation
+  - Maintains spinner functionality for better UX
+- **Logger Consistency**: Improved logger usage patterns for better debugging and troubleshooting
+  - Fixed mixed usage of static and instance logger methods throughout the codebase
+  - Ensured all verbose/debug messages are properly generated and visible
+  - Improved timing of logger calls to prevent spinner interference
+  - Enhanced test coverage for logger functionality and quiet mode behavior
+
+### Technical Details
+
+- Added `findSimilarKeys()` function with substring matching and character similarity algorithms
+- Enhanced `getConfigKeys()` function to be exportable for reuse
+- Improved git status parsing to handle R100 (rename) and C100 (copy) status codes
+- Added comprehensive test coverage for renamed and copied file scenarios
+- Enhanced error handling with debug logging throughout git operations
+- Updated test suite to verify key validation and suggestion functionality
+- **Logger Consistency Improvements**: Fixed mixed logger usage patterns throughout the codebase
+  - Changed static `Logger.info()` calls to instance `this.logger.info()` in GitService for consistency
+  - Updated test suite to spy on instance logger methods instead of static methods
+  - Ensured all services use injected logger instances with proper verbosity settings
+  - Fixed potential spinner interference with logger output by ensuring proper timing
+- The `ModelsCommand` constructor now takes `ollamaService` as the first parameter and `logger` as the second. This enables callers to inject a pre-configured or mock service, or fall back to a default instance if not provided.
+- Allowing an undefined service is a common and viable pattern for CLI tools and libraries, as it enables both flexibility and testability. For larger projects, consider centralizing service instantiation for consistency.
+
 ## [1.0.16] - 2025-07-05
 
 ### Added

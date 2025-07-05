@@ -15,7 +15,7 @@ export const registerListModelsCommand = (program: Command) => {
       try {
         const configManager = ConfigManager.getInstance(logger);
         await configManager.initialize();
-        const modelsCommand = new ModelsCommand(logger);
+        const modelsCommand = new ModelsCommand(undefined, logger);
         await modelsCommand.listModels(options.host, options.verbose);
       } catch (error) {
         Logger.error('List models failed:', error);

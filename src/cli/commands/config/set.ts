@@ -1,6 +1,7 @@
 import { Command } from 'commander';
 import { ConfigManager } from '../../../core/config';
 import { Logger } from '../../../utils/logger';
+import { getConfigKeys } from './keys';
 
 export const registerSetCommands = (configCommand: Command) => {
   configCommand
@@ -13,6 +14,19 @@ export const registerSetCommands = (configCommand: Command) => {
         try {
           const configManager = ConfigManager.getInstance();
           await configManager.initialize();
+
+          // Validate the key before proceeding
+          const validKeys = getConfigKeys().map(k => k.key);
+          if (!validKeys.includes(key)) {
+            const suggestions = findSimilarKeys(key, validKeys);
+            Logger.error(`❌ Invalid configuration key: "${key}"`);
+            if (suggestions.length > 0) {
+              console.log('💡 Did you mean one of these?');
+              suggestions.forEach(suggestion => console.log(`   ${suggestion}`));
+            }
+            console.log("\n💡 Run 'ollama-git-commit config keys' to see all available keys.");
+            process.exit(1);
+          }
 
           // Parse the value based on the key
           const parsedValue = parseValue(key, value);
@@ -140,4 +154,32 @@ export function displayUpdatedKey(
 
   const source = typeof currentSource === 'string' ? currentSource : 'unknown';
   console.log(`  ${key}: ${JSON.stringify(currentValue)} (from ${source})`);
+}
+
+/**
+ * Find similar keys to suggest when an invalid key is provided
+ */
+export function findSimilarKeys(invalidKey: string, validKeys: string[]): string[] {
+  const suggestions: string[] = [];
+
+  // Check for exact substring matches
+  for (const validKey of validKeys) {
+    if (validKey.includes(invalidKey) || invalidKey.includes(validKey)) {
+      suggestions.push(validKey);
+    }
+  }
+
+  // Check for keys with similar length and common characters
+  for (const validKey of validKeys) {
+    if (Math.abs(validKey.length - invalidKey.length) <= 2) {
+      const commonChars = [...invalidKey].filter(char => validKey.includes(char)).length;
+      const similarity = commonChars / Math.max(invalidKey.length, validKey.length);
+      if (similarity >= 0.6) {
+        suggestions.push(validKey);
+      }
+    }
+  }
+
+  // Remove duplicates and limit to 5 suggestions
+  return [...new Set(suggestions)].slice(0, 5);
 }
