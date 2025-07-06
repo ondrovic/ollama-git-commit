@@ -206,19 +206,18 @@ export class ConfigManager implements IConfigManager {
 
       // Handle OLLAMA_COMMIT_ prefixed variables
       if (envKey.startsWith('OLLAMA_COMMIT_')) {
-        const configKey = envKey.replace('OLLAMA_COMMIT_', '').toLowerCase();
+        const configKey = envKey.replace('OLLAMA_COMMIT_', '');
 
-        if (configKey.startsWith('time_outs_')) {
+        if (configKey.startsWith('TIME_OUTS_')) {
           // Handle nested timeout values
-          const timeoutType = configKey.replace(
-            'time_outs_',
-            '',
-          ) as keyof OllamaCommitConfig['timeouts'];
+          const timeoutType = configKey
+            .replace('TIME_OUTS_', '')
+            .toLowerCase() as keyof OllamaCommitConfig['timeouts'];
           const timeoutValue = parseInt(envValue, 10);
           if (!isNaN(timeoutValue)) {
             config.timeouts[timeoutType] = timeoutValue;
           }
-        } else if (configKey === 'context') {
+        } else if (configKey === 'CONTEXT') {
           // Handle context providers
           const providers = envValue
             .split(',')
@@ -227,7 +226,7 @@ export class ConfigManager implements IConfigManager {
           config.context = providers.map(provider => ({
             provider: provider as ContextProvider['provider'],
           }));
-        } else if (configKey === 'models') {
+        } else if (configKey === 'MODELS') {
           // Handle models array
           try {
             config.models = JSON.parse(envValue);
@@ -235,20 +234,40 @@ export class ConfigManager implements IConfigManager {
             this.logger.warn(`Invalid models JSON in environment variable ${envKey}`);
           }
         } else {
-          // Handle simple string/boolean values
-          const normalizedKey = configKey.replace(/_/g, '') as keyof OllamaCommitConfig;
+          // Convert SNAKE_CASE to camelCase and handle type conversion
+          const normalizedKey = this.snakeToCamelCase(configKey) as keyof OllamaCommitConfig;
           if (normalizedKey in config) {
-            (config as unknown as Record<string, unknown>)[normalizedKey] = envValue;
+            const convertedValue = this.convertEnvValue(envValue, config[normalizedKey]);
+            (config as unknown as Record<string, unknown>)[normalizedKey] = convertedValue;
           }
         }
       }
     }
   }
 
+  private snakeToCamelCase(str: string): string {
+    return str.toLowerCase().replace(/_([a-z])/g, (_, letter) => letter.toUpperCase());
+  }
+
+  private convertEnvValue(envValue: string, currentValue: unknown): unknown {
+    // Convert based on the current value's type
+    if (typeof currentValue === 'boolean') {
+      return envValue.toLowerCase() === 'true' || envValue === '1';
+    }
+    if (typeof currentValue === 'number') {
+      const num = parseInt(envValue, 10);
+      return isNaN(num) ? currentValue : num;
+    }
+    // For strings and other types, return as-is
+    return envValue;
+  }
+
   async getConfig(): Promise<Readonly<OllamaCommitConfig>> {
     if (!this.initialized) {
       await this.initialize();
     }
+    // Reload configuration from disk to ensure we get the latest changes
+    this.config = await this.loadConfig();
     return this.config;
   }
 

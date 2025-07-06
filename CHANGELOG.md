@@ -18,6 +18,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **Type Safety Bug**: Fixed critical bug in `registerCommitCommand` function
+
+  - **Parameter Type Mismatch**: Fixed contradiction between optional `deps` parameter type and required implementation
+  - **Runtime Error Prevention**: Eliminated unexpected crashes when dependencies were missing
+  - **API Consistency**: Made function signature match implementation for predictable behavior
+  - **Test Reliability**: Updated tests to provide required dependencies instead of expecting optional behavior
+
 - **Test Reliability**: Fixed failing tests in CI/CD environment
   - **Path Structure Tests**: Fixed cross-platform path validation to work on both Windows and Linux
   - **System Prompt Tests**: Added proper filesystem mocking to prevent real file creation during tests
@@ -31,6 +38,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     - Fixed linter errors related to object comparison in proxy tests
 
 ### Technical Details
+
+- **Type Safety Fix**: Resolved critical API inconsistency in `registerCommitCommand` function
+
+  - **Function Signature**: Changed `deps?: Partial<CommitCommandDeps>` to `deps: CommitCommandDeps` to match implementation
+  - **Implementation Simplification**: Removed runtime error throwing logic in favor of direct dependency destructuring
+  - **Test Updates**: Modified test that expected optional dependencies to provide required dependencies
+  - **API Predictability**: Ensured function signature accurately reflects required behavior
 
 - **CI/CD Enhancements**:
 

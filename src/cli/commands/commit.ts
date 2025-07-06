@@ -82,7 +82,7 @@ export const executeCommitAction = async (
   }
 };
 
-export const registerCommitCommand = (program: Command, deps?: Partial<CommitCommandDeps>) => {
+export const registerCommitCommand = (program: Command, deps: CommitCommandDeps) => {
   program
     .command('commit')
     .description('Generate a commit message using Ollama')
@@ -99,22 +99,7 @@ export const registerCommitCommand = (program: Command, deps?: Partial<CommitCom
     .option('--auto-model', 'Automatically select model')
     .option('-q, --quiet', 'Suppress git command output')
     .action(async options => {
-      // Use only injected dependencies, never instantiate here
-      const logger: ILogger =
-        deps?.logger ??
-        (() => {
-          throw new Error('Logger dependency missing');
-        })();
-      const serviceFactory: ServiceFactory =
-        deps?.serviceFactory ??
-        (() => {
-          throw new Error('ServiceFactory dependency missing');
-        })();
-      const getConfigFn: typeof getConfig =
-        deps?.getConfig ??
-        (() => {
-          throw new Error('getConfig dependency missing');
-        })();
+      const { logger, serviceFactory, getConfig: getConfigFn } = deps;
 
       try {
         await executeCommitAction(options, { logger, serviceFactory, getConfig: getConfigFn });

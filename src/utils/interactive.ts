@@ -204,11 +204,19 @@ export class InteractivePromptDI {
     const validChoice = choices.find(c => c.key === choice);
 
     if (validChoice) {
+      // Add a newline after user input to separate from subsequent logger messages
+      if (this.deps.processObj?.stdout?.write) {
+        this.deps.processObj.stdout.write('\n');
+      }
       resolve(choice);
     } else if (choice === '') {
       // Handle empty input - could be default or invalid
       const hasDefault = choices.some(c => c.key === choice);
       if (hasDefault) {
+        // Add a newline after user input to separate from subsequent logger messages
+        if (this.deps.processObj?.stdout?.write) {
+          this.deps.processObj.stdout.write('\n');
+        }
         resolve(choice);
       } else {
         logger.plain(`Please choose one of: ${choices.map(c => c.key).join(', ')}`);

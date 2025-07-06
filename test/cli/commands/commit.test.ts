@@ -33,7 +33,9 @@ describe('Commit CLI Command', () => {
     process.env.OLLAMA_HOST = 'http://localhost:11434';
     // Create mock dependencies
     mockConfigManager = {
-      getConfig: mock(() => Promise.resolve({ model: 'test-model', host: 'http://localhost:11434' })),
+      getConfig: mock(() =>
+        Promise.resolve({ model: 'test-model', host: 'http://localhost:11434' }),
+      ),
       saveConfig: mock(() => Promise.resolve()),
     };
     mockLogger = {
@@ -45,10 +47,14 @@ describe('Commit CLI Command', () => {
     mockServiceFactory = {
       createLogger: mock(() => mockLogger),
       createGitService: mock(() => ({ exec: mock(() => Promise.resolve('')) })),
-      createOllamaService: mock(() => ({ generateCommitMessage: mock(() => Promise.resolve('test message')) })),
+      createOllamaService: mock(() => ({
+        generateCommitMessage: mock(() => Promise.resolve('test message')),
+      })),
       createPromptService: mock(() => ({ buildCommitPrompt: mock(() => 'test prompt') })),
     };
-    mockGetConfig = mock(() => Promise.resolve({ model: 'test-model', host: 'http://localhost:11434' }));
+    mockGetConfig = mock(() =>
+      Promise.resolve({ model: 'test-model', host: 'http://localhost:11434' }),
+    );
     // Create a new program for each test
     program = new Command();
   });
@@ -67,11 +73,11 @@ describe('Commit CLI Command', () => {
       logger: mockLogger,
       getConfig: mockGetConfig,
     });
-    
+
     const commitCommand = program.commands.find(cmd => cmd.name() === 'commit');
     expect(commitCommand).toBeDefined();
     expect(commitCommand?.description()).toBe('Generate a commit message using Ollama');
-    
+
     // Check that all expected options are registered
     const options = commitCommand?.options || [];
     const optionNames = options.map(opt => opt.long);
@@ -171,13 +177,18 @@ describe('Commit CLI Command', () => {
     expect(mockServiceFactory.createPromptService).toHaveBeenCalled();
   });
 
-  test('should fall back to default dependencies when not provided', () => {
-    registerCommitCommand(program);
-    
+  test('should register command with required dependencies', () => {
+    registerCommitCommand(program, {
+      configManager: mockConfigManager,
+      serviceFactory: mockServiceFactory,
+      logger: mockLogger,
+      getConfig: mockGetConfig,
+    });
+
     const commitCommand = program.commands.find(cmd => cmd.name() === 'commit');
     expect(commitCommand).toBeDefined();
-    
-    // The command should still be registered even without injected dependencies
+
+    // The command should be registered with the provided dependencies
     expect(commitCommand?.name()).toBe('commit');
   });
 
@@ -251,15 +262,15 @@ describe('Commit CLI Command', () => {
 
     // Verify that services are created with the correct options
     expect(mockServiceFactory.createLogger).toHaveBeenCalledWith({ verbose: true });
-    expect(mockServiceFactory.createGitService).toHaveBeenCalledWith({ 
-      verbose: true, 
-      quiet: false 
+    expect(mockServiceFactory.createGitService).toHaveBeenCalledWith({
+      verbose: true,
+      quiet: false,
     });
-    expect(mockServiceFactory.createOllamaService).toHaveBeenCalledWith({ 
-      verbose: true 
+    expect(mockServiceFactory.createOllamaService).toHaveBeenCalledWith({
+      verbose: true,
     });
-    expect(mockServiceFactory.createPromptService).toHaveBeenCalledWith({ 
-      verbose: true 
+    expect(mockServiceFactory.createPromptService).toHaveBeenCalledWith({
+      verbose: true,
     });
   });
 
@@ -296,4 +307,4 @@ describe('Commit CLI Command', () => {
     expect(customLogger.error).toHaveBeenCalledWith('Environment validation failed:');
     expect(customLogger.error).toHaveBeenCalledWith('  Invalid directory');
   });
-}); 
+});
