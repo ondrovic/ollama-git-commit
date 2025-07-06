@@ -430,7 +430,6 @@ export class CommitCommand {
     }
   }
 
-  // QUESTION: this is a really large function anything we can do to make it more maintainable?
   private async displayCommitResult(
     message: string,
     interactive: boolean,
@@ -448,194 +447,184 @@ export class CommitCommand {
     this.logger.plain('');
 
     if (interactive) {
-      try {
-        const action = await askCommitAction(config.autoCommit);
-        let result: number;
+      return this.handleInteractiveMode(message, config);
+    } else {
+      return this.handleNonInteractiveMode(message, config);
+    }
+  }
 
-        switch (action) {
-          case 'use': {
-            if (config.autoCommit) {
-              // Auto-commit mode: automatically commit with the AI-generated message
-              try {
-                // Helper to run a command and await its completion
-                const runSpawn = (cmd: string, args: string[]) =>
-                  new Promise<number>((resolve, reject) => {
-                    const child = this.spawn(cmd, args, {
-                      cwd: this.directory,
-                      stdio: this.quiet ? ['pipe', 'pipe', 'pipe'] : 'inherit',
-                      env: process.env,
-                    });
-                    child.on('exit', code => resolve(code ?? 1));
-                    child.on('error', err => reject(err));
-                  });
+  private async handleInteractiveMode(
+    message: string,
+    config: Required<CommitConfig>,
+  ): Promise<number> {
+    try {
+      const action = await askCommitAction(config.autoCommit);
+      return this.handleUserAction(action, message, config);
+    } catch (error: unknown) {
+      if (typeof error === 'object' && error && 'message' in error) {
+        this.logger.error('Interactive prompt failed:', (error as { message: string }).message);
+      } else {
+        this.logger.error('Interactive prompt failed:', String(error));
+      }
+      this.logger.info('Falling back to non-interactive mode');
+      return this.handleNonInteractiveMode(message, config);
+    }
+  }
 
-                const commitCode = await runSpawn('git', ['commit', '-m', message]);
-                if (commitCode === 0) {
-                  this.logger.success('Changes committed successfully!');
-                  this.logger.up('Pushing changes to remote repository...');
-                  const pushCode = await runSpawn('git', ['push']);
-                  if (pushCode === 0) {
-                    this.logger.success('Changes pushed successfully!');
-                    result = 0;
-                  } else {
-                    this.logger.error('Failed to push changes.');
-                    this.logger.error(
-                      'If you are using 1Password SSH agent, ensure the 1Password CLI is running and SSH_AUTH_SOCK is set.',
-                    );
-                    result = 1;
-                  }
-                } else {
-                  this.logger.error('Failed to commit changes.');
-                  this.logger.error(
-                    'If you are using 1Password SSH agent, ensure the 1Password CLI is running and SSH_AUTH_SOCK is set.',
-                  );
-                  result = 1;
-                }
-              } catch (error) {
-                this.logger.error(
-                  'Failed to commit changes:',
-                  error instanceof Error ? error.message : String(error),
-                );
-                this.logger.error(
-                  'If you are using 1Password SSH agent, ensure the 1Password CLI is running and SSH_AUTH_SOCK is set.',
-                );
-                result = 1;
-              }
-            } else {
-              // Auto-stage mode: require manual commit (user types the message)
-              this.logger.plain('');
-              await this.logger.group('Copy and run this command:', () => {
-                const escapedMessage = message.replace(/"/g, '\\"');
-                this.logger.info(`git commit -m "${escapedMessage}"`);
-              });
-              result = 0;
-            }
-            break;
-          }
-          case 'copy': {
-            await copyToClipboard(message);
-            result = 0;
-            break;
-          }
-          case 'regenerate': {
-            result = 2;
-            break;
-          }
-          case 'cancel': {
-            result = 1;
-            break;
-          }
-          default: {
-            result = 1;
-            break;
-          }
-        }
-        return result;
-      } catch (error: unknown) {
-        if (typeof error === 'object' && error && 'message' in error) {
-          this.logger.error('Interactive prompt failed:', (error as { message: string }).message);
-        } else {
-          this.logger.error('Interactive prompt failed:', String(error));
-        }
-        this.logger.info('Falling back to non-interactive mode');
+  private async handleNonInteractiveMode(
+    message: string,
+    config: Required<CommitConfig>,
+  ): Promise<number> {
+    if (config.autoCommit) {
+      return this.performAutoCommit(message, config);
+    } else {
+      return this.showManualCommitInstructions(message);
+    }
+  }
 
-        // Non-interactive mode: ensure auto-commit always commits AND pushes
+  private async handleUserAction(
+    action: 'use' | 'copy' | 'regenerate' | 'cancel',
+    message: string,
+    config: Required<CommitConfig>,
+  ): Promise<number> {
+    switch (action) {
+      case 'use': {
         if (config.autoCommit) {
-          try {
-            const escapedMessage = message.replace(/"/g, '\\"');
-            // Commit changes
-            this.gitService.execCommand(`git commit -m "${escapedMessage}"`, this.quiet);
-            this.logger.success('Changes committed successfully!');
-
-            // Always push after commit in auto-commit mode
-            if (this.quiet) {
-              this.logger.rocket('Pushing to remote...');
-            } else {
-              this.logger.up('Pushing changes to remote repository...');
-            }
-            try {
-              this.gitService.execCommand('git push', this.quiet);
-              this.logger.success('Changes pushed successfully!');
-              return 0;
-            } catch (pushError) {
-              this.logger.error(
-                'Failed to push changes:',
-                pushError instanceof Error ? pushError.message : String(pushError),
-              );
-              this.logger.error(
-                'If you are using 1Password SSH agent, ensure the 1Password CLI is running and SSH_AUTH_SOCK is set.',
-              );
-              return 1;
-            }
-          } catch (error) {
-            this.logger.error(
-              'Failed to commit changes:',
-              error instanceof Error ? error.message : String(error),
-            );
-            this.logger.error(
-              'If you are using 1Password SSH agent, ensure the 1Password CLI is running and SSH_AUTH_SOCK is set.',
-            );
-            return 1;
-          }
+          return this.performInteractiveAutoCommit(message, config);
         } else {
-          // Auto-stage mode: require manual commit (user types the message)
-          await this.logger.group('To commit with this message, run:', () => {
-            const escapedMessage = message.replace(/"/g, '\\"');
-            this.logger.info(`git commit -m "${escapedMessage}"`);
-            this.logger.plain('');
-          });
-          return 0;
+          return this.showManualCommitInstructions(message);
         }
       }
-    } else {
-      // Non-interactive mode: ensure auto-commit always commits AND pushes
-      if (config.autoCommit) {
-        try {
-          const escapedMessage = message.replace(/"/g, '\\"');
-          // Commit changes
-          this.gitService.execCommand(`git commit -m "${escapedMessage}"`, this.quiet);
-          this.logger.success('Changes committed successfully!');
+      case 'copy': {
+        await copyToClipboard(message);
+        return 0;
+      }
+      case 'regenerate': {
+        return 2;
+      }
+      case 'cancel': {
+        return 1;
+      }
+      default: {
+        return 1;
+      }
+    }
+  }
 
-          // Always push after commit in auto-commit mode
-          if (this.quiet) {
-            this.logger.rocket('Pushing to remote...');
-          } else {
-            this.logger.info('Pushing changes to remote repository...');
-          }
-          try {
-            this.gitService.execCommand('git push', this.quiet);
-            this.logger.success('Changes pushed successfully!');
-            return 0;
-          } catch (pushError) {
-            this.logger.error(
-              'Failed to push changes:',
-              pushError instanceof Error ? pushError.message : String(pushError),
-            );
-            this.logger.error(
-              'If you are using 1Password SSH agent, ensure the 1Password CLI is running and SSH_AUTH_SOCK is set.',
-            );
-            return 1;
-          }
-        } catch (error) {
-          this.logger.error(
-            'Failed to commit changes:',
-            error instanceof Error ? error.message : String(error),
-          );
+  private async performAutoCommit(
+    message: string,
+    _config: Required<CommitConfig>,
+  ): Promise<number> {
+    try {
+      const escapedMessage = message.replace(/"/g, '\\"');
+
+      // Commit changes
+      this.gitService.execCommand(`git commit -m "${escapedMessage}"`, this.quiet);
+      this.logger.success('Changes committed successfully!');
+
+      // Always push after commit in auto-commit mode
+      return this.performAutoPush();
+    } catch (error) {
+      return this.handleCommitError(error);
+    }
+  }
+
+  private async performInteractiveAutoCommit(
+    message: string,
+    _config: Required<CommitConfig>,
+  ): Promise<number> {
+    try {
+      // Helper to run a command and await its completion
+      const runSpawn = (cmd: string, args: string[]) =>
+        new Promise<number>((resolve, reject) => {
+          const child = this.spawn(cmd, args, {
+            cwd: this.directory,
+            stdio: this.quiet ? ['pipe', 'pipe', 'pipe'] : 'inherit',
+            env: process.env,
+          });
+          child.on('exit', code => resolve(code ?? 1));
+          child.on('error', err => reject(err));
+        });
+
+      const commitCode = await runSpawn('git', ['commit', '-m', message]);
+      if (commitCode === 0) {
+        this.logger.success('Changes committed successfully!');
+        this.logger.up('Pushing changes to remote repository...');
+        const pushCode = await runSpawn('git', ['push']);
+        if (pushCode === 0) {
+          this.logger.success('Changes pushed successfully!');
+          return 0;
+        } else {
+          this.logger.error('Failed to push changes.');
           this.logger.error(
             'If you are using 1Password SSH agent, ensure the 1Password CLI is running and SSH_AUTH_SOCK is set.',
           );
           return 1;
         }
       } else {
-        // Auto-stage mode: require manual commit (user types the message)
-        await this.logger.group('To commit with this message, run:', () => {
-          const escapedMessage = message.replace(/"/g, '\\"');
-          this.logger.info(`git commit -m "${escapedMessage}"`);
-          this.logger.info('');
-        });
-        return 0;
+        this.logger.error('Failed to commit changes.');
+        this.logger.error(
+          'If you are using 1Password SSH agent, ensure the 1Password CLI is running and SSH_AUTH_SOCK is set.',
+        );
+        return 1;
       }
+    } catch (error) {
+      this.logger.error(
+        'Failed to commit changes:',
+        error instanceof Error ? error.message : String(error),
+      );
+      this.logger.error(
+        'If you are using 1Password SSH agent, ensure the 1Password CLI is running and SSH_AUTH_SOCK is set.',
+      );
+      return 1;
     }
+  }
+
+  private async performAutoPush(): Promise<number> {
+    if (this.quiet) {
+      this.logger.rocket('Pushing to remote...');
+    } else {
+      this.logger.up('Pushing changes to remote repository...');
+    }
+
+    try {
+      this.gitService.execCommand('git push', this.quiet);
+      this.logger.success('Changes pushed successfully!');
+      return 0;
+    } catch (pushError) {
+      return this.handlePushError(pushError);
+    }
+  }
+
+  private async showManualCommitInstructions(message: string): Promise<number> {
+    await this.logger.group('To commit with this message, run:', () => {
+      const escapedMessage = message.replace(/"/g, '\\"');
+      this.logger.info(`git commit -m "${escapedMessage}"`);
+      this.logger.plain('');
+    });
+    return 0;
+  }
+
+  private handleCommitError(error: unknown): number {
+    this.logger.error(
+      'Failed to commit changes:',
+      error instanceof Error ? error.message : String(error),
+    );
+    this.logger.error(
+      'If you are using 1Password SSH agent, ensure the 1Password CLI is running and SSH_AUTH_SOCK is set.',
+    );
+    return 1;
+  }
+
+  private handlePushError(pushError: unknown): number {
+    this.logger.error(
+      'Failed to push changes:',
+      pushError instanceof Error ? pushError.message : String(pushError),
+    );
+    this.logger.error(
+      'If you are using 1Password SSH agent, ensure the 1Password CLI is running and SSH_AUTH_SOCK is set.',
+    );
+    return 1;
   }
 
   private async buildConfig(options: CommitOptions): Promise<Required<CommitConfig>> {

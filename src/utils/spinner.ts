@@ -27,13 +27,6 @@ const defaultTimer: ITimer = {
   setInterval: (callback: () => void, ms: number) => setInterval(callback, ms),
   clearInterval: (id: NodeJS.Timeout) => clearInterval(id),
 };
-// QUESTION: should this be using ILogger
-const defaultLogger: ILogger = {
-  info: (message: string) => Logger.info(message),
-  success: (message: string) => Logger.success(message),
-  error: (message: string) => Logger.error(message),
-  warn: (message: string) => Logger.warn(message),
-};
 
 export class Spinner {
   private interval: NodeJS.Timeout | null = null;
@@ -45,8 +38,7 @@ export class Spinner {
   constructor(
     private processOutput: IProcessOutput = defaultProcessOutput,
     private timer: ITimer = defaultTimer,
-    // QUESTION: should this be using ILogger
-    private logger: ILogger = defaultLogger,
+    private logger: ILogger = Logger,
   ) {}
 
   start(message = 'Loading'): void {
@@ -134,7 +126,7 @@ export class MultiSpinner {
   constructor(
     private processOutput: IProcessOutput = defaultProcessOutput,
     private timer: ITimer = defaultTimer,
-    private logger: ILogger = defaultLogger,
+    private logger: ILogger = Logger,
   ) {}
 
   add(id: string, message: string): void {

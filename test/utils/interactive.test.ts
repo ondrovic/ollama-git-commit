@@ -1,6 +1,11 @@
 import { describe, expect, it, mock } from 'bun:test';
 import * as interactive from '../../src/utils/interactive';
 
+// Mock clipboard functionality
+mock.module('../../src/utils/clipboard', () => ({
+  hasClipboardSupport: mock(() => Promise.resolve(true)),
+}));
+
 // Simple mocks
 const mockLogger = {
   info: mock(() => {}),
@@ -270,8 +275,7 @@ describe('InteractivePrompt', () => {
     });
 
     // Mock the input handlers to not call anything
-    prompt['handleBunInput'] = mock(() => {});
-    prompt['handleNodeInput'] = mock(() => {});
+    prompt['handleInput'] = mock(() => {});
 
     const promise = prompt.prompt({
       message: 'Test?',
@@ -303,11 +307,9 @@ describe('InteractivePrompt', () => {
     const mockResolve = mock(() => {});
     const mockReject = mock(() => {});
 
-    prompt['handleBunInput'] = mock(
-      (choices, defaultChoice, resolve, reject, processObj, logger) => {
-        resolve('y');
-      },
-    );
+    prompt['handleInput'] = mock((choices, defaultChoice, resolve, reject, processObj, logger) => {
+      resolve('y');
+    });
 
     const result = await prompt.prompt({
       message: 'Test?',
@@ -321,7 +323,7 @@ describe('InteractivePrompt', () => {
     expect(result).toBe('y');
   });
 
-  it('should test handleBunInput without TTY', () => {
+  it('should test handleInput without TTY', () => {
     const prompt = new interactive.InteractivePromptDI({
       logger: mockLogger,
       processObj: mockProcess,
@@ -352,7 +354,7 @@ describe('InteractivePrompt', () => {
     const originalCreateInterface = require('readline').createInterface;
     require('readline').createInterface = mock(() => mockRl);
 
-    prompt['handleBunInput'](choices, 'y', resolve, reject, nonTTYProcess, mockLogger);
+    prompt['handleInput'](choices, 'y', resolve, reject, nonTTYProcess, mockLogger);
 
     expect(mockProcess.stdout.write).toHaveBeenCalledWith('What would you like to do? ');
     expect(mockProcess.stdout.write).toHaveBeenCalledWith('[y]: ');
@@ -360,7 +362,7 @@ describe('InteractivePrompt', () => {
     require('readline').createInterface = originalCreateInterface;
   });
 
-  it('should test handleBunInput error handling', () => {
+  it('should test handleInput error handling', () => {
     const prompt = new interactive.InteractivePromptDI({
       logger: mockLogger,
       processObj: mockProcess,
@@ -380,13 +382,13 @@ describe('InteractivePrompt', () => {
       throw new Error('setRawMode failed');
     });
 
-    prompt['handleBunInput'](choices, 'y', resolve, reject, mockProcess, mockLogger);
+    prompt['handleInput'](choices, 'y', resolve, reject, mockProcess, mockLogger);
 
     expect(mockLogger.debug).toHaveBeenCalledWith('Bun input error:', expect.any(Error));
     expect(reject).toHaveBeenCalledWith(expect.any(Error));
   });
 
-  it('should test handleNodeInput', () => {
+  it('should test handleInput for Node.js', () => {
     const prompt = new interactive.InteractivePromptDI({
       logger: mockLogger,
       processObj: mockProcess,
@@ -409,7 +411,7 @@ describe('InteractivePrompt', () => {
       return mockProcess.stdin;
     });
 
-    prompt['handleNodeInput'](choices, 'y', resolve, reject, mockProcess, mockLogger);
+    prompt['handleInput'](choices, 'y', resolve, reject, mockProcess, mockLogger);
 
     expect(mockProcess.stdout.write).toHaveBeenCalledWith('What would you like to do? ');
     expect(mockProcess.stdout.write).toHaveBeenCalledWith('[y]: ');
@@ -417,7 +419,7 @@ describe('InteractivePrompt', () => {
     expect(mockProcess.stdin.resume).toHaveBeenCalled();
   });
 
-  it('should test handleNodeInput with raw mode error', () => {
+  it('should test handleInput with raw mode error for Node.js', () => {
     const prompt = new interactive.InteractivePromptDI({
       logger: mockLogger,
       processObj: mockProcess,
@@ -437,13 +439,13 @@ describe('InteractivePrompt', () => {
       throw new Error('setRawMode failed');
     });
 
-    prompt['handleNodeInput'](choices, 'y', resolve, reject, mockProcess, mockLogger);
+    prompt['handleInput'](choices, 'y', resolve, reject, mockProcess, mockLogger);
 
-    expect(mockLogger.debug).toHaveBeenCalledWith('Failed to set raw mode:', expect.any(Error));
+    expect(mockLogger.debug).toHaveBeenCalledWith('Bun input error:', expect.any(Error));
     expect(mockProcess.stdin.resume).toHaveBeenCalled();
   });
 
-  it('should test handleNodeInput with error event', async () => {
+  it('should test handleInput with error event for Node.js', async () => {
     mockLogger.debug.mockClear();
     const prompt = new interactive.InteractivePromptDI({
       logger: mockLogger,
@@ -468,7 +470,7 @@ describe('InteractivePrompt', () => {
       return mockProcess.stdin;
     });
 
-    prompt['handleNodeInput'](choices, 'y', resolve, reject, mockProcess, mockLogger);
+    prompt['handleInput'](choices, 'y', resolve, reject, mockProcess, mockLogger);
 
     // Wait a bit for any async operations
     await new Promise(resolve => setTimeout(resolve, 5));
@@ -645,7 +647,7 @@ describe('askCommitActionDI', () => {
     );
 
     const result = await interactive.askCommitActionDI(false, deps);
-    expect(result).toBe('cancel');
+    expect(result).toBe('use');
 
     interactive.InteractivePromptDI.prototype.prompt = originalPrompt;
   });
@@ -699,6 +701,158 @@ describe('askCommitActionDI', () => {
           key: 'y',
           description: 'Use this message and copy commit command',
         }),
+      ]),
+      defaultChoice: 'y',
+    });
+
+    interactive.InteractivePromptDI.prototype.prompt = originalPrompt;
+  });
+
+  it('should hide copy option when autoCommit is true', async () => {
+    const deps = {
+      logger: mockLogger,
+      processObj: mockProcess,
+      setTimeoutFn: mockSetTimeout,
+      clearTimeoutFn: mockClearTimeout,
+    };
+
+    const originalPrompt = interactive.InteractivePromptDI.prototype.prompt;
+    interactive.InteractivePromptDI.prototype.prompt = mock(() => Promise.resolve('y'));
+
+    await interactive.askCommitActionDI(true, deps);
+
+    // Check that prompt was called without copy option
+    expect(interactive.InteractivePromptDI.prototype.prompt).toHaveBeenCalledWith({
+      message: 'Available actions:',
+      choices: expect.not.arrayContaining([
+        expect.objectContaining({
+          key: 'c',
+          description: 'Copy message to clipboard (if available)',
+        }),
+      ]),
+      defaultChoice: 'y',
+    });
+
+    interactive.InteractivePromptDI.prototype.prompt = originalPrompt;
+  });
+
+  it('should hide copy option when not interactive', async () => {
+    const deps = {
+      logger: mockLogger,
+      processObj: { ...mockProcess, stdin: { ...mockProcess.stdin, isTTY: false } },
+      setTimeoutFn: mockSetTimeout,
+      clearTimeoutFn: mockClearTimeout,
+    };
+
+    const originalPrompt = interactive.InteractivePromptDI.prototype.prompt;
+    interactive.InteractivePromptDI.prototype.prompt = mock(() => Promise.resolve('y'));
+
+    await interactive.askCommitActionDI(false, deps);
+
+    // Check that prompt was called without copy option
+    expect(interactive.InteractivePromptDI.prototype.prompt).toHaveBeenCalledWith({
+      message: 'Available actions:',
+      choices: expect.not.arrayContaining([
+        expect.objectContaining({
+          key: 'c',
+          description: 'Copy message to clipboard (if available)',
+        }),
+      ]),
+      defaultChoice: 'y',
+    });
+
+    interactive.InteractivePromptDI.prototype.prompt = originalPrompt;
+  });
+
+  it('should hide regenerate option when not interactive', async () => {
+    const deps = {
+      logger: mockLogger,
+      processObj: { ...mockProcess, stdin: { ...mockProcess.stdin, isTTY: false } },
+      setTimeoutFn: mockSetTimeout,
+      clearTimeoutFn: mockClearTimeout,
+    };
+
+    const originalPrompt = interactive.InteractivePromptDI.prototype.prompt;
+    interactive.InteractivePromptDI.prototype.prompt = mock(() => Promise.resolve('y'));
+
+    await interactive.askCommitActionDI(false, deps);
+
+    // Check that prompt was called without regenerate option
+    expect(interactive.InteractivePromptDI.prototype.prompt).toHaveBeenCalledWith({
+      message: 'Available actions:',
+      choices: expect.not.arrayContaining([
+        expect.objectContaining({
+          key: 'r',
+          description: 'Regenerate message',
+        }),
+      ]),
+      defaultChoice: 'y',
+    });
+
+    interactive.InteractivePromptDI.prototype.prompt = originalPrompt;
+  });
+
+  it('should return cancel for copy choice when autoCommit is true', async () => {
+    const deps = {
+      logger: mockLogger,
+      processObj: mockProcess,
+      setTimeoutFn: mockSetTimeout,
+      clearTimeoutFn: mockClearTimeout,
+    };
+
+    const originalPrompt = interactive.InteractivePromptDI.prototype.prompt;
+    interactive.InteractivePromptDI.prototype.prompt = mock(() => Promise.resolve('c'));
+
+    const result = await interactive.askCommitActionDI(true, deps);
+    expect(result).toBe('cancel');
+
+    interactive.InteractivePromptDI.prototype.prompt = originalPrompt;
+  });
+
+  it('should return cancel for regenerate choice when not interactive', async () => {
+    const deps = {
+      logger: mockLogger,
+      processObj: { ...mockProcess, stdin: { ...mockProcess.stdin, isTTY: false } },
+      setTimeoutFn: mockSetTimeout,
+      clearTimeoutFn: mockClearTimeout,
+    };
+
+    const originalPrompt = interactive.InteractivePromptDI.prototype.prompt;
+    interactive.InteractivePromptDI.prototype.prompt = mock(() => Promise.resolve('r'));
+
+    const result = await interactive.askCommitActionDI(false, deps);
+    expect(result).toBe('cancel');
+
+    interactive.InteractivePromptDI.prototype.prompt = originalPrompt;
+  });
+
+  it('should show all options when interactive and not autoCommit', async () => {
+    const deps = {
+      logger: mockLogger,
+      processObj: mockProcess,
+      setTimeoutFn: mockSetTimeout,
+      clearTimeoutFn: mockClearTimeout,
+    };
+
+    const originalPrompt = interactive.InteractivePromptDI.prototype.prompt;
+    interactive.InteractivePromptDI.prototype.prompt = mock(() => Promise.resolve('y'));
+
+    await interactive.askCommitActionDI(false, deps);
+
+    // Check that prompt was called with all expected options
+    expect(interactive.InteractivePromptDI.prototype.prompt).toHaveBeenCalledWith({
+      message: 'Available actions:',
+      choices: expect.arrayContaining([
+        expect.objectContaining({
+          key: 'y',
+          description: 'Use this message and copy commit command',
+        }),
+        expect.objectContaining({
+          key: 'c',
+          description: 'Copy message to clipboard (if available)',
+        }),
+        expect.objectContaining({ key: 'r', description: 'Regenerate message' }),
+        expect.objectContaining({ key: 'n', description: 'Cancel' }),
       ]),
       defaultChoice: 'y',
     });
