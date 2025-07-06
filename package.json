@@ -28,6 +28,8 @@
     "test:watch": "bun test --watch",
     "lint": "eslint",
     "lint:fix": "eslint --fix",
+    "check:types": "tsc --noEmit --project tsconfig.json",
+    "check:tests": "tsc --noEmit --project tsconfig.test.json",
     "format": "npx prettier --write src/**/*.ts",
     "format:check": "prettier --check src/**/*.ts",
     "clean": "rm -rf dist",
