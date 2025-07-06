@@ -1,10 +1,12 @@
 import { Command } from 'commander';
+import { getConfig } from '../core/config';
+import { ServiceFactory } from '../core/factory';
 import { Logger } from '../utils/logger';
 import { registerCommitCommand } from './commands/commit';
 import { registerConfigCommands } from './commands/config';
-import { registerListModelsCommand } from './commands/list-models';
-import { registerTestCommands } from './commands/test';
+
 import { VERSION } from '../generated/version';
+import { registerTestCommands } from './commands/test';
 
 const program = new Command();
 
@@ -15,10 +17,17 @@ program
   )
   .version(VERSION);
 
-// Register all commands
-registerCommitCommand(program);
+// Create dependencies for commands
+const logger = new Logger();
+const serviceFactory = ServiceFactory.getInstance();
+
+// Register all commands with dependencies
+registerCommitCommand(program, {
+  logger,
+  serviceFactory,
+  getConfig,
+});
 registerTestCommands(program);
-registerListModelsCommand(program);
 registerConfigCommands(program);
 
 // Error handling

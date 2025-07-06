@@ -18,6 +18,10 @@ print = "yarn"
 [test]
 # Test configuration
 preload = ["./test/setup.ts"]
+root = "."
+junit = "coverage/junit.xml"
+coverage = true
+coverageSkipTestFiles = true
 
 [run]
 # Runtime configuration

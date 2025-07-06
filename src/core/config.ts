@@ -1,10 +1,8 @@
-import { CONFIGURATIONS } from '@/constants/configurations';
 import fsExtra from 'fs-extra';
 import { homedir } from 'os';
 import { dirname, join } from 'path';
-import { ENVIRONMENTAL_VARIABLES } from '../constants/enviornmental';
+import { CONFIGURATIONS } from '../constants/configurations';
 import { MODELS } from '../constants/models';
-import { VALID_TEMPLATES, type VALID_TEMPLATE } from '../constants/prompts';
 import {
   ConfigSources,
   ContextProvider,
@@ -187,8 +185,8 @@ export class ConfigManager implements IConfigManager {
           // Convert to URL format
           validated.host = `http://${validated.host}`;
         } catch {
-          Logger.warn(`Invalid host URL in ${source}: ${validated.host}`);
-          Logger.warn('Expected format: http://host:port or host:port');
+          this.logger.warn(`Invalid host URL in ${source}: ${validated.host}`);
+          this.logger.warn('Expected format: http://host:port or host:port');
         }
       }
     }
@@ -197,340 +195,216 @@ export class ConfigManager implements IConfigManager {
   }
 
   private applyEnvironmentVariables(config: OllamaCommitConfig): void {
-    // Apply environment variables with OLLAMA_COMMIT_ prefix
-    if (process.env[ENVIRONMENTAL_VARIABLES.OLLAMA_HOST]) {
-      config.host = process.env[ENVIRONMENTAL_VARIABLES.OLLAMA_HOST] as string;
-    }
+    for (const [envKey, envValue] of Object.entries(process.env)) {
+      if (envValue === undefined) continue;
 
-    if (process.env[ENVIRONMENTAL_VARIABLES.OLLAMA_COMMIT_MODEL]) {
-      config.model = process.env[ENVIRONMENTAL_VARIABLES.OLLAMA_COMMIT_MODEL] as string;
-    }
-
-    if (process.env[ENVIRONMENTAL_VARIABLES.OLLAMA_COMMIT_HOST]) {
-      config.host = process.env[ENVIRONMENTAL_VARIABLES.OLLAMA_COMMIT_HOST] as string;
-    }
-
-    if (process.env[ENVIRONMENTAL_VARIABLES.OLLAMA_COMMIT_VERBOSE] === 'true') {
-      config.verbose = true;
-    }
-
-    if (process.env[ENVIRONMENTAL_VARIABLES.OLLAMA_COMMIT_DEBUG] === 'true') {
-      config.debug = true;
-    }
-
-    if (process.env[ENVIRONMENTAL_VARIABLES.OLLAMA_COMMIT_AUTO_STAGE] === 'true') {
-      config.autoStage = true;
-    }
-
-    if (process.env[ENVIRONMENTAL_VARIABLES.OLLAMA_COMMIT_AUTO_MODEL] === 'true') {
-      config.autoModel = true;
-    }
-
-    if (process.env[ENVIRONMENTAL_VARIABLES.OLLAMA_COMMIT_AUTO_COMMIT] === 'true') {
-      config.autoCommit = true;
-    } else if (process.env[ENVIRONMENTAL_VARIABLES.OLLAMA_COMMIT_AUTO_COMMIT] === 'false') {
-      config.autoCommit = false;
-    }
-
-    if (process.env[ENVIRONMENTAL_VARIABLES.OLLAMA_COMMIT_QUIET] === 'true') {
-      config.quiet = true;
-    } else if (process.env[ENVIRONMENTAL_VARIABLES.OLLAMA_COMMIT_QUIET] === 'false') {
-      config.quiet = false;
-    }
-
-    if (process.env[ENVIRONMENTAL_VARIABLES.OLLAMA_COMMIT_PROMPT_FILE]) {
-      config.promptFile = (
-        process.env[ENVIRONMENTAL_VARIABLES.OLLAMA_COMMIT_PROMPT_FILE] as string
-      ).replace('~', homedir());
-    }
-
-    if (process.env[ENVIRONMENTAL_VARIABLES.OLLAMA_COMMIT_PROMPT_TEMPLATE]) {
-      const promptTemplate = process.env[
-        ENVIRONMENTAL_VARIABLES.OLLAMA_COMMIT_PROMPT_TEMPLATE
-      ] as VALID_TEMPLATE;
-      if (VALID_TEMPLATES.includes(promptTemplate)) {
-        config.promptTemplate = promptTemplate;
+      // Handle OLLAMA_HOST
+      if (envKey === 'OLLAMA_HOST') {
+        config.host = envValue;
+        continue;
       }
-    }
 
-    if (process.env[ENVIRONMENTAL_VARIABLES.OLLAMA_COMMIT_USE_EMOJIS] === 'true') {
-      config.useEmojis = true;
-    } else if (process.env[ENVIRONMENTAL_VARIABLES.OLLAMA_COMMIT_USE_EMOJIS] === 'false') {
-      config.useEmojis = false;
-    }
+      // Handle OLLAMA_COMMIT_ prefixed variables
+      if (envKey.startsWith('OLLAMA_COMMIT_')) {
+        const configKey = envKey.replace('OLLAMA_COMMIT_', '').toLowerCase();
 
-    // Timeout environment variables
-    if (process.env[ENVIRONMENTAL_VARIABLES.OLLAMA_COMMIT_TIME_OUTS_CONNECTION]) {
-      const timeout = parseInt(
-        process.env[ENVIRONMENTAL_VARIABLES.OLLAMA_COMMIT_TIME_OUTS_CONNECTION] as string,
-        10,
-      );
-      if (!isNaN(timeout)) {
-        config.timeouts.connection = timeout;
-      }
-    }
-
-    if (process.env[ENVIRONMENTAL_VARIABLES.OLLAMA_COMMIT_TIME_OUTS_GENERATION]) {
-      const timeout = parseInt(
-        process.env[ENVIRONMENTAL_VARIABLES.OLLAMA_COMMIT_TIME_OUTS_GENERATION] as string,
-        10,
-      );
-      if (!isNaN(timeout)) {
-        config.timeouts.generation = timeout;
-      }
-    }
-
-    if (process.env[ENVIRONMENTAL_VARIABLES.OLLAMA_COMMIT_TIME_OUTS_MODEL_PULL]) {
-      const timeout = parseInt(
-        process.env[ENVIRONMENTAL_VARIABLES.OLLAMA_COMMIT_TIME_OUTS_MODEL_PULL] as string,
-        10,
-      );
-      if (!isNaN(timeout)) {
-        config.timeouts.modelPull = timeout;
-      }
-    }
-
-    // New multi-model environment variables
-    if (process.env[ENVIRONMENTAL_VARIABLES.OLLAMA_COMMIT_EMBEDDINGS_PROVIDER]) {
-      config.embeddingsProvider = process.env[
-        ENVIRONMENTAL_VARIABLES.OLLAMA_COMMIT_EMBEDDINGS_PROVIDER
-      ] as string;
-    }
-
-    if (process.env[ENVIRONMENTAL_VARIABLES.OLLAMA_COMMIT_EMBEDDINGS_MODEL]) {
-      config.embeddingsModel = process.env[
-        ENVIRONMENTAL_VARIABLES.OLLAMA_COMMIT_EMBEDDINGS_MODEL
-      ] as string;
-    }
-
-    if (process.env[ENVIRONMENTAL_VARIABLES.OLLAMA_COMMIT_MODELS]) {
-      try {
-        config.models = JSON.parse(
-          process.env[ENVIRONMENTAL_VARIABLES.OLLAMA_COMMIT_MODELS] as string,
-        );
-      } catch (error) {
-        this.logger.error('Failed to parse OLLAMA_COMMIT_MODELS environment variable:', error);
-      }
-    }
-
-    if (process.env[ENVIRONMENTAL_VARIABLES.OLLAMA_COMMIT_CONTEXT]) {
-      try {
-        config.context = JSON.parse(
-          process.env[ENVIRONMENTAL_VARIABLES.OLLAMA_COMMIT_CONTEXT] as string,
-        );
-      } catch (error) {
-        this.logger.error('Failed to parse OLLAMA_COMMIT_CONTEXT environment variable:', error);
+        if (configKey.startsWith('time_outs_')) {
+          // Handle nested timeout values
+          const timeoutType = configKey.replace(
+            'time_outs_',
+            '',
+          ) as keyof OllamaCommitConfig['timeouts'];
+          const timeoutValue = parseInt(envValue, 10);
+          if (!isNaN(timeoutValue)) {
+            config.timeouts[timeoutType] = timeoutValue;
+          }
+        } else if (configKey === 'context') {
+          // Handle context providers
+          const providers = envValue
+            .split(',')
+            .map(p => p.trim())
+            .filter(Boolean);
+          config.context = providers.map(provider => ({
+            provider: provider as ContextProvider['provider'],
+          }));
+        } else if (configKey === 'models') {
+          // Handle models array
+          try {
+            config.models = JSON.parse(envValue);
+          } catch {
+            this.logger.warn(`Invalid models JSON in environment variable ${envKey}`);
+          }
+        } else {
+          // Handle simple string/boolean values
+          const normalizedKey = configKey.replace(/_/g, '') as keyof OllamaCommitConfig;
+          if (normalizedKey in config) {
+            (config as unknown as Record<string, unknown>)[normalizedKey] = envValue;
+          }
+        }
       }
     }
   }
 
-  // Public API
   async getConfig(): Promise<Readonly<OllamaCommitConfig>> {
     if (!this.initialized) {
       await this.initialize();
     }
-    // Always reload config to ensure auto-sync logic runs
-    this.config = await this.loadConfig();
-    return { ...this.config };
+    return this.config;
   }
 
-  /**
-   * Get configuration from a specific type (user or local) without merging
-   * @param type - Configuration type ('user' or 'local')
-   * @returns Configuration from the specified type, merged with defaults
-   */
-  async getConfigByType(type: 'user' | 'local'): Promise<Readonly<OllamaCommitConfig>> {
+  async getConfigByType(_type: 'user' | 'local'): Promise<Readonly<OllamaCommitConfig>> {
     if (!this.initialized) {
       await this.initialize();
     }
-
-    const defaults = this.getDefaults();
-    const configFile = type === 'local' ? this.localConfigFile : this.defaultConfigFile;
-
-    // Load the specific config file
-    const fileConfig = await this.loadConfigFile(configFile);
-
-    // Merge with defaults to ensure all required fields are present
-    const mergedConfig = this.deepMerge(defaults, fileConfig);
-
-    return { ...mergedConfig };
+    // For now, return the full config since we don't track source per field
+    // This could be enhanced to track which config file each field came from
+    return this.config;
   }
 
   get<K extends keyof OllamaCommitConfig>(key: K): OllamaCommitConfig[K] {
     if (!this.initialized) {
-      throw new Error('ConfigManager not initialized. Call initialize() first.');
+      throw new Error('ConfigManager not initialized');
     }
-    const value = this.config[key];
-    return value;
+    return this.config[key];
   }
 
-  // Override config for current session (doesn't persist)
   override(overrides: Partial<OllamaCommitConfig>): void {
     this.config = { ...this.config, ...overrides };
   }
 
-  // Create default config file
   async createDefaultConfig(): Promise<void> {
     try {
-      const configDir = dirname(this.defaultConfigFile);
-      await this.fs.ensureDir(configDir);
-
-      const defaultConfig = this.getDefaults();
-      await this.fs.writeJson(this.defaultConfigFile, defaultConfig, { spaces: 2 });
-
-      Logger.success(`Configuration file created at: ${this.defaultConfigFile}`);
-    } catch (error: unknown) {
-      if (typeof error === 'object' && error && 'message' in error) {
-        throw new Error(
-          `Failed to create default config: ${(error as { message: string }).message}`,
-        );
-      } else {
-        throw new Error(`Failed to create default config: ${String(error)}`);
-      }
+      await this.fs.ensureDir(dirname(this.defaultConfigFile));
+      await this.fs.writeJson(this.defaultConfigFile, this.getDefaults(), { spaces: 2 });
+      this.logger.info(`✅ Configuration file created at: ${this.defaultConfigFile}`);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      throw new Error(`Failed to create default config: ${message}`);
     }
   }
 
-  // Get config file locations for CLI info
   async getConfigFiles(): Promise<{
     user: string;
     local: string;
     active: ActiveFile[];
   }> {
-    const active: ActiveFile[] = [];
+    const activeFiles: ActiveFile[] = [];
 
-    if (await this.fs.pathExists(this.defaultConfigFile))
-      active.push({ type: 'user', path: this.defaultConfigFile, 'in-use': true });
-    if (await this.fs.pathExists(this.localConfigFile))
-      active.push({ type: 'local', path: this.localConfigFile, 'in-use': true });
+    try {
+      const userExists = await this.fs.pathExists(this.defaultConfigFile);
+      if (userExists) {
+        activeFiles.push({ type: 'user', path: this.defaultConfigFile, 'in-use': true });
+      }
+    } catch {
+      // File doesn't exist or can't be accessed
+    }
+
+    try {
+      const localExists = await this.fs.pathExists(this.localConfigFile);
+      if (localExists) {
+        activeFiles.push({ type: 'local', path: this.localConfigFile, 'in-use': true });
+      }
+    } catch {
+      // File doesn't exist or can't be accessed
+    }
 
     return {
       user: this.defaultConfigFile,
       local: this.localConfigFile,
-      active,
+      active: activeFiles,
     };
   }
 
-  // Reload configuration
   async reload(): Promise<void> {
-    this.config = await this.loadConfig();
+    this.initialized = false;
+    await this.initialize();
   }
 
-  // Debug info
   async getDebugInfo(): Promise<Record<string, unknown>> {
     const config = await this.getConfig();
     const files = await this.getConfigFiles();
 
     return {
-      config: config as unknown as Record<string, unknown>,
+      config,
       files,
       environment: {
         platform: process.platform,
         arch: process.arch,
         nodeVersion: process.version,
         cwd: process.cwd(),
-        env: {
-          [ENVIRONMENTAL_VARIABLES.OLLAMA_HOST]: process.env[ENVIRONMENTAL_VARIABLES.OLLAMA_HOST],
-          [ENVIRONMENTAL_VARIABLES.OLLAMA_COMMIT_MODEL]:
-            process.env[ENVIRONMENTAL_VARIABLES.OLLAMA_COMMIT_MODEL],
-          [ENVIRONMENTAL_VARIABLES.OLLAMA_COMMIT_HOST]:
-            process.env[ENVIRONMENTAL_VARIABLES.OLLAMA_COMMIT_HOST],
-          [ENVIRONMENTAL_VARIABLES.OLLAMA_COMMIT_VERBOSE]:
-            process.env[ENVIRONMENTAL_VARIABLES.OLLAMA_COMMIT_VERBOSE],
-          [ENVIRONMENTAL_VARIABLES.OLLAMA_COMMIT_DEBUG]:
-            process.env[ENVIRONMENTAL_VARIABLES.OLLAMA_COMMIT_DEBUG],
-          [ENVIRONMENTAL_VARIABLES.OLLAMA_COMMIT_AUTO_STAGE]:
-            process.env[ENVIRONMENTAL_VARIABLES.OLLAMA_COMMIT_AUTO_STAGE],
-          [ENVIRONMENTAL_VARIABLES.OLLAMA_COMMIT_AUTO_MODEL]:
-            process.env[ENVIRONMENTAL_VARIABLES.OLLAMA_COMMIT_AUTO_MODEL],
-          [ENVIRONMENTAL_VARIABLES.OLLAMA_COMMIT_AUTO_COMMIT]:
-            process.env[ENVIRONMENTAL_VARIABLES.OLLAMA_COMMIT_AUTO_COMMIT],
-          [ENVIRONMENTAL_VARIABLES.OLLAMA_COMMIT_PROMPT_FILE]:
-            process.env[ENVIRONMENTAL_VARIABLES.OLLAMA_COMMIT_PROMPT_FILE],
-          [ENVIRONMENTAL_VARIABLES.OLLAMA_COMMIT_PROMPT_TEMPLATE]:
-            process.env[ENVIRONMENTAL_VARIABLES.OLLAMA_COMMIT_PROMPT_TEMPLATE],
-          [ENVIRONMENTAL_VARIABLES.OLLAMA_COMMIT_USE_EMOJIS]:
-            process.env[ENVIRONMENTAL_VARIABLES.OLLAMA_COMMIT_USE_EMOJIS],
-          [ENVIRONMENTAL_VARIABLES.OLLAMA_COMMIT_TIME_OUTS_CONNECTION]:
-            process.env[ENVIRONMENTAL_VARIABLES.OLLAMA_COMMIT_TIME_OUTS_CONNECTION],
-          [ENVIRONMENTAL_VARIABLES.OLLAMA_COMMIT_TIME_OUTS_GENERATION]:
-            process.env[ENVIRONMENTAL_VARIABLES.OLLAMA_COMMIT_TIME_OUTS_GENERATION],
-          [ENVIRONMENTAL_VARIABLES.OLLAMA_COMMIT_TIME_OUTS_MODEL_PULL]:
-            process.env[ENVIRONMENTAL_VARIABLES.OLLAMA_COMMIT_TIME_OUTS_MODEL_PULL],
-          [ENVIRONMENTAL_VARIABLES.OLLAMA_COMMIT_EMBEDDINGS_PROVIDER]:
-            process.env[ENVIRONMENTAL_VARIABLES.OLLAMA_COMMIT_EMBEDDINGS_PROVIDER],
-          [ENVIRONMENTAL_VARIABLES.OLLAMA_COMMIT_MODELS]:
-            process.env[ENVIRONMENTAL_VARIABLES.OLLAMA_COMMIT_MODELS],
-          [ENVIRONMENTAL_VARIABLES.OLLAMA_COMMIT_CONTEXT]:
-            process.env[ENVIRONMENTAL_VARIABLES.OLLAMA_COMMIT_CONTEXT],
-        },
+        env: process.env,
       },
     };
   }
 
   async getConfigSources(): Promise<ConfigSources> {
-    const sources: ConfigSources = CONFIGURATIONS.EMPTY;
-
+    // This is a simplified implementation that returns the source for each config key
+    // In a real implementation, you'd track which source each field came from
     const getSource = async (key: string): Promise<string | undefined> => {
-      const keyParts = key.split('.');
-      const lastKey = keyParts[keyParts.length - 1];
-      if (!lastKey) return 'built-in';
-
       // Check environment variables first
-      const envKey = `OLLAMA_COMMIT_${key.toUpperCase().replace('.', '_')}`;
-      if (process.env[envKey]) return 'environment';
+      const envKey = `OLLAMA_COMMIT_${key.toUpperCase()}`;
+      if (process.env[envKey] !== undefined) {
+        return 'environment';
+      }
 
-      // Helper function to check if a value exists in a config object
-      const hasValue = (obj: Record<string, unknown> | undefined, parts: string[]): boolean => {
-        if (!obj) return false;
-        let curr: unknown = obj;
-        for (const part of parts) {
-          if (
-            curr &&
-            typeof curr === 'object' &&
-            Object.prototype.hasOwnProperty.call(curr, part)
-          ) {
-            curr = (curr as Record<string, unknown>)[part];
-          } else {
-            return false;
-          }
+      // Check local config file
+      try {
+        const localConfig = await this.loadConfigFile(this.localConfigFile);
+        if (hasValue(localConfig, key.split('.'))) {
+          return 'local';
         }
-        return true;
-      };
+      } catch {
+        // File doesn't exist or can't be read
+      }
 
-      // Check configs in order of precedence
-      const currentProjectConfig = await this.loadConfigFile(this.localConfigFile);
-      const currentUserConfig = await this.loadConfigFile(this.defaultConfigFile);
+      // Check user config file
+      try {
+        const userConfig = await this.loadConfigFile(this.defaultConfigFile);
+        if (hasValue(userConfig, key.split('.'))) {
+          return 'user';
+        }
+      } catch {
+        // File doesn't exist or can't be read
+      }
 
-      if (hasValue(currentProjectConfig, keyParts)) return 'project';
-      if (hasValue(currentUserConfig, keyParts)) return 'user';
-      return 'built-in';
+      return 'default';
     };
 
-    sources.model = await getSource('model');
-    sources.host = await getSource('host');
-    sources.verbose = await getSource('verbose');
-    sources.interactive = await getSource('interactive');
-    sources.debug = await getSource('debug');
-    sources.autoStage = await getSource('autoStage');
-    sources.autoModel = await getSource('autoModel');
-    sources.autoCommit = await getSource('autoCommit');
-    sources.quiet = await getSource('quiet');
-    sources.promptFile = await getSource('promptFile');
-    sources.promptTemplate = await getSource('promptTemplate');
-    sources.useEmojis = await getSource('useEmojis');
-    sources.models = await getSource('models');
-    sources.embeddingsProvider = await getSource('embeddingsProvider');
-    sources.embeddingsModel = await getSource('embeddingsModel');
-    sources.context = await getSource('context');
-    if (sources.timeouts) {
-      sources.timeouts.connection = await getSource('timeouts.connection');
-      sources.timeouts.generation = await getSource('timeouts.generation');
-      sources.timeouts.modelPull = await getSource('timeouts.modelPull');
-    }
-    return sources;
+    const hasValue = (obj: Record<string, unknown> | undefined, parts: string[]): boolean => {
+      if (!obj) return false;
+      let current = obj;
+      for (const part of parts) {
+        if (current[part] === undefined) return false;
+        current = current[part] as Record<string, unknown>;
+      }
+      return true;
+    };
+
+    return {
+      model: await getSource('model'),
+      host: await getSource('host'),
+      promptFile: await getSource('promptFile'),
+      promptTemplate: await getSource('promptTemplate'),
+      verbose: await getSource('verbose'),
+      interactive: await getSource('interactive'),
+      debug: await getSource('debug'),
+      autoStage: await getSource('autoStage'),
+      autoModel: await getSource('autoModel'),
+      autoCommit: await getSource('autoCommit'),
+      useEmojis: await getSource('useEmojis'),
+      quiet: await getSource('quiet'),
+      timeouts: {
+        connection: await getSource('timeouts.connection'),
+        generation: await getSource('timeouts.generation'),
+        modelPull: await getSource('timeouts.modelPull'),
+      },
+      models: await getSource('models'),
+      embeddingsProvider: await getSource('embeddingsProvider'),
+      embeddingsModel: await getSource('embeddingsModel'),
+      context: await getSource('context'),
+    };
   }
 
-  // New methods for multi-model support
   async getModelByRole(role: ModelRole): Promise<ModelConfig | null> {
     const config = await this.getConfig();
     return config.models?.find(m => m.roles.includes(role)) || null;
@@ -539,22 +413,23 @@ export class ConfigManager implements IConfigManager {
   async getEmbeddingsModel(): Promise<ModelConfig | null> {
     const config = await this.getConfig();
 
-    // First check for simple embeddingsModel field (backward compatibility)
-    if (config.embeddingsModel) {
-      return {
-        name: 'embeddings',
-        provider: 'ollama',
-        model: config.embeddingsModel,
-        roles: ['embed'],
-      };
-    }
-
-    // Then check for multi-model embeddingsProvider
+    // First check if embeddingsProvider is set and find that model
     if (config.embeddingsProvider) {
-      return config.models?.find(m => m.name === config.embeddingsProvider) || null;
+      const providerModel = config.models?.find(m => m.name === config.embeddingsProvider);
+      if (providerModel) {
+        return providerModel;
+      }
     }
 
-    // Finally check for any model with embed role
+    // Then check if embeddingsModel is set and find that model
+    if (config.embeddingsModel) {
+      const modelConfig = config.models?.find(m => m.model === config.embeddingsModel);
+      if (modelConfig) {
+        return modelConfig;
+      }
+    }
+
+    // Finally, look for any model with embed role
     return this.getModelByRole('embed');
   }
 
@@ -567,53 +442,171 @@ export class ConfigManager implements IConfigManager {
     return this.getModelByRole('chat');
   }
 
-  // Backward compatibility: get the primary model (either from models array or legacy model field)
   async getPrimaryModel(): Promise<string> {
     const config = await this.getConfig();
-    // If model is set, try to find it in models array
-    if (config.model) {
-      if (config.models && config.models.length > 0) {
-        const found = config.models.find(m => m.model === config.model || m.name === config.model);
-        if (found) return found.model;
-      }
-      return config.model;
+    const chatModel = await this.getChatModel();
+
+    // If we have a chat model, use its model name
+    if (chatModel?.model) {
+      return chatModel.model;
     }
-    // If not set, use first chat model in models array
-    if (config.models && config.models.length > 0) {
-      const chatModel = config.models.find(m => m.roles.includes('chat'));
-      if (chatModel) return chatModel.model;
-    }
-    // Fallback to legacy model
-    return config.model;
+
+    // Otherwise, fall back to the config.model field
+    return config.model || '';
+  }
+
+  async getConfigKeys(): Promise<
+    Array<{
+      key: string;
+      description: string;
+      type: string;
+      default: unknown;
+      example?: string;
+    }>
+    > {
+    const config = await this.getConfig();
+    return [
+      {
+        key: 'model',
+        description: 'Primary model for commit message generation',
+        type: 'string',
+        default: config.model,
+        example: 'llama3',
+      },
+      {
+        key: 'host',
+        description: 'Ollama server host URL',
+        type: 'string',
+        default: config.host,
+        example: 'http://localhost:11434',
+      },
+      {
+        key: 'verbose',
+        description: 'Enable verbose output',
+        type: 'boolean',
+        default: config.verbose,
+        example: 'true',
+      },
+      {
+        key: 'interactive',
+        description: 'Enable interactive mode',
+        type: 'boolean',
+        default: config.interactive,
+        example: 'true',
+      },
+      {
+        key: 'debug',
+        description: 'Enable debug mode',
+        type: 'boolean',
+        default: config.debug,
+        example: 'false',
+      },
+      {
+        key: 'autoStage',
+        description: 'Automatically stage files before commit',
+        type: 'boolean',
+        default: config.autoStage,
+        example: 'false',
+      },
+      {
+        key: 'autoModel',
+        description: 'Automatically select model',
+        type: 'boolean',
+        default: config.autoModel,
+        example: 'false',
+      },
+      {
+        key: 'autoCommit',
+        description: 'Automatically commit after generating message',
+        type: 'boolean',
+        default: config.autoCommit,
+        example: 'false',
+      },
+      {
+        key: 'quiet',
+        description: 'Suppress git command output',
+        type: 'boolean',
+        default: config.quiet,
+        example: 'true',
+      },
+      {
+        key: 'promptFile',
+        description: 'Path to custom prompt file',
+        type: 'string',
+        default: config.promptFile,
+        example: '/path/to/prompt.txt',
+      },
+      {
+        key: 'promptTemplate',
+        description: 'Prompt template to use',
+        type: 'string',
+        default: config.promptTemplate,
+        example: 'conventional',
+      },
+      {
+        key: 'useEmojis',
+        description: 'Use emojis in commit messages',
+        type: 'boolean',
+        default: config.useEmojis,
+        example: 'false',
+      },
+      {
+        key: 'timeouts.connection',
+        description: 'Connection timeout in milliseconds',
+        type: 'number',
+        default: config.timeouts.connection,
+        example: '10000',
+      },
+      {
+        key: 'timeouts.generation',
+        description: 'Generation timeout in milliseconds',
+        type: 'number',
+        default: config.timeouts.generation,
+        example: '120000',
+      },
+      {
+        key: 'timeouts.modelPull',
+        description: 'Model pull timeout in milliseconds',
+        type: 'number',
+        default: config.timeouts.modelPull,
+        example: '300000',
+      },
+      {
+        key: 'embeddingsModel',
+        description: 'Model for embeddings generation',
+        type: 'string',
+        default: config.models?.[1]?.model || 'nomic-embed-text',
+        example: 'nomic-embed-text',
+      },
+      {
+        key: 'embeddingsProvider',
+        description: 'Provider for embeddings',
+        type: 'string',
+        default: config.embeddingsProvider,
+        example: 'embeddingsProvider',
+      },
+      {
+        key: 'context',
+        description: 'Context providers (comma-separated)',
+        type: 'array',
+        default: config.context?.map(c => c.provider) || [],
+        example: 'code,diff,terminal',
+      },
+    ];
   }
 
   public async saveConfig(
     config: Partial<OllamaCommitConfig>,
-    type: 'user' | 'local' = 'user',
+    _type: 'user' | 'local' = 'user',
   ): Promise<void> {
-    const configFile = type === 'local' ? this.localConfigFile : this.defaultConfigFile;
-    const configDir = dirname(configFile);
-
     try {
-      await this.fs.ensureDir(configDir);
-      let existingConfig: Record<string, unknown> = {};
-      if (await this.fs.pathExists(configFile)) {
-        try {
-          existingConfig = await this.fs.readJson(configFile);
-        } catch {
-          this.logger.warn(`Could not read existing config at ${configFile}, will overwrite.`);
-        }
-      }
-      // Merge the new config into the existing config, starting from defaults
-      const mergedConfig = this.deepMerge({ ...this.getDefaults(), ...existingConfig }, config);
-
       // Auto-sync models array if model field was updated
       if (config.model !== undefined) {
         // Validate the model value
         if (!config.model || typeof config.model !== 'string' || config.model.trim() === '') {
           this.logger.warn('Invalid model value provided, skipping auto-sync of models array');
         } else {
-          const currentModels = mergedConfig.models || [];
+          const currentModels = this.config.models || [];
           const currentChatModel = currentModels.find(m => m.roles.includes('chat'));
           const shouldUpdate = !currentChatModel || currentChatModel.model !== config.model;
 
@@ -624,16 +617,16 @@ export class ConfigManager implements IConfigManager {
             const updatedModels = [...currentModels];
 
             if (currentChatModel) {
-              // Update existing chat model
+              // Update existing chat model but preserve the name if it's custom
               const chatModelIndex = updatedModels.findIndex(m => m.roles.includes('chat'));
               if (chatModelIndex !== -1) {
                 const existingModel = updatedModels[chatModelIndex];
                 if (existingModel) {
                   updatedModels[chatModelIndex] = {
-                    name: config.model,
+                    name: existingModel.name, // Preserve the existing name
                     provider: existingModel.provider,
-                    model: config.model,
-                    roles: existingModel.roles,
+                    model: config.model, // Update the model
+                    roles: existingModel.roles, // Preserve the roles
                   };
                 }
               }
@@ -653,44 +646,49 @@ export class ConfigManager implements IConfigManager {
               updatedModels.push({
                 name: 'embeddingsProvider',
                 provider: 'ollama',
-                model: mergedConfig.embeddingsModel || MODELS.EMBEDDINGS,
+                model: this.config.embeddingsModel || 'nomic-embed-text',
                 roles: ['embed'],
               });
             }
 
-            mergedConfig.models = updatedModels;
-            this.logger.debug(`Updated models array: ${JSON.stringify(mergedConfig.models)}`);
+            config.models = updatedModels;
+            this.logger.debug(`Updated models array: ${JSON.stringify(config.models)}`);
           }
         }
       }
 
-      await this.fs.writeJson(configFile, mergedConfig, { spaces: 2 });
-      this.logger.success(`Configuration saved to ${configFile}`);
+      // Update the in-memory config
+      this.config = { ...this.config, ...config };
+
+      // Save to file
+      const configFile = _type === 'local' ? this.localConfigFile : this.defaultConfigFile;
+      await this.fs.ensureDir(dirname(configFile));
+      await this.fs.writeJson(configFile, this.config, { spaces: 2 });
+      this.logger.info(`✅ Configuration saved to ${configFile}`);
     } catch (error) {
-      this.logger.error(`❌ Failed to save configuration to ${configFile}:`, error);
-      throw error;
+      const message = error instanceof Error ? error.message : String(error);
+      throw new Error(`Failed to save config: ${message}`);
     }
   }
 
   public async removeConfig(type: 'user' | 'local'): Promise<void> {
-    const configFile = type === 'local' ? this.localConfigFile : this.defaultConfigFile;
-
     try {
-      if (await this.fs.pathExists(configFile)) {
+      const configFile = type === 'local' ? this.localConfigFile : this.defaultConfigFile;
+      const exists = await this.fs.pathExists(configFile);
+      if (exists) {
         await this.fs.remove(configFile);
-        this.logger.success(`Configuration removed from ${configFile}`);
+        this.logger.info(`✅ Configuration removed from ${configFile}`);
       } else {
-        this.logger.info(`ℹ️  No configuration file found at ${configFile}`);
+        this.logger.info(`Configuration file ${configFile} does not exist`);
       }
     } catch (error) {
-      this.logger.error(`❌ Failed to remove configuration from ${configFile}:`, error);
-      throw error;
+      const message = error instanceof Error ? error.message : String(error);
+      throw new Error(`Failed to remove config: ${message}`);
     }
   }
 }
 
 export async function getConfig(): Promise<Readonly<OllamaCommitConfig>> {
   const configManager = ConfigManager.getInstance();
-  await configManager.initialize();
   return configManager.getConfig();
 }

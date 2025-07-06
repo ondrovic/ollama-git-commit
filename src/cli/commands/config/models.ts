@@ -1,7 +1,17 @@
 import { Command } from 'commander';
 import { ConfigManager } from '../../../core/config';
 import { ModelConfig, ModelRole } from '../../../types';
+import { formatFileSize } from '../../../utils/formatFileSize';
 import { Logger } from '../../../utils/logger';
+import { normalizeHost } from '../../../utils/url';
+
+interface OllamaModelResponse {
+  name: string;
+  size?: number;
+  details?: {
+    family?: string;
+  };
+}
 
 export const registerModelsCommands = (configCommand: Command) => {
   const modelsCommand = configCommand.command('models').description('Manage model configurations');
@@ -53,7 +63,7 @@ export const registerModelsCommands = (configCommand: Command) => {
     .description('Remove a model configuration')
     .argument('<name>', 'Model name')
     .option('-t, --type <type>', 'Configuration type (user, local)', 'user')
-    .action(async (name, options) => {
+    .action(async (name, _options) => {
       try {
         const configManager = ConfigManager.getInstance();
         await configManager.initialize();
@@ -63,13 +73,13 @@ export const registerModelsCommands = (configCommand: Command) => {
         const filteredModels = models.filter(m => m.name !== name);
 
         if (filteredModels.length === models.length) {
-          Logger.error(`❌ Model '${name}' not found`);
+          Logger.error(`Model '${name}' not found`);
           process.exit(1);
         }
 
         await configManager.saveConfig(
           { models: filteredModels },
-          options.type as 'user' | 'local',
+          _options.type as 'user' | 'local',
         );
         Logger.success(`Model '${name}' removed successfully`);
       } catch (error) {
@@ -80,26 +90,51 @@ export const registerModelsCommands = (configCommand: Command) => {
 
   modelsCommand
     .command('list')
-    .description('List all model configurations')
+    .description('List all available models from Ollama server')
     .option('-t, --type <type>', 'Configuration type (user, local)', 'user')
-    .action(async options => {
+    .action(async _options => {
       try {
         const configManager = ConfigManager.getInstance();
         await configManager.initialize();
+        const config = await configManager.getConfig();
 
-        const config = await configManager.getConfigByType(options.type as 'user' | 'local');
-        const models = config.models || [];
+        // Get available models from Ollama server
+        const ollamaHost = normalizeHost(config.host);
+        const response = await fetch(`${ollamaHost}/api/tags`, {
+          signal: AbortSignal.timeout(config.timeouts.connection),
+        });
 
-        if (models.length === 0) {
-          Logger.info(`No models configured in ${options.type} configuration`);
-          return;
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status}: ${response.statusText}`);
         }
 
-        console.log(`📋 Configured Models (${options.type}):`);
-        models.forEach(model => {
-          console.log(`  ${model.name.padEnd(20)} - ${model.provider}/${model.model}`);
-          console.log(`    Roles: ${model.roles.join(', ')}`);
+        const data = await response.json();
+        if (!data.models || !Array.isArray(data.models)) {
+          throw new Error('Invalid response from Ollama server');
+        }
+
+        // Banner
+        Logger.plain(
+          '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━',
+        );
+        Logger.plain('Available models:');
+        Logger.plain(
+          '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━',
+        );
+
+        // List models with size, family, and current indicator
+        data.models.forEach((model: OllamaModelResponse) => {
+          const size = model.size ? formatFileSize(model.size) : 'n/a';
+          const family = model.details?.family ? ` [${model.details.family}]` : '';
+          const currentIndicator = model.name === config.model ? ' ⭐ (current)' : '';
+          Logger.package(`  ${model.name} (${size})${family}${currentIndicator}`);
         });
+
+        // Bottom banner and total
+        Logger.plain(
+          '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━',
+        );
+        Logger.tableInfo(`Total: ${data.models.length} models available`);
       } catch (error) {
         Logger.error('Failed to list models:', error);
         process.exit(1);
@@ -121,12 +156,12 @@ export const registerModelsCommands = (configCommand: Command) => {
         const targetModel = models.find(m => m.name === name);
 
         if (!targetModel) {
-          Logger.error(`❌ Model '${name}' not found`);
+          Logger.error(`Model '${name}' not found`);
           process.exit(1);
         }
 
         if (!targetModel.roles.includes('chat')) {
-          Logger.error(`❌ Model '${name}' does not have chat role`);
+          Logger.error(`Model '${name}' does not have chat role`);
           process.exit(1);
         }
 
@@ -156,12 +191,12 @@ export const registerModelsCommands = (configCommand: Command) => {
         const targetModel = models.find(m => m.name === name);
 
         if (!targetModel) {
-          Logger.error(`❌ Model '${name}' not found`);
+          Logger.error(`Model '${name}' not found`);
           process.exit(1);
         }
 
         if (!targetModel.roles.includes('embed')) {
-          Logger.error(`❌ Model '${name}' does not have embed role`);
+          Logger.error(`Model '${name}' does not have embed role`);
           process.exit(1);
         }
 

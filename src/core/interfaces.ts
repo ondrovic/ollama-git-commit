@@ -78,6 +78,24 @@ export interface ILogger {
   group(label: string, fn: () => void): void;
   time(label: string): void;
   timeEnd(label: string): void;
+  // Custom log methods for specific icons
+  version(message: string, ...args: unknown[]): void;
+  increment(message: string, ...args: unknown[]): void;
+  changelog(message: string, ...args: unknown[]): void;
+  tag(message: string, ...args: unknown[]): void;
+  rocket(message: string, ...args: unknown[]): void;
+  package(message: string, ...args: unknown[]): void;
+  floppy(message: string, ...args: unknown[]): void;
+  test(message: string, ...args: unknown[]): void;
+  house(message: string, ...args: unknown[]): void;
+  magnifier(message: string, ...args: unknown[]): void;
+  hammer(message: string, ...args: unknown[]): void;
+  memo(message: string, ...args: unknown[]): void;
+  text(message: string, ...args: unknown[]): void;
+  plain(message: string, ...args: unknown[]): void;
+  settings(message: string, ...args: unknown[]): void;
+  current(message: string, ...args: unknown[]): void;
+  tableInfo(message: string, ...args: unknown[]): void;
 }
 
 /**
@@ -104,4 +122,14 @@ export interface IConfigManager {
   getContextProviders(): Promise<ContextProvider[]>;
   getChatModel(): Promise<ModelConfig | null>;
   getPrimaryModel(): Promise<string>;
+  // Config keys method for the keys command
+  getConfigKeys(): Promise<
+    Array<{
+      key: string;
+      description: string;
+      type: string;
+      default: unknown;
+      example?: string;
+    }>
+  >;
 }

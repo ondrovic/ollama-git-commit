@@ -1,25 +1,36 @@
 import { TROUBLE_SHOOTING } from '@/constants/troubleshooting';
-import type { ModelInfo } from '../types';
+import type { ModelInfo, OllamaCommitConfig } from '../types';
 import { Logger } from '../utils/logger';
 import { Spinner } from '../utils/spinner';
 import { normalizeHost } from '../utils/url';
 import { getConfig } from './config';
 import { ILogger, IOllamaService } from './interfaces';
 
+export interface OllamaServiceDeps {
+  fetch?: typeof fetch;
+  config?: OllamaCommitConfig;
+  logger?: ILogger;
+  spinner?: Spinner;
+}
+
 export class OllamaService implements IOllamaService {
-  private config = getConfig();
+  private configPromise: Promise<OllamaCommitConfig>;
   private logger: ILogger;
   private spinner: Spinner;
   private quiet: boolean;
+  private fetchFn: typeof fetch;
 
   constructor(
     logger: ILogger = Logger.getDefault(),
     spinner: Spinner = new Spinner(),
     quiet = false,
+    deps: OllamaServiceDeps = {},
   ) {
-    this.logger = logger;
-    this.spinner = spinner;
+    this.logger = deps.logger || logger;
+    this.spinner = deps.spinner || spinner;
     this.quiet = quiet;
+    this.fetchFn = deps.fetch || fetch;
+    this.configPromise = deps.config ? Promise.resolve(deps.config) : getConfig();
   }
 
   public setQuiet(quiet: boolean): void {
@@ -39,7 +50,7 @@ export class OllamaService implements IOllamaService {
     prompt: string,
     verbose = false,
   ): Promise<string> {
-    const config = await this.config;
+    const config = await this.configPromise;
 
     const formattedHost = normalizeHost(host);
 
@@ -73,7 +84,7 @@ export class OllamaService implements IOllamaService {
         this.logger.debug(`Payload: ${body}`);
       }
 
-      const response = await fetch(url, {
+      const response = await this.fetchFn(url, {
         method: 'POST',
         headers,
         body,
@@ -176,7 +187,7 @@ export class OllamaService implements IOllamaService {
   }
 
   async testConnection(host?: string, verbose = false): Promise<boolean> {
-    const config = await this.config;
+    const config = await this.configPromise;
     const ollamaHost = normalizeHost(host || config.host);
     const timeouts = config.timeouts;
 
@@ -186,7 +197,7 @@ export class OllamaService implements IOllamaService {
     }
 
     try {
-      const response = await fetch(`${ollamaHost}/api/tags`, {
+      const response = await this.fetchFn(`${ollamaHost}/api/tags`, {
         signal: AbortSignal.timeout(timeouts.connection),
       });
 
@@ -203,25 +214,25 @@ export class OllamaService implements IOllamaService {
         this.logger.error(`Detailed error: ${String(error)}`);
       }
       // Provide helpful troubleshooting steps
-      console.log(TROUBLE_SHOOTING.GENERAL);
+      this.logger.info(TROUBLE_SHOOTING.GENERAL);
       if (
         typeof error === 'object' &&
         error &&
         'name' in error &&
         (error as { name: string }).name === 'TimeoutError'
       ) {
-        console.log('\n   5. Increase timeout in config file');
+        this.logger.info('   5. Increase timeout in config file');
       }
       return false;
     }
   }
 
   async isModelAvailable(host: string, model: string): Promise<boolean> {
-    const config = await this.config;
+    const config = await this.configPromise;
     const formattedHost = normalizeHost(host || config.host);
 
     try {
-      const response = await fetch(`${formattedHost}/api/tags`, {
+      const response = await this.fetchFn(`${formattedHost}/api/tags`, {
         signal: AbortSignal.timeout(config.timeouts.connection),
       });
 
@@ -251,13 +262,13 @@ export class OllamaService implements IOllamaService {
   }
 
   async pullModel(_model: string, _host?: string): Promise<void> {
-    const config = await this.config;
+    const config = await this.configPromise;
     const formattedHost = normalizeHost(_host || config.host);
 
-    this.logger.info(`⏳ Pulling model: ${_model} from ${formattedHost}`);
+    this.logger.info(`Pulling model: ${_model} from ${formattedHost}`);
 
     try {
-      const response = await fetch(`${formattedHost}/api/pull`, {
+      const response = await this.fetchFn(`${formattedHost}/api/pull`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ name: _model, stream: true }),
@@ -279,7 +290,7 @@ export class OllamaService implements IOllamaService {
 
       this.logger.success(`Model '${_model}' pulled successfully.`);
     } catch (error: unknown) {
-      this.logger.error(`❌ Failed to pull model '${_model}':`);
+      this.logger.error(`Failed to pull model '${_model}':`);
       if (typeof error === 'object' && error && 'message' in error) {
         this.logger.error(`Error: ${(error as { message: string }).message}`);
       } else {
@@ -291,11 +302,11 @@ export class OllamaService implements IOllamaService {
 
   // Linter: unused arguments are intentionally prefixed with _
   async validateModel(_model: string, _host?: string): Promise<void> {
-    const config = await this.config;
+    const config = await this.configPromise;
     const formattedHost = normalizeHost(_host || config.host);
 
     try {
-      const response = await fetch(`${formattedHost}/api/tags`, {
+      const response = await this.fetchFn(`${formattedHost}/api/tags`, {
         signal: AbortSignal.timeout(config.timeouts.connection),
       });
 
@@ -325,7 +336,7 @@ export class OllamaService implements IOllamaService {
 
   async getModels(host: string): Promise<ModelInfo[]> {
     try {
-      const response = await fetch(`${normalizeHost(host)}/api/tags`);
+      const response = await this.fetchFn(`${normalizeHost(host)}/api/tags`);
       if (!response.ok) {
         throw new Error(`Failed to fetch models: ${response.statusText}`);
       }

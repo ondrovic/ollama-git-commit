@@ -1,122 +1,12 @@
-import { afterAll, beforeAll } from 'bun:test';
-import * as path from 'path';
+/* istanbul ignore file */
+// Bun global test setup file. Use with: bun test --preload ./test/setup.ts
+// Only include helpers and lifecycle hooks needed for all tests.
+import { afterAll, afterEach, beforeAll } from 'bun:test';
 import { MODELS } from '../src/constants/models';
+import { MockedFileSystem } from './mocks/MockedFileSystem';
 
-// Mock file system
-export const mockFs = {
-  files: new Map<string, string>(),
-  dirs: new Set<string>(),
-
-  async mkdir(dir: string, options?: { recursive: boolean }) {
-    this.dirs.add(dir);
-    if (options?.recursive) {
-      const parts = dir.split(path.sep);
-      let current = '';
-      for (const part of parts) {
-        current = current ? path.join(current, part) : part;
-        this.dirs.add(current);
-      }
-    }
-  },
-
-  async writeFile(filePath: string, content: string) {
-    this.files.set(filePath, content);
-    // Ensure parent directory exists
-    const dir = path.dirname(filePath);
-    this.dirs.add(dir);
-  },
-
-  async readFile(filePath: string, encoding: string) {
-    return this.files.get(filePath) || '';
-  },
-
-  async access(filePath: string) {
-    if (this.files.has(filePath) || this.dirs.has(filePath)) {
-      return;
-    }
-    throw new Error('File not found');
-  },
-
-  async rm(dir: string, options?: { recursive: boolean; force: boolean }) {
-    if (options?.recursive) {
-      for (const file of this.files.keys()) {
-        if (file.startsWith(dir)) {
-          this.files.delete(file);
-        }
-      }
-      for (const d of this.dirs) {
-        if (d.startsWith(dir)) {
-          this.dirs.delete(d);
-        }
-      }
-    }
-  },
-};
-
-// Mock Git commands
-export const mockGit = {
-  async exec(cmd: string, args: string[]) {
-    if (cmd === 'git') {
-      if (args[0] === 'diff' && args[1] === '--staged') {
-        return createMockGitDiff();
-      }
-      if (args[0] === 'status' && args[1] === '--porcelain') {
-        return 'M  test.txt\n';
-      }
-    }
-    return '';
-  },
-};
-
-// Mock Ollama API responses
-export const mockOllamaResponses = {
-  models: {
-    models: [
-      { name: MODELS.DEFAULT, modified_at: '2024-03-20T12:00:00Z' },
-      { name: 'llama2:7b', modified_at: '2024-03-20T12:00:00Z' },
-    ],
-  },
-  generate: {
-    model: MODELS.DEFAULT,
-    response: 'feat: add new feature for improved performance',
-    done: true,
-  },
-  health: {
-    status: 'ok',
-  },
-};
-
-// Mock fetch for Ollama API calls
-export function mockOllamaFetch() {
-  const originalFetch = global.fetch;
-
-  global.fetch = async (input: RequestInfo | URL, init?: RequestInit) => {
-    const url = input instanceof URL ? input : new URL(input.toString());
-
-    // Mock different endpoints
-    if (url.pathname === '/api/tags') {
-      return new Response(JSON.stringify(mockOllamaResponses.models));
-    }
-
-    if (url.pathname === '/api/generate') {
-      return new Response(JSON.stringify(mockOllamaResponses.generate));
-    }
-
-    if (url.pathname === '/api/health') {
-      return new Response(JSON.stringify(mockOllamaResponses.health));
-    }
-
-    // Default to original fetch for other requests
-    return originalFetch(input, init);
-  };
-
-  return () => {
-    global.fetch = originalFetch;
-  };
-}
-
-// Mock configuration
-export const mockConfig = {
+// Global MockedConfig for all tests
+export const MockedConfig = {
   model: MODELS.DEFAULT,
   host: 'http://localhost:11434',
   verbose: false,
@@ -133,40 +23,40 @@ export const mockConfig = {
   },
   useEmojis: false,
   promptTemplate: 'default',
+  models: [
+    { name: MODELS.DEFAULT, size: 1234567890, modified_at: '2024-01-01T00:00:00Z' },
+    { name: 'nomic-embed-text', size: 987654321, modified_at: '2024-01-01T00:00:00Z' },
+  ],
+  generate: {
+    model: MODELS.DEFAULT,
+    response: 'test commit message',
+    done: true,
+  },
+  health: {
+    status: 'ok',
+  },
 };
-
-/**
- * Creates a mock Git diff string for testing purposes.
- *
- * @returns A string containing a mock Git diff output for a new file
- */
-export function createMockGitDiff() {
-  return `diff --git a/test.txt b/test.txt
-new file mode 100644
-index 0000000..1234567
---- /dev/null
-+++ b/test.txt
-@@ -0,0 +1,1 @@
-+Test content
-`;
-}
 
 // Setup before all tests
 beforeAll(async () => {
-  // Setup Ollama API mocking
-  mockOllamaFetch();
-
   // Create mock files
-  await mockFs.writeFile(
-    mockConfig.promptFile,
-    'Generate a commit message for the following changes:\n{{diff}}',
-  );
-  await mockFs.writeFile(mockConfig.configFile, JSON.stringify(mockConfig, null, 2));
+  await MockedFileSystem.readFile(MockedConfig.promptFile, 'utf-8').catch(async () => {
+    await MockedFileSystem.access(MockedConfig.promptFile).catch(async () => {
+      // Simulate file creation
+    });
+  });
 });
 
-// Cleanup after all tests
+// Global safety net: restore common globals after each test
+const realFetch = global.fetch;
+const realConsole = global.console;
+const realProcess = global.process;
+afterEach(() => {
+  global.fetch = realFetch;
+  global.console = realConsole;
+  global.process = realProcess;
+});
+
 afterAll(async () => {
-  // Clean up mock files
-  mockFs.files.clear();
-  mockFs.dirs.clear();
+  // No-op for MockedFileSystem
 });

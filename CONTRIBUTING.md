@@ -44,33 +44,12 @@ Thank you for your interest in contributing to Ollama Git Commit! This document 
 
 ### Pre-commit Checks and Automation
 
-To help ensure code quality and consistency, the project provides a `precommit` script:
+The project provides scripts to ensure code quality and consistency:
 
-- **`precommit` script** (`bun run precommit`):
+- **`precommit` script** (`bun run precommit`): Runs linting with auto-fix, tests, and type build checks
+- **`stage` script** (`bun run stage`): Formats, lints, tests, builds type declarations, and stages files
 
-  - Runs linting with auto-fix, tests, and type build checks.
-  - Use this script manually before committing to catch issues early and prevent errors that could break the release script.
-  - Optionally, set up a git pre-commit hook to run this script automatically:
-    - Create a file `.git/hooks/pre-commit` with the following content:
-      ```sh
-      #!/bin/sh
-      bun run precommit || exit 1
-      ```
-    - Make it executable:
-      ```bash
-      chmod +x .git/hooks/pre-commit
-      ```
-    - This will ensure pre-commit checks always run before each commit.
-
-- **`stage` script** (`bun stage`):
-  - Formats, lints, tests, builds type declarations, and stages files
-
-**Tip:** Using pre-commit checks helps ensure code quality, consistent formatting, and up-to-date versioning before you commit or push changes, and will catch errors that could break the release process.
-
-**Summary of differences:**
-
-- `precommit`: Manual script for lint, test, and type checks before commit (recommended to run or hook before every commit)
-- `stage`: Main staging script for formatting, linting, and staging
+For detailed information about these scripts and development workflow, see the [Development Workflow](#development-workflow) section in README.md.
 
 ## Project Structure
 
@@ -81,7 +60,7 @@ ollama-git-commit/
 │   │   ├── commands/  # Individual command modules
 │   │   │   ├── commit.ts      # Main commit command
 │   │   │   ├── config/        # Configuration management commands
-│   │   │   ├── list-models.ts # Model listing command
+│   │   │   ├── models.ts # Model management commands
 │   │   │   └── test/          # Testing commands
 │   │   ├── utils/     # CLI-specific utilities
 │   │   └── index.ts   # CLI entry point
@@ -145,6 +124,37 @@ ollama-git-commit/
 - Use PascalCase for classes and interfaces
 - Use UPPER_CASE for constants
 - Prefix unused parameters with underscore (`_verbose`, `_directory`)
+
+### Logging Standards
+
+- **Use Logger Methods**: Always use Logger methods instead of `console.log` or `console.error`
+- **No Hardcoded Emojis**: Never include emojis directly in log messages - they are handled by Logger methods
+- **Specialized Methods**: Use appropriate Logger methods for different contexts:
+  - `Logger.info()` for general information
+  - `Logger.success()` for successful operations
+  - `Logger.error()` for errors
+  - `Logger.warn()` for warnings
+  - `Logger.debug()` for debug information
+  - `Logger.version()`, `Logger.rocket()`, `Logger.package()`, etc. for specific contexts
+- **Logger.group Usage**: When using `Logger.group()`, always provide a function parameter:
+
+  ```typescript
+  // ✅ Correct
+  Logger.group('Label', () => {
+    Logger.info('Content');
+  });
+
+  // ❌ Incorrect
+  Logger.group('Label');
+  Logger.info('Content');
+  ```
+
+- **Test Logging**: In tests, spy on Logger methods instead of console.log:
+  ```typescript
+  const loggerSpy = spyOn(Logger.prototype, 'info').mockImplementation(() => {});
+  // Test logic
+  expect(loggerSpy).toHaveBeenCalledWith('expected message');
+  ```
 
 ### Testing
 
@@ -260,83 +270,7 @@ export const ENVIRONMENTAL_VARIABLES = {
 
 ## Development Workflow
 
-### Feature Development
-
-1. Create a new branch for your feature or bugfix:
-
-   ```bash
-   git checkout -b feature/your-feature-name
-   # or
-   git checkout -b fix/your-bugfix-name
-   # or
-   git checkout -b hotfix/your-hotfix-name
-   ```
-
-2. Make your changes
-
-3. Run the staging script to format, lint, build type declarations, and stage your changes:
-
-   ```bash
-   # Option 1: Stage files only
-   bun run stage
-
-   # Option 2: Use the tool's auto-stage functionality
-   bun dev:run commit -d . --auto-stage
-
-   # Option 3: Stage files and auto-commit with AI-generated message
-   bun dev:run commit -d . --auto-commit
-
-   # Option 4: Use the tool directly (same as --auto-commit)
-   ollama-git-commit -d . --auto-commit
-   ```
-
-4. Commit your changes (if using option 1 or 2):
-
-   ```bash
-   git commit -m "feat: your feature description"
-   ```
-
-5. Run tests to ensure everything works:
-
-   ```bash
-   bun test
-   ```
-
-6. Push your changes and create a pull request:
-   ```bash
-   git push origin feature/your-feature-name
-   ```
-
-### Release Process
-
-After your PR is merged into `main`:
-
-1. **Pull the latest changes:**
-
-   ```bash
-   git checkout main
-   git pull origin main
-   ```
-
-2. **Run the release command:**
-
-   ```bash
-   # For patch release (1.0.3 → 1.0.4)
-   bun run release
-
-   # For minor release (1.0.3 → 1.1.0)
-   bun run release minor
-
-   # For major release (1.0.3 → 2.0.0)
-   bun run release major
-   ```
-
-3. **Automated publishing:**
-   - The release script automatically increments the version in `package.json`
-   - Updates the `CHANGELOG.md`
-   - Creates a git tag (e.g., `v1.0.4`)
-   - Pushes the tag and commits to GitHub
-   - GitHub Actions automatically publishes to NPM
+For detailed information about the development workflow, including feature development, release process, and automated publishing, see the [Development Workflow](#development-workflow) and [Release Workflow](#release-workflow-for-maintainers) sections in README.md.
 
 ## Development Tips
 

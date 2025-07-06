@@ -107,7 +107,7 @@ export const CONFIGURATIONS = {
         Model Pull: ${modelPull}ms (from ${sourceInfo.timeouts.modelPull})
         `,
     MODELS: (models: ModelConfig[], embeddingsProvider: string) => `Models:
-        ${models.map(m => `  ${m.name} - Roles: ${m.roles.join(', ')}`).join('\n        ')}
+        ${models.map(m => `  ${m.model} - Roles: ${m.roles.join(', ')}`).join('\n        ')}
         Embeddings Provider: ${embeddingsProvider}
         `,
     CONTEXT: (context: ContextProvider[]) => `Context Providers:
@@ -121,7 +121,7 @@ export const CONFIGURATIONS = {
    */
   MOCK: {
     model: 'mock-model',
-    host: 'mock-host',
+    host: 'http://mock-host:1234',
     verbose: false,
     interactive: true,
     debug: false,

@@ -1,4 +1,5 @@
 import { Command } from 'commander';
+import { ConfigManager } from '../../../core/config';
 import { ServiceFactory } from '../../../core/factory';
 import { Logger } from '../../../utils/logger';
 
@@ -6,22 +7,31 @@ export const registerModelTestCommand = (testCommand: Command) => {
   testCommand
     .command('model')
     .description('Test specific model on Ollama server')
-    .requiredOption('-m, --model <model>', 'Model name to test')
+    .option('-m, --model <model>', 'Model name to test (uses config model if not provided)')
     .option('-H, --host <host>', 'Ollama server URL')
     .option('-v, --verbose', 'Show detailed output')
     .action(async options => {
       try {
+        // Get model from options or config
+        let modelToTest = options.model;
+        if (!modelToTest) {
+          const configManager = ConfigManager.getInstance();
+          await configManager.initialize();
+          modelToTest = await configManager.getPrimaryModel();
+          Logger.info(`Using model from config: ${modelToTest}`);
+        }
+
         // Create services using the factory
         const factory = ServiceFactory.getInstance();
         const ollamaService = factory.createOllamaService({
           verbose: options.verbose,
         });
 
-        const success = await ollamaService.isModelAvailable(options.host, options.model);
+        const success = await ollamaService.isModelAvailable(options.host, modelToTest);
         if (success) {
-          Logger.success(`Model ${options.model} is available`);
+          Logger.success(`Model ${modelToTest} is available`);
         } else {
-          Logger.error(`Model '${options.model}' is not available`);
+          Logger.error(`Model '${modelToTest}' is not available`);
           process.exit(1);
         }
       } catch (error) {

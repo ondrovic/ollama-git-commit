@@ -1,58 +1,93 @@
-import { beforeEach, describe, expect, it, test, vi } from 'bun:test';
-import { MODELS } from '../src/constants/models';
+import { afterEach, beforeEach, describe, expect, it, mock, test } from 'bun:test';
 import { OllamaService } from '../src/core/ollama';
 import { Logger } from '../src/utils/logger';
-import { mockConfig, mockOllamaResponses } from './setup';
+import { MockedConfig } from './setup';
+
+// Save the real fetch at the top
+const realFetch = global.fetch;
+
+// Mock the getConfig function to prevent real dependencies
+const mockGetConfig = mock(() => Promise.resolve(MockedConfig));
 
 describe('Ollama Integration', () => {
   let ollamaService: OllamaService;
   let mockLogger: Logger;
 
   beforeEach(() => {
+    global.fetch = realFetch;
     mockLogger = new Logger();
     ollamaService = new OllamaService(mockLogger);
+
+    // Mock the getConfig import to prevent real dependencies
+    mock.module('../src/core/config', () => ({
+      getConfig: mockGetConfig,
+    }));
+  });
+
+  afterEach(() => {
+    global.fetch = realFetch;
   });
 
   describe('Model Listing', () => {
     test('should fetch available models', async () => {
-      const response = await fetch(`${mockConfig.host}/api/tags`);
-      const data = await response.json();
+      const mockFetch = mock(() =>
+        Promise.resolve({
+          ok: true,
+          json: () => Promise.resolve({ models: MockedConfig.models }),
+        }),
+      );
+      const service = new OllamaService(mockLogger, undefined, false, {
+        fetch: mockFetch,
+        config: MockedConfig,
+      });
 
-      expect(data).toEqual(mockOllamaResponses.models);
-      expect(data.models).toHaveLength(2);
-      expect(data.models[0].name).toBe(MODELS.DEFAULT);
+      const models = await service.getModels(MockedConfig.host);
+      expect(models).toEqual(MockedConfig.models);
+      expect(mockFetch).toHaveBeenCalled();
     });
   });
 
   describe('Message Generation', () => {
     test('should generate commit message', async () => {
-      const response = await fetch(`${mockConfig.host}/api/generate`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          model: mockConfig.model,
-          prompt: 'Generate a commit message for: Added new feature',
+      const mockFetch = mock(() =>
+        Promise.resolve({
+          ok: true,
+          text: () => Promise.resolve('{"response": "test commit message"}'),
         }),
+      );
+      const service = new OllamaService(mockLogger, undefined, false, {
+        fetch: mockFetch,
+        config: { ...MockedConfig, useEmojis: false, timeouts: { generation: 1000 } },
       });
 
-      const data = await response.json();
-
-      expect(data).toEqual(mockOllamaResponses.generate);
-      expect(data.model).toBe(mockConfig.model);
-      expect(data.response).toBeTruthy();
-      expect(data.done).toBe(true);
+      const message = await service.generateCommitMessage(
+        MockedConfig.model,
+        MockedConfig.host,
+        'Generate a commit message for: Added new feature',
+        true,
+      );
+      expect(message).toBe('test commit message');
+      expect(mockFetch).toHaveBeenCalled();
     });
   });
 
   describe('Health Check', () => {
     test('should check server health', async () => {
-      const response = await fetch(`${mockConfig.host}/api/health`);
-      const data = await response.json();
+      const mockFetch = mock(() =>
+        Promise.resolve({
+          ok: true,
+          json: () => Promise.resolve(MockedConfig.health),
+        }),
+      );
+      const service = new OllamaService(mockLogger, undefined, false, {
+        fetch: mockFetch,
+        config: MockedConfig,
+      });
 
-      expect(data).toEqual(mockOllamaResponses.health);
-      expect(data.status).toBe('ok');
+      // We'll use getModels as a proxy for health check (since there's no explicit health method)
+      const models = await service.getModels(MockedConfig.host);
+      expect(Array.isArray(models)).toBe(true);
+      expect(mockFetch).toHaveBeenCalled();
     });
   });
 
@@ -124,16 +159,24 @@ Updated README.md with new sections and improved contribution steps
   describe('Quiet Mode', () => {
     it('should respect quiet mode and not output verbose messages when quiet is true', async () => {
       const quietOllamaService = new OllamaService(mockLogger, undefined, true);
-      const spy = vi.spyOn(mockLogger, 'info');
+      const spy = mock(() => {});
+      mockLogger.info = spy;
 
       // Mock fetch to return a successful response
-      global.fetch = vi.fn().mockResolvedValue({
-        ok: true,
-        text: () => Promise.resolve('{"response": "test commit message"}'),
-      });
+      global.fetch = mock(() =>
+        Promise.resolve({
+          ok: true,
+          text: () => Promise.resolve('{"response": "test commit message"}'),
+        }),
+      );
 
       try {
-        await quietOllamaService.generateCommitMessage('test-model', 'http://localhost:11434', 'test prompt', true);
+        await quietOllamaService.generateCommitMessage(
+          'test-model',
+          'http://localhost:11434',
+          'test prompt',
+          true,
+        );
       } catch (error) {
         // Expected to fail due to fetch mock, but we're testing the logger calls
       }
@@ -144,16 +187,24 @@ Updated README.md with new sections and improved contribution steps
 
     it('should output verbose messages when quiet is false', async () => {
       const nonQuietOllamaService = new OllamaService(mockLogger, undefined, false);
-      const spy = vi.spyOn(mockLogger, 'info');
+      const spy = mock(() => {});
+      mockLogger.info = spy;
 
       // Mock fetch to return a successful response
-      global.fetch = vi.fn().mockResolvedValue({
-        ok: true,
-        text: () => Promise.resolve('{"response": "test commit message"}'),
-      });
+      global.fetch = mock(() =>
+        Promise.resolve({
+          ok: true,
+          text: () => Promise.resolve('{"response": "test commit message"}'),
+        }),
+      );
 
       try {
-        await nonQuietOllamaService.generateCommitMessage('test-model', 'http://localhost:11434', 'test prompt', true);
+        await nonQuietOllamaService.generateCommitMessage(
+          'test-model',
+          'http://localhost:11434',
+          'test prompt',
+          true,
+        );
       } catch (error) {
         // Expected to fail due to fetch mock, but we're testing the logger calls
       }

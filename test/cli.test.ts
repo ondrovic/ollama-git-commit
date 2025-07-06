@@ -8,7 +8,29 @@ import { GitService } from '../src/core/git';
 import { OllamaService } from '../src/core/ollama';
 import { PromptService } from '../src/core/prompt';
 import { Logger } from '../src/utils/logger';
-import { mockConfig } from './setup';
+import { MockedConfig } from './setup';
+
+// Save ALL global state at the top to ensure we can always restore it
+const realFetch = global.fetch;
+const realConsole = global.console;
+const realProcess = global.process;
+
+// Mock fetch to prevent real HTTP requests
+const mockFetch = mock(() =>
+  Promise.resolve({
+    ok: true,
+    status: 200,
+    statusText: 'OK',
+    text: () => Promise.resolve(JSON.stringify({ response: 'Test successful' })),
+    json: () => Promise.resolve({ response: 'Test successful' }),
+  } as Response),
+) as unknown as typeof fetch;
+
+// Add required properties to the mock
+Object.assign(mockFetch, {
+  preconnect: () => {},
+  // Add any other static properties that fetch might have
+});
 
 // Mock the validation module with conditional logic for OLLAMA_HOST
 mock.module('../src/utils/validation', () => ({
@@ -77,7 +99,10 @@ const mockOllamaService = {
   getModels: async () => [{ name: 'model1' }, { name: 'model2' }],
   isModelAvailable: async () => true,
   generateEmbeddings: async () => [0.1, 0.2, 0.3],
-  generateEmbeddingsBatch: async () => [[0.1, 0.2, 0.3], [0.4, 0.5, 0.6]],
+  generateEmbeddingsBatch: async () => [
+    [0.1, 0.2, 0.3],
+    [0.4, 0.5, 0.6],
+  ],
   setQuiet: () => {},
   testModel: async () => true,
   listModels: async () => ['model1', 'model2'],
@@ -111,18 +136,18 @@ const mockPromptService = {
   buildCommitPromptWithEmbeddings: async () => 'test embeddings prompt',
 };
 
-// Mock commands
+// Mock commands - store original methods for cleanup
+const originalTestModel = TestCommand.prototype.testModel;
+const originalListModels = ModelsCommand.prototype.listModels;
+
+// Mock the methods
 TestCommand.prototype.testModel = async function (model: string, host: string, debug: boolean) {
   return true;
 };
 
-ModelsCommand.prototype.listModels = async function (host: string, debug: boolean) {
-  console.log('Available models:');
-  console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-  console.log('  📦 model1');
-  console.log('  📦 model2');
-  console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-  console.log('📊 Total: 2 models available');
+ModelsCommand.prototype.listModels = async function (host?: string, verbose?: boolean) {
+  // Mock implementation - no logging needed for tests
+  // Return void to match the real method signature
 };
 
 // Mock the interactive prompt
@@ -142,18 +167,35 @@ describe('CLI Commands', () => {
   });
 
   beforeEach(() => {
+    // Restore ALL global state to ensure clean environment
+    global.fetch = realFetch;
+    global.console = realConsole;
+    global.process = realProcess;
+
+    // Set up fetch mock to prevent real HTTP requests
+    global.fetch = mockFetch;
+
     // Save and set OLLAMA_HOST for each test
     originalHost = process.env[ENVIRONMENTAL_VARIABLES.OLLAMA_HOST];
-    process.env[ENVIRONMENTAL_VARIABLES.OLLAMA_HOST] = mockConfig.host;
+    process.env[ENVIRONMENTAL_VARIABLES.OLLAMA_HOST] = MockedConfig.host;
   });
 
   afterEach(() => {
+    // Restore ALL global state
+    global.fetch = realFetch;
+    global.console = realConsole;
+    global.process = realProcess;
+
     // Restore OLLAMA_HOST after each test
     if (originalHost !== undefined) {
       process.env[ENVIRONMENTAL_VARIABLES.OLLAMA_HOST] = originalHost;
     } else {
       delete process.env[ENVIRONMENTAL_VARIABLES.OLLAMA_HOST];
     }
+
+    // Restore original prototype methods
+    TestCommand.prototype.testModel = originalTestModel;
+    ModelsCommand.prototype.listModels = originalListModels;
   });
 
   test('commit command should generate and apply commit message', async () => {
@@ -187,7 +229,7 @@ describe('CLI Commands', () => {
   });
 
   test('models command should list available models', async () => {
-    const modelsCommand = new ModelsCommand(logger, mockOllamaService as unknown as OllamaService);
+    const modelsCommand = new ModelsCommand(mockOllamaService as unknown as OllamaService, logger);
     await modelsCommand.listModels('http://localhost:11434', false);
     // No need to expect anything since the method logs to console
   });

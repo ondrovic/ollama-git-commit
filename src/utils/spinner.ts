@@ -1,4 +1,39 @@
 import { SPINNER_FRAMES } from '../constants/ui';
+import { Logger } from './logger';
+
+// DI interfaces
+export interface IProcessOutput {
+  write: (data: string) => boolean;
+}
+
+export interface ITimer {
+  setInterval: (callback: () => void, ms: number) => NodeJS.Timeout;
+  clearInterval: (id: NodeJS.Timeout) => void;
+}
+
+export interface ILogger {
+  info: (message: string) => void;
+  success: (message: string) => void;
+  error: (message: string) => void;
+  warn: (message: string) => void;
+}
+
+// Default implementations
+const defaultProcessOutput: IProcessOutput = {
+  write: (data: string) => process.stdout.write(data),
+};
+
+const defaultTimer: ITimer = {
+  setInterval: (callback: () => void, ms: number) => setInterval(callback, ms),
+  clearInterval: (id: NodeJS.Timeout) => clearInterval(id),
+};
+
+const defaultLogger: ILogger = {
+  info: (message: string) => Logger.info(message),
+  success: (message: string) => Logger.success(message),
+  error: (message: string) => Logger.error(message),
+  warn: (message: string) => Logger.warn(message),
+};
 
 export class Spinner {
   private interval: NodeJS.Timeout | null = null;
@@ -6,6 +41,12 @@ export class Spinner {
   private readonly frames = SPINNER_FRAMES;
   private currentFrame = 0;
   private message = '';
+
+  constructor(
+    private processOutput: IProcessOutput = defaultProcessOutput,
+    private timer: ITimer = defaultTimer,
+    private logger: ILogger = defaultLogger,
+  ) {}
 
   start(message = 'Loading'): void {
     if (this.isSpinning) {
@@ -17,10 +58,10 @@ export class Spinner {
     this.currentFrame = 0;
 
     // Hide cursor
-    process.stdout.write('\x1B[?25l');
+    this.processOutput.write('\x1B[?25l');
 
-    this.interval = setInterval(() => {
-      process.stdout.write(`\r${this.frames[this.currentFrame]} ${this.message}`);
+    this.interval = this.timer.setInterval(() => {
+      this.processOutput.write(`\r${this.frames[this.currentFrame]} ${this.message}`);
       this.currentFrame = (this.currentFrame + 1) % this.frames.length;
     }, 100);
   }
@@ -35,48 +76,48 @@ export class Spinner {
     }
 
     if (this.interval) {
-      clearInterval(this.interval);
+      this.timer.clearInterval(this.interval);
       this.interval = null;
     }
 
     this.isSpinning = false;
 
     // Clear the spinner line
-    process.stdout.write('\r\x1B[K');
+    this.processOutput.write('\r\x1B[K');
 
     // Show cursor
-    process.stdout.write('\x1B[?25h');
+    this.processOutput.write('\x1B[?25h');
 
     if (finalMessage) {
-      console.log(finalMessage);
+      this.logger.info(finalMessage);
     }
   }
 
   succeed(message?: string): void {
     this.stop();
     if (message) {
-      console.log(`✅ ${message}`);
+      this.logger.success(message);
     }
   }
 
   fail(message?: string): void {
     this.stop();
     if (message) {
-      console.log(`❌ ${message}`);
+      this.logger.error(message);
     }
   }
 
   warn(message?: string): void {
     this.stop();
     if (message) {
-      console.log(`⚠️  ${message}`);
+      this.logger.warn(message);
     }
   }
 
   info(message?: string): void {
     this.stop();
     if (message) {
-      console.log(`ℹ️  ${message}`);
+      this.logger.info(message);
     }
   }
 }
@@ -89,8 +130,14 @@ export class MultiSpinner {
   private completed = 0;
   private total = 0;
 
+  constructor(
+    private processOutput: IProcessOutput = defaultProcessOutput,
+    private timer: ITimer = defaultTimer,
+    private logger: ILogger = defaultLogger,
+  ) {}
+
   add(id: string, message: string): void {
-    const spinner = new Spinner();
+    const spinner = new Spinner(this.processOutput, this.timer, this.logger);
     this.spinners.set(id, { spinner, status: 'spinning' });
     this.total++;
 

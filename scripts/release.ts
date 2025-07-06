@@ -3,6 +3,7 @@ import { execSync } from 'child_process';
 import { readFileSync, writeFileSync } from 'fs';
 import { join } from 'path';
 import { ConfigManager } from '../src/core/config';
+import { Logger } from '../src/utils/logger';
 
 function getCurrentBranch(): string {
   return execSync('git rev-parse --abbrev-ref HEAD').toString().trim();
@@ -18,7 +19,7 @@ function getPackageVersion(): string {
 }
 
 function incrementVersion(type: 'patch' | 'minor' | 'major' = 'patch'): string {
-  console.log(`🔄 Incrementing ${type} version...`);
+  Logger.increment(`Incrementing ${type} version...`);
 
   try {
     // Use npm version to increment
@@ -28,17 +29,17 @@ function incrementVersion(type: 'patch' | 'minor' | 'major' = 'patch'): string {
 
     // npm version returns the new version with 'v' prefix, remove it
     const newVersion = result.replace('v', '');
-    console.log(`✅ Version updated to: ${newVersion}`);
+    Logger.success(`Version updated to: ${newVersion}`);
 
     return newVersion;
   } catch (error) {
-    console.error('❌ Failed to increment version:', error);
+    Logger.error('Failed to increment version:', error instanceof Error ? error.message : String(error));
     throw error;
   }
 }
 
 function regenerateVersionFile(isQuiet: boolean): void {
-  console.log(`🔄 Regenerating version file...`);
+  Logger.increment('Regenerating version file...');
 
   try {
     // Create environment with QUIET propagation
@@ -52,15 +53,15 @@ function regenerateVersionFile(isQuiet: boolean): void {
       stdio: 'inherit',
       env
     });
-    console.log(`✅ Version file regenerated`);
+    Logger.success('Version file regenerated');
   } catch (error) {
-    console.error('❌ Failed to regenerate version file:', error);
-    console.log('💡 This is not critical for release, as CI/CD will regenerate it');
+    Logger.error('Failed to regenerate version file:', error instanceof Error ? error.message : String(error));
+    Logger.info('This is not critical for release, as CI/CD will regenerate it');
   }
 }
 
 function updateChangelog(version: string): void {
-  console.log(`📝 Updating CHANGELOG.md for version ${version}...`);
+  Logger.changelog(`Updating CHANGELOG.md for version ${version}...`);
 
   try {
     const changelogPath = join(process.cwd(), 'CHANGELOG.md');
@@ -76,15 +77,15 @@ function updateChangelog(version: string): void {
     );
 
     writeFileSync(changelogPath, updatedChangelog);
-    console.log(`✅ CHANGELOG.md updated`);
+    Logger.success('CHANGELOG.md updated');
   } catch (error) {
-    console.error('❌ Failed to update CHANGELOG.md:', error);
+    Logger.error('Failed to update CHANGELOG.md:', error instanceof Error ? error.message : String(error));
     throw error;
   }
 }
 
 function testBuild(isQuiet: boolean): void {
-  console.log(`🧪 Testing build process...`);
+  Logger.test('Testing build process...');
 
   try {
     // Create environment with QUIET propagation
@@ -98,9 +99,9 @@ function testBuild(isQuiet: boolean): void {
       stdio: 'inherit',
       env
     });
-    console.log(`✅ Build test successful`);
+    Logger.success('Build test successful');
   } catch (error) {
-    console.error('❌ Build test failed:', error);
+    Logger.error('Build test failed:', error instanceof Error ? error.message : String(error));
     throw error;
   }
 }
@@ -132,7 +133,7 @@ async function createAndPushTag(version: string): Promise<void> {
     ...(isQuiet && { QUIET: 'true' }) 
   };
 
-  console.log(`🏷️ Creating and pushing tag ${tag}...`);
+  Logger.tag(`Creating and pushing tag ${tag}...`);
 
   try {
     // Update CHANGELOG.md
@@ -145,79 +146,79 @@ async function createAndPushTag(version: string): Promise<void> {
     testBuild(isQuiet);
 
     // Stage version changes (note: we don't stage the generated version file)
-    console.log(`📦 Staging package.json and CHANGELOG.md...`);
+    Logger.package('Staging package.json and CHANGELOG.md...');
     execSync('git add package.json CHANGELOG.md', { 
       stdio: isQuiet ? ['pipe', 'pipe', 'pipe'] : 'inherit',
       env
     });
 
     // Commit changes
-    console.log(`💾 Committing version ${version}...`);
+    Logger.floppy(`Committing version ${version}...`);
     execSync(`git commit -m "chore: release version ${version}"`, { 
       stdio: isQuiet ? ['pipe', 'pipe', 'pipe'] : 'inherit',
       env
     });
 
     // Create tag
-    console.log(`🏷️ Creating tag ${tag}...`);
+    Logger.tag(`Creating tag ${tag}...`);
     execSync(`git tag ${tag}`, { 
       stdio: isQuiet ? ['pipe', 'pipe', 'pipe'] : 'inherit',
       env
     });
 
     // Push tag first
-    console.log(`🚀 Pushing tag ${tag}...`);
+    Logger.rocket(`Pushing tag ${tag}...`);
     execSync(`git push origin ${tag}`, { 
       stdio: isQuiet ? ['pipe', 'pipe', 'pipe'] : 'inherit',
       env
     });
 
     // Push commits
-    console.log(`🚀 Pushing commits to main...`);
+    Logger.rocket('Pushing commits to main...');
     execSync('git push origin main', { 
       stdio: isQuiet ? ['pipe', 'pipe', 'pipe'] : 'inherit',
       env
     });
 
-    console.log(`✅ Successfully created and pushed tag ${tag}`);
+    Logger.success(`Successfully created and pushed tag ${tag}`);
   } catch (error) {
-    console.error('❌ Failed to create and push tag:', error);
+    Logger.error('Failed to create and push tag:', error instanceof Error ? error.message : String(error));
     throw error;
   }
 }
 
 async function main() {
-  console.log('🚀 Starting release process...');
+  Logger.rocket('Starting release process...');
 
   // Get version type from command line argument (default: patch)
   const versionType = (process.argv[2] as 'patch' | 'minor' | 'major') || 'patch';
 
   if (!['patch', 'minor', 'major'].includes(versionType)) {
-    console.error('❌ Error: Version type must be patch, minor, or major');
-    console.log('Usage: bun run release [patch|minor|major]');
+    Logger.error('Error: Version type must be patch, minor, or major');
+    Logger.info('Usage: bun run release [patch|minor|major]');
     process.exit(1);
   }
 
-  console.log(`📋 Release type: ${versionType}`);
+  Logger.group(`Release type: ${versionType}`);
 
   // Check if we're on main branch
   const currentBranch = getCurrentBranch();
-  console.log(`🌿 Current branch: ${currentBranch}`);
+  Logger.info(`Current branch: ${currentBranch}`);
 
   if (currentBranch !== 'main') {
-    console.error('❌ Error: You must be on the main branch to create a release');
+    Logger.error('Error: You must be on the main branch to create a release');
     process.exit(1);
   }
 
   // Check for uncommitted changes
   if (hasUncommittedChanges()) {
-    console.error('❌ Error: You have uncommitted changes. Please commit or stash them first.');
-    console.log('💡 Run: git status');
+    Logger.error('Error: You have uncommitted changes. Please commit or stash them first.');
+    Logger.info('Run: git status');
     process.exit(1);
   }
 
   const currentVersion = getPackageVersion();
-  console.log(`📦 Current version: ${currentVersion}`);
+  Logger.package(`Current version: ${currentVersion}`);
 
   try {
     // Increment version in package.json
@@ -226,22 +227,20 @@ async function main() {
     // Create tag and push
     await createAndPushTag(newVersion);
 
-    console.log(`🎉 Successfully released version ${newVersion}!`);
-    console.log('🚀 The GitHub Actions workflow will now handle the NPM publish process.');
-    console.log(
-      '📦 Local build test completed - CI/CD will regenerate version file for production.',
-    );
+    Logger.success(`Successfully released version ${newVersion}!`);
+    Logger.info('The GitHub Actions workflow will now handle the NPM publish process.');
+    Logger.info('Local build test completed - CI/CD will regenerate version file for production.');
   } catch (error) {
-    console.error('💥 Release failed:', error);
-    console.log('\n🔍 Debug info:');
-    console.log('- Check git status:', 'git status');
-    console.log('- Check git remote:', 'git remote -v');
-    console.log('- Check git config:', 'git config user.name && git config user.email');
+    Logger.error('Release failed:', error instanceof Error ? error.message : String(error));
+    Logger.info('Debug info:');
+    Logger.info('- Check git status: git status');
+    Logger.info('- Check git remote: git remote -v');
+    Logger.info('- Check git config: git config user.name && git config user.email');
     process.exit(1);
   }
 }
 
 main().catch(error => {
-  console.error('❌ Script failed:', error);
+  Logger.error('Script failed:', error instanceof Error ? error.message : String(error));
   process.exit(1);
 });

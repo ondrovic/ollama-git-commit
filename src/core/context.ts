@@ -1,4 +1,7 @@
-import { spawn } from 'child_process';
+import childProcess from 'child_process';
+import * as fsPromises from 'fs/promises';
+import * as osModule from 'os';
+import * as pathModule from 'path';
 import { ContextProvider } from '../types';
 import { Logger } from '../utils/logger';
 import { ILogger } from './interfaces';
@@ -20,13 +23,31 @@ export interface IContextService {
   ): Promise<ContextData[]>;
 }
 
-export class ContextService implements IContextService {
-  private logger: ILogger;
-  private quiet: boolean;
+export interface ContextServiceDeps {
+  spawn?: typeof import('child_process').spawn;
+  fs?: typeof import('fs/promises');
+  path?: typeof import('path');
+  os?: typeof import('os');
+  logger?: ILogger;
+}
 
-  constructor(logger: ILogger = Logger.getDefault(), quiet = false) {
-    this.logger = logger;
+export class ContextService implements IContextService {
+  private quiet: boolean;
+  private logger: ILogger;
+  private spawn: typeof import('child_process').spawn;
+  private fs: typeof import('fs/promises');
+  private path: typeof import('path');
+  private os: typeof import('os');
+
+  constructor(deps: ContextServiceDeps = {}, quiet = false) {
     this.quiet = quiet;
+    this.logger = deps.logger || Logger.getDefault();
+
+    // Initialize dependencies synchronously
+    this.spawn = deps.spawn || childProcess.spawn;
+    this.fs = deps.fs || fsPromises;
+    this.path = deps.path || pathModule;
+    this.os = deps.os || osModule;
   }
 
   setQuiet(quiet: boolean): void {
@@ -180,9 +201,9 @@ export class ContextService implements IContextService {
     const docFiles: string[] = [];
 
     try {
-      // Import modules once outside the loop for efficiency
-      const fs = await import('fs/promises');
-      const path = await import('path');
+      // Use injected fs and path
+      const fs = this.fs;
+      const path = this.path;
 
       // Common documentation files that likely exist
       const commonDocs = ['README.md', 'README.txt', 'CHANGELOG.md', 'CONTRIBUTING.md', 'LICENSE'];
@@ -215,9 +236,9 @@ export class ContextService implements IContextService {
 
   private async getShellInfo(): Promise<string> {
     try {
-      // Use Node.js built-ins instead of shell commands
-      const path = await import('path');
-      const os = await import('os');
+      // Use injected path and os
+      const path = this.path;
+      const os = this.os;
       const currentDir = path.resolve(process.cwd());
       const user = os.userInfo().username;
       return `Current directory: ${currentDir}\nUser: ${user}`;
@@ -232,8 +253,8 @@ export class ContextService implements IContextService {
     // Check if package.json exists and read available scripts
     let availableScripts: Record<string, string> = {};
     try {
-      const fs = await import('fs/promises');
-      const path = await import('path');
+      const fs = this.fs;
+      const path = this.path;
       const packageJsonPath = path.join(directory, 'package.json');
       const packageJsonContent = await fs.readFile(packageJsonPath, 'utf-8');
       const packageJson = JSON.parse(packageJsonContent);
@@ -272,9 +293,9 @@ export class ContextService implements IContextService {
 
   private async getFolderStructure(directory: string): Promise<string> {
     try {
-      // Use Node.js built-ins for cross-platform compatibility
-      const fs = await import('fs/promises');
-      const path = await import('path');
+      // Use injected fs and path
+      const fs = this.fs;
+      const path = this.path;
 
       const getDirectories = async (dir: string, depth = 0): Promise<string[]> => {
         if (depth > 3) return [];
@@ -305,9 +326,9 @@ export class ContextService implements IContextService {
 
   private async getCodebaseStats(directory: string): Promise<string> {
     try {
-      // Use Node.js built-ins for cross-platform compatibility
-      const fs = await import('fs/promises');
-      const path = await import('path');
+      // Use injected fs and path
+      const fs = this.fs;
+      const path = this.path;
 
       const extensions = ['.js', '.ts', '.py', '.java'];
       let fileCount = 0;
@@ -345,7 +366,7 @@ export class ContextService implements IContextService {
 
   private execCommand(command: string, args: string[], cwd?: string): Promise<string> {
     return new Promise((resolve, reject) => {
-      const child = spawn(command, args, {
+      const child = this.spawn(command, args, {
         cwd,
         stdio: ['pipe', 'pipe', 'pipe'], // Always capture output, never display to user
         shell: true,

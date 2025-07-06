@@ -1,18 +1,22 @@
-import { beforeEach, describe, expect, mock, test } from 'bun:test';
-import { CommitCommand } from '../src/commands/commit';
-import { Logger } from '../src/utils/logger';
+import { mock } from 'bun:test';
 
-// Mock the validation module
 mock.module('../src/utils/validation', () => ({
   validateGitRepository: () => {},
   validateNodeVersion: () => true,
   validateEnvironment: () => ({ valid: true, errors: [] }),
 }));
-
-// Mock the interactive prompt
 mock.module('../src/utils/interactive', () => ({
   askCommitAction: async () => 'use',
 }));
+
+import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
+import { CommitCommand } from '../src/commands/commit';
+import { Logger } from '../src/utils/logger';
+
+// Save ALL global state at the top to ensure we can always restore it
+const realFetch = global.fetch;
+const realConsole = global.console;
+const realProcess = global.process;
 
 describe('Quiet Functionality', () => {
   let logger: Logger;
@@ -21,6 +25,11 @@ describe('Quiet Functionality', () => {
   let mockPromptService: any;
 
   beforeEach(() => {
+    // Restore ALL global state to ensure clean environment
+    global.fetch = realFetch;
+    global.console = realConsole;
+    global.process = realProcess;
+
     logger = new Logger();
     logger.setVerbose(true);
 
@@ -63,6 +72,13 @@ describe('Quiet Functionality', () => {
       buildCommitPromptWithContext: async () => 'test context prompt',
       buildCommitPromptWithEmbeddings: async () => 'test embeddings prompt',
     };
+  });
+
+  afterEach(() => {
+    // Restore ALL global state
+    global.fetch = realFetch;
+    global.console = realConsole;
+    global.process = realProcess;
   });
 
   test('should respect quiet=false from config (default behavior)', async () => {

@@ -1,20 +1,39 @@
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'fs';
-import { dirname } from 'path';
+import fsExtra from 'fs-extra';
+import { dirname as realDirname } from 'path';
 import { PROMPTS } from '../constants/prompts';
 import { ContextProvider } from '../types';
-import { ContextData, ContextService } from './context';
+import { ContextService, type ContextData } from './context';
 import { ILogger, IOllamaService, IPromptService } from './interfaces';
+
+export interface PromptServiceDeps {
+  fs?: typeof fsExtra;
+  path?: {
+    dirname?: typeof realDirname;
+  };
+}
 
 export class PromptService implements IPromptService {
   private readonly defaultPrompt = PROMPTS.DEFAULT;
   private logger: ILogger;
   private quiet: boolean;
   private contextService: ContextService;
+  private fs: typeof fsExtra;
+  private path: {
+    dirname: typeof realDirname;
+  };
 
-  constructor(logger: ILogger, quiet = false, contextService?: ContextService) {
+  constructor(
+    logger: ILogger,
+    quiet = false,
+    contextService?: ContextService,
+    deps: PromptServiceDeps = {},
+  ) {
     this.logger = logger;
     this.quiet = quiet;
-    this.contextService = contextService || new ContextService(logger, quiet);
+    this.contextService = contextService || new ContextService({ logger }, quiet);
+    this.fs = deps.fs || fsExtra;
+    this.path =
+      deps.path && deps.path.dirname ? { dirname: deps.path.dirname } : { dirname: realDirname };
   }
 
   setQuiet(quiet: boolean): void {
@@ -23,13 +42,13 @@ export class PromptService implements IPromptService {
 
   getSystemPrompt(promptFile: string, verbose: boolean, promptTemplate?: string): string {
     // Create prompt directory if it doesn't exist
-    const promptDir = dirname(promptFile);
-    if (!existsSync(promptDir)) {
-      mkdirSync(promptDir, { recursive: true });
+    const promptDir = this.path.dirname(promptFile);
+    if (!this.fs.existsSync(promptDir)) {
+      this.fs.mkdirSync(promptDir, { recursive: true });
     }
 
     // Create default prompt if file doesn't exist
-    if (!existsSync(promptFile)) {
+    if (!this.fs.existsSync(promptFile)) {
       if (verbose) {
         this.logger.info(`Creating prompt file at ${promptFile}`);
       }
@@ -39,7 +58,7 @@ export class PromptService implements IPromptService {
         const template = promptTemplate
           ? this.createPromptFromTemplate(promptTemplate)
           : this.defaultPrompt;
-        writeFileSync(promptFile, template, 'utf8');
+        this.fs.writeFileSync(promptFile, template, 'utf8');
       } catch (error: unknown) {
         if (typeof error === 'object' && error && 'message' in error) {
           throw new Error(
@@ -56,12 +75,12 @@ export class PromptService implements IPromptService {
     }
 
     // Verify the file exists and is readable
-    if (!existsSync(promptFile)) {
+    if (!this.fs.existsSync(promptFile)) {
       throw new Error(`❌ Cannot read prompt file: ${promptFile}`);
     }
 
     try {
-      return readFileSync(promptFile, 'utf8');
+      return this.fs.readFileSync(promptFile, 'utf8');
     } catch (error: unknown) {
       if (typeof error === 'object' && error && 'message' in error) {
         throw new Error(`❌ Failed to read prompt file: ${(error as { message: string }).message}`);
@@ -143,25 +162,20 @@ IMPORTANT: Maintain a professional, factual tone throughout. Focus on what was c
   ): Promise<string> {
     // First build the basic prompt
     const basicPrompt = this.buildCommitPrompt(filesInfo, diff, systemPrompt);
-
     if (!contextProviders || contextProviders.length === 0) {
       return basicPrompt;
     }
-
     try {
       const contextData = await this.contextService.gatherContext(contextProviders, {
         directory,
         diff,
         verbose,
       });
-
       if (contextData.length === 0) {
         return basicPrompt;
       }
-
       // Build context section
       const contextSection = this.buildContextSection(contextData);
-
       return `${basicPrompt}
 
 ADDITIONAL CONTEXT:
@@ -176,40 +190,21 @@ IMPORTANT: Maintain a professional, factual tone throughout. Focus on what was c
     }
   }
 
-  private buildContextSection(contextData: ContextData[]): string {
-    const sections: string[] = [];
-
-    for (const data of contextData) {
-      if (data.content && data.content.trim()) {
-        sections.push(`[${data.provider.toUpperCase()} CONTEXT]
-${data.content}
-`);
-      }
-    }
-
-    return sections.join('\n');
-  }
-
   validatePrompt(prompt: string): { valid: boolean; errors: string[] } {
     const errors: string[] = [];
-
     if (!prompt || prompt.trim().length === 0) {
       errors.push('Prompt cannot be empty');
     }
-
     if (prompt.length < 50) {
       errors.push('Prompt seems too short (less than 50 characters)');
     }
-
     if (prompt.length > 10000) {
       errors.push('Prompt is too long (more than 10,000 characters)');
     }
-
     // Check for common prompt issues
     if (!prompt.includes('commit')) {
       errors.push('Prompt should mention "commit" to provide context');
     }
-
     return {
       valid: errors.length === 0,
       errors,
@@ -227,13 +222,21 @@ ${data.content}
 
   createPromptFromTemplate(templateName: string): string {
     const templates = this.getPromptTemplates();
-
     if (!templates[templateName]) {
       throw new Error(
         `Template '${templateName}' not found. Available templates: ${Object.keys(templates).join(', ')}`,
       );
     }
-
     return templates[templateName];
+  }
+
+  private buildContextSection(contextData: ContextData[]): string {
+    const sections: string[] = [];
+    for (const data of contextData) {
+      if (data.content && data.content.trim()) {
+        sections.push(`[${data.provider.toUpperCase()} CONTEXT]\n${data.content}\n`);
+      }
+    }
+    return sections.join('\n');
   }
 }

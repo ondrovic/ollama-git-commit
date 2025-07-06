@@ -21,7 +21,7 @@ export const TROUBLE_SHOOTING = {
   MODEL_NOT_FOUND: (model: string) =>
     `Model '${model}' is not available.:
     - ollama pull ${model}
-    - ollama-git-commit --list-models
+    - ollama-git-commit config models list
     ` as const,
   TIMEOUT: (timeout: number) =>
     `

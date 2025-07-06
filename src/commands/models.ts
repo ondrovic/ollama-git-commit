@@ -36,29 +36,36 @@ export class ModelsCommand {
 
       // Pretty output: table with model name, size, family, and star for current model
       if (verbose) {
-        console.log(
-          '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━',
-        );
-        console.log(`🔧 Current configured model: ${config.model}`);
-        console.log(`🌐 Ollama host: ${config.host}`);
-        console.log(
-          '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━',
-        );
+        this.logger.table([
+          {
+            header: `Current configured model: ${config.model}`,
+            separator:
+              '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━',
+          },
+          {
+            header: `Ollama host: ${config.host}`,
+            separator:
+              '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━',
+          },
+        ]);
       } else {
-        console.log(
-          '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━',
-        );
+        this.logger.table([
+          {
+            header: 'Available models:',
+            separator:
+              '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━',
+          },
+        ]);
       }
-      console.log('Available models:');
-      console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+
       data.models.forEach((model: ModelInfo) => {
         const size = model.size ? formatFileSize(model.size) : 'n/a';
         const family = model.details?.family ? ` [${model.details.family}]` : '';
-        const currentModel = model.name === config.model ? ' ⭐ (current)' : '';
-        console.log(`  📦 ${model.name} ${size}${family}${currentModel}`);
+        const currentModel = model.name === config.model ? ' (current)' : '';
+        this.logger.package(`${model.name} ${size}${family}${currentModel}`);
       });
-      console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-      console.log(`📊 Total: ${data.models.length} models available`);
+
+      this.logger.info(`Total: ${data.models.length} models available`);
     } catch (error: unknown) {
       this.logger.error(`Cannot fetch models from ${ollamaHost}`);
       if (typeof error === 'object' && error && 'message' in error) {
@@ -74,7 +81,7 @@ export class ModelsCommand {
         'name' in error &&
         (error as { name: string }).name === 'TimeoutError'
       ) {
-        console.log('   5. Increase timeout in config file');
+        this.logger.info('   5. Increase timeout in config file');
       }
     }
   }
@@ -171,19 +178,19 @@ export class ModelsCommand {
 
     await this.listModels(ollamaHost, true);
 
-    console.log('');
-    console.log('   3. Or let the script auto-select a model:');
+    this.logger.info('');
+    this.logger.info('   3. Or let the script auto-select a model:');
     const autoModel = await this.getDefaultModel(ollamaHost);
     if (autoModel) {
-      console.log(`      💡 Suggested: ollama-git-commit --model ${autoModel} -d /path/to/repo`);
-      console.log('      💡 Or set in config: ollama-git-commit --config-show');
+      this.logger.info(`      Suggested: ollama-git-commit --model ${autoModel} -d /path/to/repo`);
+      this.logger.info('      Or set in config: ollama-git-commit --config-show');
     }
 
     // Popular models
-    console.log(MODELS.POPULAR);
+    this.logger.info(MODELS.POPULAR);
 
     // Configuration options
-    console.log(MODELS.CONFIGURATION);
+    this.logger.info(MODELS.CONFIGURATION);
   }
 
   async validateModel(model: string, host?: string): Promise<boolean> {

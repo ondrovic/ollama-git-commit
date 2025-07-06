@@ -1,9 +1,10 @@
 import { Command } from 'commander';
 import { ConfigManager } from '../../../core/config';
+import { IConfigManager } from '../../../core/interfaces';
 import { Logger } from '../../../utils/logger';
 import { getConfigKeys } from './keys';
 
-export const registerSetCommands = (configCommand: Command) => {
+export const registerSetCommands = (configCommand: Command, configManager?: IConfigManager) => {
   configCommand
     .command('set <key> <value>')
     .description('Set a configuration value')
@@ -12,19 +13,19 @@ export const registerSetCommands = (configCommand: Command) => {
     .action(
       async (key: string, value: string, options: { type: 'user' | 'local'; all?: boolean }) => {
         try {
-          const configManager = ConfigManager.getInstance();
-          await configManager.initialize();
+          const manager = configManager || ConfigManager.getInstance();
+          await manager.initialize();
 
           // Validate the key before proceeding
           const validKeys = getConfigKeys().map(k => k.key);
           if (!validKeys.includes(key)) {
             const suggestions = findSimilarKeys(key, validKeys);
-            Logger.error(`❌ Invalid configuration key: "${key}"`);
+            Logger.error(`Invalid configuration key: "${key}"`);
             if (suggestions.length > 0) {
-              console.log('💡 Did you mean one of these?');
-              suggestions.forEach(suggestion => console.log(`   ${suggestion}`));
+              Logger.info('Did you mean one of these?');
+              suggestions.forEach(suggestion => Logger.info(`   ${suggestion}`));
             }
-            console.log("\n💡 Run 'ollama-git-commit config keys' to see all available keys.");
+            Logger.info("Run 'ollama-git-commit config keys' to see all available keys.");
             process.exit(1);
           }
 
@@ -32,14 +33,14 @@ export const registerSetCommands = (configCommand: Command) => {
           const parsedValue = parseValue(key, value);
 
           // Get current config files to determine which ones to update
-          const configFiles = await configManager.getConfigFiles();
+          const configFiles = await manager.getConfigFiles();
           const activeConfigs = configFiles.active;
 
           if (options.all && activeConfigs.length > 1) {
             // Update all active configs
             for (const configFile of activeConfigs) {
               const configToUpdate = createConfigUpdate(key, parsedValue);
-              await configManager.saveConfig(configToUpdate, configFile.type);
+              await manager.saveConfig(configToUpdate, configFile.type);
               Logger.success(
                 `Updated ${configFile.type} config: ${key} = ${JSON.stringify(parsedValue)}`,
               );
@@ -47,16 +48,17 @@ export const registerSetCommands = (configCommand: Command) => {
           } else {
             // Update single config
             const configToUpdate = createConfigUpdate(key, parsedValue);
-            await configManager.saveConfig(configToUpdate, options.type);
+            await manager.saveConfig(configToUpdate, options.type);
             Logger.success(
               `Updated ${options.type} config: ${key} = ${JSON.stringify(parsedValue)}`,
             );
           }
 
           // Show the updated configuration
-          console.log('\n📋 Updated configuration:');
-          const updatedConfig = await configManager.getConfig();
-          const sourceInfo = await configManager.getConfigSources();
+          Logger.text('');
+          Logger.text('Updated configuration:');
+          const updatedConfig = await manager.getConfig();
+          const sourceInfo = await manager.getConfigSources();
 
           // Display the specific key that was updated
           displayUpdatedKey(key, updatedConfig, sourceInfo as Record<string, unknown>);
@@ -152,7 +154,7 @@ export function displayUpdatedKey(
   }
 
   const source = typeof currentSource === 'string' ? currentSource : 'unknown';
-  console.log(`  ${key}: ${JSON.stringify(currentValue)} (from ${source})`);
+  Logger.info(`  ${key}: ${JSON.stringify(currentValue)} (from ${source})`);
 }
 
 /**

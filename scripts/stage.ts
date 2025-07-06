@@ -4,6 +4,7 @@ import { execSync } from 'child_process';
 import { readFileSync } from 'fs';
 import { join } from 'path';
 import { ConfigManager } from '../src/core/config';
+import { Logger } from '../src/utils/logger';
 
 async function main() {
   let isQuiet = process.env.QUIET === 'true';
@@ -18,6 +19,8 @@ async function main() {
       isQuiet = false;
     }
   }
+
+  Logger.setVerbose(!isQuiet);
 
   // Create environment with QUIET propagation
   const env = { 
@@ -54,37 +57,37 @@ async function main() {
   }
 
   if (hasPrecommitScript) {
-    if (!isQuiet) console.log('🔍 Running precommit checks...');
+    if (!isQuiet) Logger.magnifier('Running precommit checks...');
     try {
       execSync('bun run precommit', { 
         stdio: isQuiet ? ['pipe', 'pipe', 'pipe'] : 'inherit',
         env
       });
     } catch (error) {
-      if (!isQuiet) console.error('❌ Precommit failed:', error);
+      if (!isQuiet) Logger.error('Precommit failed:', error instanceof Error ? error.message : String(error));
       process.exit(1);
     }
   }
 
   if (!isQuiet) {
-    console.log('🚀 Running staging checks...');
+    Logger.rocket('Running staging checks...');
   }
 
   // Helper to run a script if it exists
-  function runScriptIfExists(name: string, label: string) {
+  function runScriptIfExists(name: string, label: string, loggerMethod: (msg: string) => void) {
     if (scripts[name]) {
-      if (!isQuiet) console.log(label);
+      if (!isQuiet) loggerMethod(label);
       try {
         execSync(`bun run ${name}`, { 
           stdio: isQuiet ? ['pipe', 'pipe', 'pipe'] : 'inherit',
           env
         });
       } catch (error) {
-        if (!isQuiet) console.error(`❌ ${name} failed:`, error);
+        if (!isQuiet) Logger.error(`${name} failed:`, error instanceof Error ? error.message : String(error));
         process.exit(1);
       }
     } else if (!isQuiet) {
-      console.log(`⏭️  Skipping ${name} (script not found in package.json)`);
+      Logger.info(`Skipping ${name} (script not found in package.json)`);
     }
   }
 
@@ -92,38 +95,38 @@ async function main() {
     if (isOllamaGitCommitRepo) {
       // Full staging workflow for ollama-git-commit repository
       if (!isQuiet) {
-        console.log('🏠 Running full staging workflow for ollama-git-commit...');
+        Logger.house('Running full staging workflow for ollama-git-commit...');
       }
       
       // Run tests if available
-      runScriptIfExists('test', '🔍 Running tests...');
+      runScriptIfExists('test', 'Running tests...', Logger.test);
 
       // Run formatting if available
-      runScriptIfExists('format', '💅 Running code formatting...');
+      // runScriptIfExists('format', 'Running code formatting...', Logger.floppy);
 
       // Run linting with auto-fix if available
-      runScriptIfExists('lint:fix', '🔍 Running linting with auto-fix...');
+      runScriptIfExists('lint:fix', 'Running linting with auto-fix...', Logger.magnifier);
       // Fallback to regular lint if lint:fix doesn't exist
       if (!scripts['lint:fix'] && scripts['lint']) {
-        runScriptIfExists('lint', '🔍 Running linting...');
+        runScriptIfExists('lint', 'Running linting...', Logger.magnifier);
       }
 
       // Run type building if available
-      runScriptIfExists('build:types', '🔨 Building type declarations...');
+      runScriptIfExists('build:types', 'Building type declarations...', Logger.hammer);
     } else {
       // Simplified staging for other repositories
       if (!isQuiet) {
-        console.log('📦 Running simplified staging for external repository...');
+        Logger.package('Running simplified staging for external repository...');
       }
       
       // Only run basic scripts that are likely to exist in most projects
-      runScriptIfExists('test', '🔍 Running tests...');
-      runScriptIfExists('lint', '🔍 Running linting...');
-      runScriptIfExists('format', '💅 Running code formatting...');
+      runScriptIfExists('test', 'Running tests...', Logger.test);
+      // runScriptIfExists('format', 'Running code formatting...', Logger.floppy);
+      runScriptIfExists('lint', 'Running linting...', Logger.magnifier);
     }
 
     if (!isQuiet) {
-      console.log('📝 Staging all files...');
+      Logger.memo('Staging all files...');
     }
     execSync('git add -A', {
       stdio: isQuiet ? ['pipe', 'pipe', 'pipe'] : 'inherit',
@@ -131,17 +134,17 @@ async function main() {
     });
 
     if (!isQuiet) {
-      console.log('✅ Staging checks completed!');
+      Logger.success('Staging checks completed!');
     }
   } catch (error: unknown) {
     if (error instanceof Error) {
-      console.error('❌ Staging checks failed:', error.message);
+      Logger.error('Staging checks failed:', error.message);
     }
     process.exit(1);
   }
 }
 
 main().catch(error => {
-  console.error('❌ Script failed:', error);
+  Logger.error('Script failed:', error instanceof Error ? error.message : String(error));
   process.exit(1);
 });
