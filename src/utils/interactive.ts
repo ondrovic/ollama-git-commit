@@ -182,6 +182,8 @@ export class InteractivePromptDI {
     const validChoice = choices.find(c => c.key === choice);
 
     if (validChoice) {
+      // Echo the choice back to the user
+      logger.plain(` ${choice} `);
       // Add a newline after user input to separate from subsequent logger messages
       if (this.deps.processObj?.stdout?.write) {
         this.deps.processObj.stdout.write('\n');
