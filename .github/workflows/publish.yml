@@ -25,8 +25,32 @@ jobs:
         with:
           bun-version: 1.2.16
 
+      - name: Verify Bun installation
+        run: |
+          echo "🔍 Bun version:"
+          bun --version
+          echo "📋 Package.json contents:"
+          cat package.json | grep -A 10 -B 5 "string-width"
+
       - name: Install dependencies
         run: bun install
+
+      - name: Verify dependencies
+        run: |
+          echo "🔍 Checking if string-width is available..."
+          bun pm ls | grep string-width || echo "string-width not found in bun pm ls"
+          echo "📦 Checking bun.lock for string-width..."
+          grep -i "string-width" bun.lock || echo "string-width not found in bun.lock"
+
+      - name: Install missing string-width if needed
+        run: |
+          if [ ! -d "node_modules/string-width" ]; then
+            echo "🔄 string-width not found, installing it..."
+            bun add string-width
+            echo "✅ string-width installed"
+          else
+            echo "✅ string-width already installed"
+          fi
 
       - name: Extract version from tag
         id: get-version

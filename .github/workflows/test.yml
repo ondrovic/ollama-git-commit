@@ -17,27 +17,89 @@ jobs:
 
       - name: Set up Bun
         uses: oven-sh/setup-bun@v1
-
-      - name: Cache Bun dependencies
-        id: bun-cache
-        uses: actions/cache@v4
         with:
-          path: |
-            ~/.bun/install/cache
-            node_modules
-          key: ${{ runner.os }}-bun-${{ hashFiles('bun.lock') }}
-          restore-keys: |
-            ${{ runner.os }}-bun-
+          bun-version: 1.2.16
+
+      - name: Verify Bun installation
+        run: |
+          echo "🔍 Bun version:"
+          bun --version
+          echo "📋 Package.json contents:"
+          cat package.json | grep -A 10 -B 5 "string-width"
+
+      # Temporarily disabled cache to debug dependency issues
+      # - name: Cache Bun dependencies
+      #   id: bun-cache
+      #   uses: actions/cache@v4
+      #   with:
+      #     path: |
+      #       ~/.bun/install/cache
+      #       node_modules
+      #     key: ${{ runner.os }}-bun-${{ hashFiles('bun.lock') }}
+      #     restore-keys: |
+      #       ${{ runner.os }}-bun-
 
       - name: List directory contents
         run: ls -la
 
       - name: Install dependencies
-        if: steps.bun-cache.outputs.cache-hit != 'true'
         run: bun install
+
+      - name: Fallback npm install if bun fails
+        if: failure()
+        run: |
+          echo "🔄 Bun install failed, trying npm install..."
+          npm install
+          echo "✅ NPM install completed"
 
       - name: List directory contents after install
         run: ls -la
+
+      - name: Verify dependencies
+        run: |
+          echo "🔍 Checking if string-width is available..."
+          bun pm ls | grep string-width || echo "string-width not found in bun pm ls"
+          echo "📦 Checking bun.lock for string-width..."
+          grep -i "string-width" bun.lock || echo "string-width not found in bun.lock"
+
+      - name: Install missing string-width if needed
+        run: |
+          if [ ! -d "node_modules/string-width" ]; then
+            echo "🔄 string-width not found, installing it..."
+            bun add string-width
+            echo "✅ string-width installed"
+          else
+            echo "✅ string-width already installed"
+          fi
+
+      - name: Clear cache and reinstall if string-width still missing
+        run: |
+          if [ ! -d "node_modules/string-width" ]; then
+            echo "🔄 Clearing cache and reinstalling..."
+            rm -rf node_modules bun.lock
+            bun install
+            echo "✅ Reinstall completed"
+          fi
+
+      - name: Check node_modules
+        run: |
+          echo "📦 Checking node_modules..."
+          ls -la node_modules/ | head -20
+          echo "🔍 Checking for string-width package..."
+          if [ -d "node_modules/string-width" ]; then
+            echo "✅ string-width package found"
+            ls -la node_modules/string-width/
+          else
+            echo "❌ string-width package not found"
+            echo "📋 All packages in node_modules:"
+            ls node_modules/ | grep -E "(string|width)" || echo "No matching packages found"
+          fi
+
+      - name: Test string-width import
+        run: |
+          echo "🧪 Testing string-width import..."
+          bun -e "import stringWidth from 'string-width'; console.log('string-width version:', stringWidth('test'));"
+          echo "✅ string-width import test passed"
 
       - name: Generate version file for testing
         run: bun run prebuild
