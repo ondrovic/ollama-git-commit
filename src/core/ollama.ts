@@ -321,14 +321,15 @@ export class OllamaService implements IOllamaService {
         // Fallback to simple stream consumption if progress tracking fails
         progressEnabled = false;
         this.logger.debug('Progress tracking failed, using fallback mode');
-      }
 
-      // Fallback: simple stream consumption if progress tracking was disabled
-      if (!progressEnabled) {
-        const fallbackReader = (response.body as ReadableStream<Uint8Array>).getReader();
-        while (true) {
-          const { done } = await fallbackReader.read();
-          if (done) break;
+        // Continue reading with the same reader until the stream is complete
+        try {
+          while (true) {
+            const { done } = await reader.read();
+            if (done) break;
+          }
+        } catch (fallbackError) {
+          this.logger.debug('Fallback stream reading also failed:', fallbackError);
         }
       }
 

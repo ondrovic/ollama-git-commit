@@ -12,7 +12,7 @@ const mockLogger = {
   warn: mock(() => {}),
   debug: mock(() => {}),
   plain: mock(() => {}),
-};
+} as any; // Type assertion to avoid complex mock typing
 
 const mockProcess = {
   stdin: {
@@ -30,14 +30,14 @@ const mockProcess = {
   versions: { bun: '1.0.0' },
   on: mock(() => {}),
   exit: mock(() => {}),
-};
+} as any; // Type assertion to avoid complex Process interface
 
 const mockSetTimeout = mock((fn: Function, ms: number) => {
   setTimeout(fn, 0);
   return 1;
-});
+}) as any; // Type assertion to avoid setTimeout interface complexity
 
-const mockClearTimeout = mock(() => {});
+const mockClearTimeout = mock(() => {}) as any; // Type assertion to avoid clearTimeout interface complexity
 
 describe('InteractivePrompt', () => {
   it('should create instance with DI dependencies', () => {
@@ -181,7 +181,7 @@ describe('InteractivePrompt', () => {
     const originalSetTimeout = global.setTimeout;
     const mockGlobalSetTimeout = mock((fn: Function, ms: number) => {
       return originalSetTimeout(fn, 0);
-    });
+    }) as any;
     global.setTimeout = mockGlobalSetTimeout;
 
     prompt['handleChoice']('z', choices, resolve, askQuestion, mockLogger);
@@ -212,7 +212,7 @@ describe('InteractivePrompt', () => {
     const originalSetTimeout = global.setTimeout;
     const mockGlobalSetTimeout = mock((fn: Function, ms: number) => {
       return originalSetTimeout(fn, 0);
-    });
+    }) as any;
     global.setTimeout = mockGlobalSetTimeout;
 
     prompt['handleChoice']('', choices, resolve, askQuestion, mockLogger);
@@ -403,23 +403,30 @@ describe('InteractivePrompt', () => {
       { key: 'n', description: 'No' },
     ];
 
+    // Create a Node.js-specific mock process (no bun version)
+    const nodeProcess = {
+      ...mockProcess,
+      versions: undefined,
+    };
+
     // Mock stdin.once to simulate data
-    mockProcess.stdin.once.mockImplementation((event, callback) => {
+    nodeProcess.stdin.once.mockImplementation((event, callback) => {
       if (event === 'data') {
         setTimeout(() => callback(Buffer.from('y\n')), 0);
       }
-      return mockProcess.stdin;
+      return nodeProcess.stdin;
     });
 
-    prompt['handleInput'](choices, 'y', resolve, reject, mockProcess, mockLogger);
+    prompt['handleInput'](choices, 'y', resolve, reject, nodeProcess, mockLogger);
 
-    expect(mockProcess.stdout.write).toHaveBeenCalledWith('What would you like to do? ');
-    expect(mockProcess.stdout.write).toHaveBeenCalledWith('[y]: ');
-    expect(mockProcess.stdin.setRawMode).toHaveBeenCalledWith(true);
-    expect(mockProcess.stdin.resume).toHaveBeenCalled();
+    expect(nodeProcess.stdout.write).toHaveBeenCalledWith('What would you like to do? ');
+    expect(nodeProcess.stdout.write).toHaveBeenCalledWith('[y]: ');
+    expect(nodeProcess.stdin.setRawMode).toHaveBeenCalledWith(true);
+    expect(nodeProcess.stdin.resume).toHaveBeenCalled();
   });
 
   it('should test handleInput with raw mode error for Node.js', () => {
+    mockLogger.debug.mockClear();
     const prompt = new interactive.InteractivePromptDI({
       logger: mockLogger,
       processObj: mockProcess,
@@ -434,15 +441,21 @@ describe('InteractivePrompt', () => {
       { key: 'n', description: 'No' },
     ];
 
+    // Create a Node.js-specific mock process (no bun version)
+    const nodeProcess = {
+      ...mockProcess,
+      versions: undefined,
+    };
+
     // Make setRawMode throw
-    mockProcess.stdin.setRawMode.mockImplementation(() => {
+    nodeProcess.stdin.setRawMode.mockImplementation(() => {
       throw new Error('setRawMode failed');
     });
 
-    prompt['handleInput'](choices, 'y', resolve, reject, mockProcess, mockLogger);
+    prompt['handleInput'](choices, 'y', resolve, reject, nodeProcess, mockLogger);
 
-    expect(mockLogger.debug).toHaveBeenCalledWith('Bun input error:', expect.any(Error));
-    expect(mockProcess.stdin.resume).toHaveBeenCalled();
+    expect(mockLogger.debug).toHaveBeenCalledWith('Failed to set raw mode:', expect.any(Error));
+    expect(nodeProcess.stdin.resume).toHaveBeenCalled();
   });
 
   it('should test handleInput with error event for Node.js', async () => {
@@ -461,16 +474,22 @@ describe('InteractivePrompt', () => {
       { key: 'n', description: 'No' },
     ];
 
+    // Create a Node.js-specific mock process (no bun version)
+    const nodeProcess = {
+      ...mockProcess,
+      versions: undefined,
+    };
+
     // Mock stdin.once to simulate error immediately
-    mockProcess.stdin.once.mockImplementation((event, callback) => {
+    nodeProcess.stdin.once.mockImplementation((event, callback) => {
       if (event === 'error') {
         // Call immediately instead of with setTimeout
         callback(new Error('stdin error'));
       }
-      return mockProcess.stdin;
+      return nodeProcess.stdin;
     });
 
-    prompt['handleInput'](choices, 'y', resolve, reject, mockProcess, mockLogger);
+    prompt['handleInput'](choices, 'y', resolve, reject, nodeProcess, mockLogger);
 
     // Wait a bit for any async operations
     await new Promise(resolve => setTimeout(resolve, 5));
