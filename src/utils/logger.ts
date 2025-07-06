@@ -109,11 +109,15 @@ export class Logger implements ILogger {
     }
   }
 
-  group(label: string, fn: () => void): void {
+  group(label: string, fn: () => void | Promise<void>): void {
     if (this.verbose) {
       console.group(`${EMOJIS.GROUP} ${label}`);
-      fn();
-      console.groupEnd();
+      const result = fn();
+      if (result instanceof Promise) {
+        result.finally(() => console.groupEnd());
+      } else {
+        console.groupEnd();
+      }
     } else {
       fn();
     }
@@ -282,7 +286,7 @@ export class Logger implements ILogger {
   static table(data: Record<string, unknown>[]): void {
     Logger.getDefault().table(data);
   }
-  static group(label: string, fn: () => void): void {
+  static group(label: string, fn: () => void | Promise<void>): void {
     Logger.getDefault().group(label, fn);
   }
   static time(label: string): void {

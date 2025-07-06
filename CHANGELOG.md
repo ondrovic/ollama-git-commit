@@ -18,6 +18,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **Release Script Error**: Fixed "fn is not a function" error in release script
+  - **Logger.group Usage**: Fixed incorrect usage of `Logger.group()` method in release script that was missing the required function parameter
+  - **Async Function Support**: Enhanced `Logger.group()` method to support both synchronous and asynchronous functions
+  - **Release Process**: Ensured release script can properly execute with async operations within grouped logging
+  - **Backward Compatibility**: Maintained compatibility with existing synchronous `Logger.group()` usage
+
 - **Type Safety Bug**: Fixed critical bug in `registerCommitCommand` function
 
   - **Parameter Type Mismatch**: Fixed contradiction between optional `deps` parameter type and required implementation
@@ -38,6 +44,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     - Fixed linter errors related to object comparison in proxy tests
 
 ### Technical Details
+
+- **Logger.group Enhancement**: Extended Logger.group method to support async functions
+
+  - **Method Signature**: Updated `group(label: string, fn: () => void)` to `group(label: string, fn: () => void | Promise<void>)`
+  - **Async Handling**: Added proper Promise handling with `Promise.finally()` to ensure `console.groupEnd()` is called for async functions
+  - **Release Script Fix**: Updated release script to properly use `Logger.group()` with async callback function
+  - **Static Method Update**: Updated static `Logger.group()` method to match instance method signature
+  - **Test Compatibility**: All existing Logger tests continue to pass with enhanced async support
 
 - **Type Safety Fix**: Resolved critical API inconsistency in `registerCommitCommand` function
 
