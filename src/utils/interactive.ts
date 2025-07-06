@@ -7,103 +7,131 @@ interface PromptOptions {
   defaultChoice?: string;
 }
 
-export class InteractivePrompt {
-  private static isRawModeEnabled = false;
+// DI interfaces
+export interface IInteractiveDeps {
+  logger: typeof Logger;
+  fileSystem?: typeof import('fs-extra'); // For future extensibility
+  configManager?: typeof import('../core/config').ConfigManager; // For future extensibility
+  processObj?: typeof process;
+  setTimeoutFn?: typeof setTimeout;
+  clearTimeoutFn?: typeof clearTimeout;
+}
 
-  static async prompt(options: PromptOptions): Promise<string> {
+export class InteractivePromptDI {
+  private isRawModeEnabled = false;
+  constructor(private deps: IInteractiveDeps) {}
+
+  async prompt(options: PromptOptions): Promise<string> {
     const { message, choices, defaultChoice } = options;
+    const { logger, processObj, setTimeoutFn, clearTimeoutFn } = this.deps;
 
-    // Show the prompt
-    console.log(message);
+    if (!processObj) {
+      throw new Error('Process object not available');
+    }
+
+    logger.plain(message);
     choices.forEach(choice => {
       const isDefault = choice.key === defaultChoice ? ' (default)' : '';
-      console.log(`   [${choice.key}] ${choice.description}${isDefault}`);
+      logger.plain(`   [${choice.key}] ${choice.description}${isDefault}`);
     });
-    console.log('');
-
+    logger.plain('');
     return new Promise((resolve, reject) => {
-      // Set a timeout to prevent hanging
-      const globalTimeout = setTimeout(() => {
+      const globalTimeout = (setTimeoutFn || setTimeout)(() => {
         this.cleanup();
-        Logger.warn('Prompt timed out, using default choice');
+        logger.plain('');
+        logger.warn('Prompt timed out, using default choice');
         resolve(defaultChoice || 'n');
-      }, 60000); // 60 second timeout
-
+      }, 60000);
       const cleanupAndResolve = (value: string) => {
-        clearTimeout(globalTimeout);
+        (clearTimeoutFn || clearTimeout)(globalTimeout);
         this.cleanup();
         resolve(value);
       };
-
       const cleanupAndReject = (error: Error) => {
-        clearTimeout(globalTimeout);
+        (clearTimeoutFn || clearTimeout)(globalTimeout);
         this.cleanup();
         reject(error);
       };
-
-      // Try different input methods based on runtime
-      if (this.isBunRuntime()) {
-        this.handleBunInput(choices, defaultChoice, cleanupAndResolve, cleanupAndReject);
+      if (this.isBunRuntime(processObj)) {
+        this.handleBunInput(
+          choices,
+          defaultChoice,
+          cleanupAndResolve,
+          cleanupAndReject,
+          processObj,
+          logger,
+        );
       } else {
-        this.handleNodeInput(choices, defaultChoice, cleanupAndResolve, cleanupAndReject);
+        this.handleNodeInput(
+          choices,
+          defaultChoice,
+          cleanupAndResolve,
+          cleanupAndReject,
+          processObj,
+          logger,
+        );
       }
     });
   }
-
-  private static isBunRuntime(): boolean {
-    return typeof process !== 'undefined' && process.versions?.bun !== undefined;
+  private isBunRuntime(processObj?: typeof process): boolean {
+    return typeof processObj !== 'undefined' && processObj.versions?.bun !== undefined;
   }
-
-  private static handleBunInput(
+  // QUESTION: can we make a considate the handelBunInput, handleNodeInput into one function that just takes isBunRuntime instead of having two functions that are almost identical?
+  private handleBunInput(
     choices: { key: string; description: string }[],
     defaultChoice: string | undefined,
     resolve: (value: string) => void,
     reject: (error: Error) => void,
+    processObj: typeof process,
+    logger: typeof Logger,
   ): void {
     const askQuestion = async () => {
-      process.stdout.write('What would you like to do? ');
+      if (!processObj) {
+        reject(new Error('Process object not available'));
+        return;
+      }
+
+      processObj.stdout.write('What would you like to do? ');
 
       if (defaultChoice) {
-        process.stdout.write(`[${defaultChoice}]: `);
+        processObj.stdout.write(`[${defaultChoice}]: `);
       }
 
       try {
         // For Bun, try to use readline-like functionality
-        if (process.stdin.isTTY) {
+        if (processObj.stdin.isTTY) {
           // Set raw mode for single character input
-          process.stdin.setRawMode(true);
-          process.stdin.resume();
+          processObj.stdin.setRawMode(true);
+          processObj.stdin.resume();
 
-          process.stdin.once('data', data => {
+          processObj.stdin.once('data', data => {
             const input = data.toString().trim().toLowerCase();
-            process.stdin.setRawMode(false);
-            process.stdin.pause();
+            processObj.stdin.setRawMode(false);
+            processObj.stdin.pause();
 
-            console.log(input); // Echo the choice
-
-            this.handleChoice(input || defaultChoice || '', choices, resolve, askQuestion);
+            this.handleChoice(input || defaultChoice || '', choices, resolve, askQuestion, logger);
           });
 
-          process.stdin.once('error', error => {
-            process.stdin.setRawMode(false);
-            process.stdin.pause();
+          processObj.stdin.once('error', error => {
+            processObj.stdin.setRawMode(false);
+            processObj.stdin.pause();
             reject(error);
           });
         } else {
           // Fallback for non-TTY environments
           const rl = createInterface({
-            input: process.stdin,
-            output: process.stdout,
+            input: processObj.stdin,
+            output: processObj.stdout,
           });
 
           rl.question('', (answer: string) => {
             rl.close();
             const input = answer.trim().toLowerCase() || defaultChoice || '';
-            this.handleChoice(input, choices, resolve, askQuestion);
+            this.handleChoice(input, choices, resolve, askQuestion, logger);
           });
         }
       } catch (error) {
-        Logger.debug('Bun input error:', error);
+        logger.debug('Bun input error:', error);
         reject(error as Error);
       }
     };
@@ -111,113 +139,139 @@ export class InteractivePrompt {
     askQuestion();
   }
 
-  private static handleNodeInput(
+  private handleNodeInput(
     choices: { key: string; description: string }[],
     defaultChoice: string | undefined,
     resolve: (value: string) => void,
     reject: (error: Error) => void,
+    processObj: typeof process,
+    logger: typeof Logger,
   ): void {
     const askQuestion = () => {
-      process.stdout.write('What would you like to do? ');
+      if (!processObj) {
+        reject(new Error('Process object not available'));
+        return;
+      }
+
+      processObj.stdout.write('What would you like to do? ');
 
       if (defaultChoice) {
-        process.stdout.write(`[${defaultChoice}]: `);
+        processObj.stdout.write(`[${defaultChoice}]: `);
       }
 
       // Only set raw mode if it's not already enabled and stdin supports it
-      if (!this.isRawModeEnabled && process.stdin.setRawMode && process.stdin.isTTY) {
+      if (!this.isRawModeEnabled && processObj.stdin.setRawMode && processObj.stdin.isTTY) {
         try {
-          process.stdin.setRawMode(true);
+          processObj.stdin.setRawMode(true);
           this.isRawModeEnabled = true;
         } catch (error) {
-          Logger.debug('Failed to set raw mode:', error);
+          logger.debug('Failed to set raw mode:', error);
         }
       }
 
-      process.stdin.resume();
+      processObj.stdin.resume();
 
       const onData = (data: Buffer) => {
         const choice = data.toString().toLowerCase().trim();
 
         // Clean up listeners first
-        process.stdin.removeListener('data', onData);
-        process.stdin.removeListener('error', onError);
+        processObj.stdin.removeListener('data', onData);
+        processObj.stdin.removeListener('error', onError);
 
-        console.log(choice); // Echo the choice
-
-        this.handleChoice(choice || defaultChoice || '', choices, resolve, askQuestion);
+        this.handleChoice(choice || defaultChoice || '', choices, resolve, askQuestion, logger);
       };
 
       const onError = (error: Error) => {
-        Logger.debug('Stdin error:', error);
-        process.stdin.removeListener('data', onData);
-        process.stdin.removeListener('error', onError);
+        logger.debug('Stdin error:', error);
+        processObj.stdin.removeListener('data', onData);
+        processObj.stdin.removeListener('error', onError);
         reject(error);
       };
 
-      process.stdin.once('data', onData);
-      process.stdin.once('error', onError);
+      processObj.stdin.once('data', onData);
+      processObj.stdin.once('error', onError);
     };
 
     askQuestion();
   }
 
-  private static handleChoice(
+  private handleChoice(
     choice: string,
     choices: { key: string; description: string }[],
     resolve: (value: string) => void,
     askQuestion: () => void,
+    logger: typeof Logger,
   ): void {
     const validChoice = choices.find(c => c.key === choice);
 
     if (validChoice) {
+      // Add a newline after user input to separate from subsequent logger messages
+      if (this.deps.processObj?.stdout?.write) {
+        this.deps.processObj.stdout.write('\n');
+      }
       resolve(choice);
     } else if (choice === '') {
       // Handle empty input - could be default or invalid
       const hasDefault = choices.some(c => c.key === choice);
       if (hasDefault) {
+        // Add a newline after user input to separate from subsequent logger messages
+        if (this.deps.processObj?.stdout?.write) {
+          this.deps.processObj.stdout.write('\n');
+        }
         resolve(choice);
       } else {
-        console.log(`Please choose one of: ${choices.map(c => c.key).join(', ')}`);
-        setTimeout(askQuestion, 100); // Small delay to prevent rapid loops
+        logger.plain(`Please choose one of: ${choices.map(c => c.key).join(', ')}`);
+        (this.deps.setTimeoutFn || setTimeout)(askQuestion, 100); // Small delay to prevent rapid loops
       }
     } else {
-      console.log(`Please choose one of: ${choices.map(c => c.key).join(', ')}`);
-      setTimeout(askQuestion, 100); // Small delay to prevent rapid loops
+      logger.plain(`Please choose one of: ${choices.map(c => c.key).join(', ')}`);
+      (this.deps.setTimeoutFn || setTimeout)(askQuestion, 100); // Small delay to prevent rapid loops
     }
   }
 
   // Cleanup method to call on process exit
-  static cleanup(): void {
-    if (this.isRawModeEnabled && process.stdin.setRawMode) {
+  cleanup(): void {
+    const { processObj, logger } = this.deps;
+    if (this.isRawModeEnabled && processObj?.stdin?.setRawMode) {
       try {
-        process.stdin.setRawMode(false);
-        this.isRawModeEnabled = false;
+        processObj.stdin.setRawMode(false);
       } catch (error) {
-        Logger.debug('Failed to cleanup raw mode:', error);
+        logger.debug('Failed to cleanup raw mode:', error);
       }
     }
 
-    // Make sure stdin is paused
-    try {
-      process.stdin.pause();
-    } catch (error) {
-      Logger.debug('Failed to pause stdin:', error);
+    if (processObj?.stdin?.pause) {
+      try {
+        processObj.stdin.pause();
+      } catch (error) {
+        logger.debug('Failed to pause stdin:', error);
+      }
     }
+
+    this.isRawModeEnabled = false;
   }
 }
 
+// Default instance using real dependencies
+const defaultInteractivePrompt = new InteractivePromptDI({
+  logger: Logger,
+  processObj: process,
+  setTimeoutFn: setTimeout,
+  clearTimeoutFn: clearTimeout,
+});
+
 // Auto-cleanup on process exit
-process.on('exit', () => InteractivePrompt.cleanup());
+process.on('exit', () => defaultInteractivePrompt.cleanup());
 process.on('SIGINT', () => {
-  InteractivePrompt.cleanup();
+  defaultInteractivePrompt.cleanup();
   process.exit(0);
 });
 process.on('SIGTERM', () => {
-  InteractivePrompt.cleanup();
+  defaultInteractivePrompt.cleanup();
   process.exit(0);
 });
 
+// Question: can we consolidate the askYesNoDI, askCommitActionDI into one function that just takes autoCommit as a boolean and interactivePromptDI as a dependency, and then builds the choices dynamically?
 /**
  * Prompts the user with a yes/no question and returns their choice.
  *
@@ -225,9 +279,18 @@ process.on('SIGTERM', () => {
  * @param defaultChoice - The default choice if user doesn't provide input ('y' or 'n')
  * @returns Promise resolving to true for 'yes' or false for 'no'
  */
-export async function askYesNo(message: string, defaultChoice: 'y' | 'n' = 'n'): Promise<boolean> {
+export async function askYesNoDI(
+  message: string,
+  defaultChoice: 'y' | 'n' = 'n',
+  deps: IInteractiveDeps = {
+    logger: Logger,
+    processObj: process,
+    setTimeoutFn: setTimeout,
+    clearTimeoutFn: clearTimeout,
+  },
+): Promise<boolean> {
   try {
-    const choice = await InteractivePrompt.prompt({
+    const choice = await new InteractivePromptDI(deps).prompt({
       message,
       choices: [
         { key: 'y', description: 'Yes' },
@@ -235,10 +298,9 @@ export async function askYesNo(message: string, defaultChoice: 'y' | 'n' = 'n'):
       ],
       defaultChoice,
     });
-
     return choice === 'y';
   } catch (error) {
-    Logger.debug('askYesNo error:', error);
+    deps.logger.debug('askYesNo error:', error);
     return defaultChoice === 'y';
   }
 }
@@ -253,12 +315,18 @@ export async function askYesNo(message: string, defaultChoice: 'y' | 'n' = 'n'):
  * - 'regenerate': Generate a new message
  * - 'cancel': Cancel the operation
  */
-export async function askCommitAction(
+export async function askCommitActionDI(
   autoCommit = false,
+  deps: IInteractiveDeps = {
+    logger: Logger,
+    processObj: process,
+    setTimeoutFn: setTimeout,
+    clearTimeoutFn: clearTimeout,
+  },
 ): Promise<'use' | 'copy' | 'regenerate' | 'cancel'> {
   try {
-    const choice = await InteractivePrompt.prompt({
-      message: '📋 Available actions:',
+    const choice = await new InteractivePromptDI(deps).prompt({
+      message: 'Available actions:',
       choices: [
         {
           key: 'y',
@@ -266,7 +334,9 @@ export async function askCommitAction(
             ? 'Use this message and commit changes'
             : 'Use this message and copy commit command',
         },
+        // TODO: hide option c if autoCommitm or not interactive
         { key: 'c', description: 'Copy message to clipboard (if available)' },
+        // TODO: hide if not interactive prompt
         { key: 'r', description: 'Regenerate message' },
         { key: 'n', description: 'Cancel' },
       ],
@@ -276,6 +346,7 @@ export async function askCommitAction(
     switch (choice) {
       case 'y':
         return 'use';
+      // TODO: hide option c if autoCommit
       case 'c':
         return 'copy';
       case 'r':
@@ -286,7 +357,14 @@ export async function askCommitAction(
         return 'cancel';
     }
   } catch (error) {
-    Logger.debug('askCommitAction error:', error);
+    deps.logger.debug('askCommitAction error:', error);
     return 'cancel';
   }
 }
+
+// Default exports using real dependencies
+export const InteractivePrompt = defaultInteractivePrompt;
+// QUESTION consilidate these maybe since they are similar then build the choices dynamically?
+export const askYesNo = async (message: string, defaultChoice: 'y' | 'n' = 'n') =>
+  askYesNoDI(message, defaultChoice);
+export const askCommitAction = async (autoCommit = false) => askCommitActionDI(autoCommit);

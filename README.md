@@ -9,14 +9,18 @@ A powerful CLI tool that generates meaningful, contextual commit messages using 
 
 ## 🚦 Continuous Integration & Automated Publishing
 
-This project uses **GitHub Actions** for automated testing and NPM publishing:
+This project uses **GitHub Actions** for automated testing and NPM publishing with robust dependency management and cross-platform compatibility:
 
 ### Automated Testing
 
 - The test workflow is defined in `.github/workflows/test.yml`
 - All branches are tested automatically on push and pull requests
 - Tests are run using [Bun](https://bun.sh/) for fast execution
-- Comprehensive test coverage for all features including context providers and embeddings
+- **Cross-platform compatibility**: Tests work on Windows, macOS, and Linux
+- **Dependency management**: Robust handling of package dependencies with fallback strategies
+- **Comprehensive test coverage** for all features including context providers and embeddings
+- **Isolated testing**: All tests use mocks to avoid real external calls (API, filesystem, git commands)
+- **Test safety**: Eliminated dangerous global prototype modifications that could cause unpredictable test failures
 
 ### Automated NPM Publishing
 
@@ -25,6 +29,7 @@ This project uses **GitHub Actions** for automated testing and NPM publishing:
 - **Validates** that the version doesn't already exist on NPM
 - **Builds and tests** the package before publishing
 - **Publishes to NPM** with zero manual intervention
+- **Dependency verification**: Ensures all required packages are properly installed
 
 **How it works:**
 
@@ -56,6 +61,7 @@ You can view the status of all workflows in the "Actions" tab of the GitHub repo
 - 🎨 **Emoji-Rich**: Fun, expressive commit messages with emojis
 - 🎨 **Emoji Control**: Choose whether commit messages include emojis using the `useEmojis` config option
 - 🔇 **Quiet Mode**: Suppress git command output using the `--quiet` flag or `quiet` config option
+- 📝 **Consistent Logging**: Standardized logging system with centralized emoji handling and 15+ specialized log methods
 - ⚡ **Fast**: Optimized git diff parsing and API calls
 - 🔧 **Robust**: Enhanced error handling and validation mechanisms
 - 🎭 **Template System**: Multiple prompt templates (conventional, simple, detailed)
@@ -93,6 +99,25 @@ You can view the status of all workflows in the "Actions" tab of the GitHub repo
   - Proper dependency injection ensures testability and maintainability
   - All commands use injected services instead of inline instantiation
   - Improved error handling and user feedback across all service layers
+- 📊 **Enhanced Logging System**: Comprehensive logging refactoring with consistent emoji handling
+  - Extended Logger class with 15+ specialized methods for different use cases
+  - Centralized emoji management - no hardcoded emojis in log messages
+  - Consistent logging patterns across all CLI commands, core services, and utilities
+  - Enhanced test infrastructure with proper Logger method spying
+- 🎯 **CLI Command Enhancements**: Improved command structure and user experience
+  - Short (`-x`) and long (`--xxx`) flags for all CLI commands and options, following best CLI practices
+  - Usage examples in documentation for both short and long forms
+  - **config list-prompt-templates**: New subcommand to list all available built-in prompt templates and view the contents of any template
+  - Intelligent configuration key validation with typo suggestions and helpful error messages
+- 🎨 **Enhanced Commit Message Display**: Improved commit message presentation and user experience
+  - Fixed commit message display to show properly regardless of verbose mode settings
+  - Enhanced visual separation of commit messages with clear borders
+  - Improved user interaction flow with better message visibility
+  - Consistent formatting across all output modes
+- 🔇 **Improved Quiet Mode**: Enhanced quiet mode functionality across the application
+  - Fixed debug mode test prompts to respect quiet mode settings
+  - Improved verbose output control with consistent logic across all services
+  - Better user experience when running in quiet mode with proper progress indicators
 
 ## 🚀 Installation
 
@@ -331,9 +356,13 @@ Any validation issues will be reported with helpful error messages and suggestio
 
 ### Basic Usage
 
+All CLI commands support both short (`-x`) and long (`--xxx`) flags for better user experience:
+
 ```bash
 # Generate a commit message for staged changes
 ollama-git-commit -d /path/to/repo
+# or
+ollama-git-commit --directory /path/to/repo
 
 # Generate a commit message for unstaged changes
 ollama-git-commit -d /path/to/repo --auto-stage
@@ -342,10 +371,17 @@ ollama-git-commit -d /path/to/repo --auto-stage
 ollama-git-commit -d /path/to/repo --auto-commit
 
 # Suppress git command output
+ollama-git-commit -d /path/to/repo -q
+# or
 ollama-git-commit -d /path/to/repo --quiet
 
 # Combine quiet mode with auto-commit
-ollama-git-commit -d /path/to/repo --auto-commit --quiet
+ollama-git-commit -d /path/to/repo --auto-commit -q
+
+# Use specific model with verbose output
+ollama-git-commit -d /path/to/repo -m mistral:7b-instruct -v
+# or
+ollama-git-commit -d /path/to/repo --model mistral:7b-instruct --verbose
 ```
 
 ### Auto-Staging and Auto-Commit
@@ -376,12 +412,14 @@ ollama-git-commit -d . --auto-commit
 ```bash
 # Use specific model
 ollama-git-commit -d . -m mistral:7b-instruct
+# or
+ollama-git-commit -d . --model mistral:7b-instruct
 
 # Auto-select best available model
 ollama-git-commit -d . --auto-model
 
 # List all available models
-ollama-git-commit list-models
+ollama-git-commit config models list
 
 # Test connection to Ollama
 ollama-git-commit test connection
@@ -697,12 +735,14 @@ The tool includes advanced message cleaning capabilities:
 
 ### Quiet Mode
 
-The tool supports quiet mode to suppress git command output:
+The tool supports quiet mode to suppress git command output and verbose logging:
 
 - **CLI Flag**: Use `--quiet` to suppress git command output for the current run
 - **Configuration**: Set `quiet: true` in your config file to enable quiet mode by default
 - **Environment Variable**: Set `OLLAMA_COMMIT_QUIET=true` to enable quiet mode
 - **Auto-Commit Integration**: Quiet mode works seamlessly with `--auto-commit` and `--auto-stage` flags
+- **Debug Mode Respect**: Debug mode test prompts now respect quiet mode settings
+- **Verbose Control**: Quiet mode properly controls verbose output across all service layers
 
 Quiet mode is useful when you want to reduce noise in your terminal output, especially in automated workflows or when running the tool frequently. Progress messages are still shown to keep you informed of the current operation.
 
@@ -717,6 +757,9 @@ ollama-git-commit config set quiet true
 
 # Use with auto-commit for clean output
 ollama-git-commit -d . --auto-commit --quiet
+
+# Debug mode with quiet (test prompts will be silent)
+ollama-git-commit -d . --debug --quiet
 ```
 
 **Example output with quiet mode:**
@@ -727,6 +770,16 @@ ollama-git-commit -d . --auto-commit --quiet
 ✅ Staging completed!
 🔍 Analyzing changes...
 🤖 Generating commit message...
+✅ Generated commit message:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+feat: add new user authentication system
+
+- Implement JWT token-based authentication
+- Add user registration and login endpoints
+- Include password hashing and validation
+- Add middleware for protected routes
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
 🚀 Pushing to remote...
 ✅ Changes pushed successfully!
 ```

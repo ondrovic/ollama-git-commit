@@ -196,7 +196,6 @@ export function sanitizeInput(input: string, maxLength = 1000): string {
 }
 
 export function isValidPath(path: string): boolean {
-  // Basic path validation
   if (!path || path.trim().length === 0) {
     return false;
   }
@@ -206,10 +205,157 @@ export function isValidPath(path: string): boolean {
     return false;
   }
 
-  // Check for excessively long paths
+  // Check for reasonable length (prevent path traversal attacks)
   if (path.length > 4096) {
     return false;
   }
 
   return true;
+}
+
+// Dependency-injectable versions
+export function validateNodeVersionDI({
+  process,
+  logger,
+}: {
+  process: typeof globalThis.process;
+  logger: typeof import('../utils/logger').Logger;
+}) {
+  const requiredVersion = '18.12.0';
+  const currentVersion = process.version.slice(1);
+  if (!isVersionCompatible(currentVersion, requiredVersion)) {
+    logger.error(
+      `Node.js version ${requiredVersion} or higher is required. Current version: ${currentVersion}`,
+    );
+    logger.error('Please upgrade Node.js: https://nodejs.org/');
+    process.exit(1);
+  }
+  logger.debug(`Node.js version: ${currentVersion} ✓`);
+}
+
+export function validateGitRepositoryDI(
+  {
+    execSync,
+    process,
+    logger,
+  }: {
+    execSync: typeof import('child_process').execSync;
+    process: typeof globalThis.process;
+    logger: typeof import('../utils/logger').Logger;
+  },
+  directory: string = process.cwd(),
+) {
+  try {
+    execSync('git rev-parse --git-dir', { stdio: 'pipe', cwd: directory });
+    logger.debug('Git repository detected ✓');
+  } catch {
+    throw new GitRepositoryError('Not a git repository');
+  }
+}
+
+export function validateGitConfigDI(
+  {
+    execSync,
+    process,
+  }: { execSync: typeof import('child_process').execSync; process: typeof globalThis.process },
+  directory: string = process.cwd(),
+) {
+  const warnings: string[] = [];
+  let name: string | undefined;
+  let email: string | undefined;
+  try {
+    name = execSync('git config user.name', { encoding: 'utf8', cwd: directory }).trim();
+  } catch {
+    warnings.push(
+      'Git user.name is not configured. Run: git config --global user.name "Your Name"',
+    );
+  }
+  try {
+    email = execSync('git config user.email', { encoding: 'utf8', cwd: directory }).trim();
+  } catch {
+    warnings.push(
+      'Git user.email is not configured. Run: git config --global user.email "your.email@example.com"',
+    );
+  }
+  return { name, email, warnings };
+}
+
+export function validateOllamaHostDI(host: string) {
+  try {
+    const url = new URL(host);
+    return ['http:', 'https:'].includes(url.protocol);
+  } catch {
+    return false;
+  }
+}
+
+export function validateModelNameDI(model: string) {
+  const modelPattern = /^[a-zA-Z0-9._-]+(?::[a-zA-Z0-9._-]+)?$/;
+  return modelPattern.test(model);
+}
+
+export function validatePromptFileDI(filePath: string) {
+  if (!filePath || filePath.trim().length === 0) {
+    return { valid: false, error: 'Prompt file path cannot be empty' };
+  }
+  if (filePath.includes('..') || filePath.includes('~')) {
+    return { valid: false, error: 'Prompt file path contains potentially unsafe characters' };
+  }
+  return { valid: true };
+}
+
+export function validateEnvironmentDI(
+  {
+    execSync,
+    process,
+    logger,
+  }: {
+    execSync: typeof import('child_process').execSync;
+    process: typeof globalThis.process;
+    logger: typeof import('../utils/logger').Logger;
+  },
+  directory: string = process.cwd(),
+) {
+  const errors: string[] = [];
+  const warnings: string[] = [];
+  try {
+    validateNodeVersionDI({ process, logger });
+  } catch (error: unknown) {
+    if (typeof error === 'object' && error && 'message' in error) {
+      errors.push(`Node.js validation failed: ${(error as { message: string }).message}`);
+    } else {
+      errors.push(`Node.js validation failed: ${String(error)}`);
+    }
+  }
+  try {
+    execSync('git --version', { stdio: 'pipe', cwd: directory });
+  } catch {
+    errors.push('Git is not installed or not available in PATH');
+  }
+  try {
+    validateGitRepositoryDI({ execSync, process, logger }, directory);
+  } catch (error: unknown) {
+    if (typeof error === 'object' && error && 'message' in error) {
+      errors.push((error as { message: string }).message);
+    } else {
+      errors.push(String(error));
+    }
+  }
+  const gitConfig = validateGitConfigDI({ execSync, process }, directory);
+  warnings.push(...gitConfig.warnings);
+  try {
+    if (typeof fetch === 'undefined') {
+      warnings.push('Native fetch not available - using polyfill');
+    }
+  } catch {
+    warnings.push('HTTP client not available');
+  }
+  if (!process.env[ENVIRONMENTAL_VARIABLES.OLLAMA_HOST]) {
+    errors.push('Ollama host is not configured');
+  }
+  return {
+    valid: errors.length === 0,
+    errors,
+    warnings,
+  };
 }

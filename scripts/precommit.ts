@@ -4,6 +4,7 @@ import { execSync } from 'child_process';
 import { readFileSync } from 'fs';
 import { join } from 'path';
 import { ConfigManager } from '../src/core/config';
+import { Logger } from '../src/utils/logger';
 
 async function main() {
   let isQuiet = process.env.QUIET === 'true';
@@ -18,6 +19,8 @@ async function main() {
       isQuiet = false;
     }
   }
+
+  Logger.setVerbose(!isQuiet);
 
   // Create environment with QUIET propagation
   const env = { 
@@ -44,51 +47,51 @@ async function main() {
   }
 
   // Helper to run a script if it exists
-  function runScriptIfExists(name: string, label: string) {
+  function runScriptIfExists(name: string, label: string, loggerMethod: (msg: string) => void) {
     if (scripts[name]) {
-      if (!isQuiet) console.log(label);
+      if (!isQuiet) loggerMethod(label);
       try {
         execSync(`bun run ${name}`, { 
           stdio: isQuiet ? ['pipe', 'pipe', 'pipe'] : 'inherit',
           env
         });
       } catch (error) {
-        if (!isQuiet) console.error(`❌ ${name} failed:`, error);
+        if (!isQuiet) Logger.error(`${name} failed:`, error instanceof Error ? error.message : String(error));
         process.exit(1);
       }
     } else if (!isQuiet) {
-      console.log(`⏭️  Skipping ${name} (script not found in package.json)`);
+      Logger.info(`Skipping ${name} (script not found in package.json)`);
     }
   }
 
   if (isOllamaGitCommitRepo) {
     // Full precommit workflow for ollama-git-commit repository
     if (!isQuiet) {
-      console.log('🏠 Running full precommit checks for ollama-git-commit...');
+      Logger.house('Running full precommit checks for ollama-git-commit...');
     }
     
-    runScriptIfExists('format', '💅 Running code formatting...');
-    runScriptIfExists('lint', '🔍 Running linting...');
-    runScriptIfExists('test', '🧪 Running tests...');
-    runScriptIfExists('build:types', '🔨 Building type declarations...');
+    // runScriptIfExists('format', 'Running code formatting...', Logger.floppy);
+    runScriptIfExists('lint', 'Running linting...', Logger.magnifier);
+    runScriptIfExists('test', 'Running tests...', Logger.test);
+    runScriptIfExists('build:types', 'Building type declarations...', Logger.hammer);
   } else {
     // Simplified precommit for other repositories
     if (!isQuiet) {
-      console.log('📦 Running simplified precommit checks for external repository...');
+      Logger.package('Running simplified precommit checks for external repository...');
     }
     
     // Only run basic scripts that are likely to exist in most projects
-    runScriptIfExists('lint', '🔍 Running linting...');
-    runScriptIfExists('test', '🧪 Running tests...');
-    runScriptIfExists('format', '💅 Running code formatting...');
+    runScriptIfExists('lint', 'Running linting...', Logger.magnifier);
+    runScriptIfExists('test', 'Running tests...', Logger.test);
+    // runScriptIfExists('format', 'Running code formatting...', Logger.floppy);
   }
 
   if (!isQuiet) {
-    console.log('✅ Precommit checks completed!');
+    Logger.success('Precommit checks completed!');
   }
 }
 
 main().catch(error => {
-  console.error('❌ Script failed:', error);
+  Logger.error('Script failed:', error instanceof Error ? error.message : String(error));
   process.exit(1);
 });

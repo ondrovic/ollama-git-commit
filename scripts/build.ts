@@ -2,6 +2,7 @@
 
 import { execSync } from 'child_process';
 import { ConfigManager } from '../src/core/config';
+import { Logger } from '../src/utils/logger';
 
 async function main() {
   let isQuiet = process.env.QUIET === 'true';
@@ -17,6 +18,8 @@ async function main() {
     }
   }
 
+  Logger.setVerbose(!isQuiet);
+
   // Create environment with QUIET propagation
   const env = { 
     ...process.env, 
@@ -25,7 +28,7 @@ async function main() {
 
   try {
     if (!isQuiet) {
-      console.log('🔨 Building project...');
+      Logger.version('Building project...');
     }
     
     // Run bun build
@@ -41,17 +44,19 @@ async function main() {
     });
     
     if (!isQuiet) {
-      console.log('✅ Build completed successfully!');
+      Logger.success('Build completed successfully!');
     }
   } catch (error) {
     if (error instanceof Error) {
-      console.error('❌ Build failed:', error.message);
+      Logger.error('Build failed:', error.message);
+    } else {
+      Logger.error('Build failed:', String(error));
     }
     process.exit(1);
   }
 }
 
 main().catch(error => {
-  console.error('❌ Script failed:', error);
+  Logger.error('Script failed:', error instanceof Error ? error.message : String(error));
   process.exit(1);
 });

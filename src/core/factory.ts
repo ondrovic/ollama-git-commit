@@ -1,3 +1,4 @@
+import fsExtra from 'fs-extra';
 import type { OllamaCommitConfig } from '../types';
 import { Logger } from '../utils/logger';
 import { Spinner } from '../utils/spinner';
@@ -14,17 +15,32 @@ export interface ServiceFactoryOptions {
   verbose?: boolean;
   debug?: boolean;
   logger?: ILogger;
+  deps?: Partial<ServiceFactoryDeps>;
+}
+
+export interface ServiceFactoryDeps {
+  fs?: typeof fsExtra;
+  path?: typeof import('path');
+  os?: typeof import('os');
+  spawn?: typeof import('child_process').spawn;
+  logger?: ILogger;
+  spinner?: typeof import('../utils/spinner').Spinner;
+  fetch?: typeof fetch;
+  config?: OllamaCommitConfig;
 }
 
 export class ServiceFactory {
   private static instance: ServiceFactory;
   private config: OllamaCommitConfig | null = null;
+  private deps: Partial<ServiceFactoryDeps>;
 
-  private constructor() {}
+  private constructor(deps: Partial<ServiceFactoryDeps> = {}) {
+    this.deps = deps;
+  }
 
-  static getInstance(): ServiceFactory {
+  static getInstance(deps: Partial<ServiceFactoryDeps> = {}): ServiceFactory {
     if (!ServiceFactory.instance) {
-      ServiceFactory.instance = new ServiceFactory();
+      ServiceFactory.instance = new ServiceFactory(deps);
     }
     return ServiceFactory.instance;
   }
@@ -41,7 +57,7 @@ export class ServiceFactory {
    * Create a logger with consistent configuration
    */
   createLogger(options: ServiceFactoryOptions = {}): ILogger {
-    const logger = options.logger || new Logger();
+    const logger = options.logger || this.deps.logger || new Logger();
 
     if (options.verbose !== undefined) {
       logger.setVerbose(options.verbose);
@@ -61,8 +77,11 @@ export class ServiceFactory {
     const logger = this.createLogger(options);
     const directory = options.directory || process.cwd();
     const quiet = options.quiet ?? false;
-
-    return new GitService(directory, logger, quiet);
+    const fs = this.deps.fs;
+    const path = this.deps.path;
+    const os = this.deps.os;
+    const spawn = this.deps.spawn;
+    return new GitService(directory, logger, quiet, { fs, path, os, spawn });
   }
 
   /**
@@ -71,9 +90,13 @@ export class ServiceFactory {
   createOllamaService(options: ServiceFactoryOptions = {}): IOllamaService {
     const logger = this.createLogger(options);
     const quiet = options.quiet ?? false;
-    const spinner = new Spinner();
-
-    return new OllamaService(logger, spinner, quiet);
+    const spinner = this.deps.spinner ? new this.deps.spinner() : new Spinner();
+    return new OllamaService(logger, spinner, quiet, {
+      fetch: this.deps.fetch,
+      config: this.deps.config,
+      logger,
+      spinner,
+    });
   }
 
   /**
@@ -83,8 +106,10 @@ export class ServiceFactory {
     const logger = this.createLogger(options);
     const quiet = options.quiet ?? false;
     const contextService = this.createContextService(options);
-
-    return new PromptService(logger, quiet, contextService);
+    return new PromptService(logger, quiet, contextService, {
+      fs: this.deps.fs || fsExtra,
+      path: this.deps.path ? { dirname: this.deps.path.dirname } : undefined,
+    });
   }
 
   /**
@@ -93,8 +118,16 @@ export class ServiceFactory {
   createContextService(options: ServiceFactoryOptions = {}): ContextService {
     const logger = this.createLogger(options);
     const quiet = options.quiet ?? false;
-
-    return new ContextService(logger, quiet);
+    // Pass only relevant deps to ContextService (do not pass fs)
+    return new ContextService(
+      {
+        logger,
+        path: this.deps.path,
+        os: this.deps.os,
+        spawn: this.deps.spawn,
+      },
+      quiet,
+    );
   }
 
   /**

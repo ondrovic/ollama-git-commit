@@ -1,5 +1,7 @@
 import { Command } from 'commander';
 import { CONFIGURATIONS } from '../../../constants/configurations';
+import { ConfigManager } from '../../../core/config';
+import { IConfigManager } from '../../../core/interfaces';
 import { Logger } from '../../../utils/logger';
 
 interface ConfigKeyInfo {
@@ -10,44 +12,64 @@ interface ConfigKeyInfo {
   example?: string;
 }
 
-export const registerKeysCommands = (configCommand: Command) => {
+export const registerKeysCommands = (configCommand: Command, configManager?: IConfigManager) => {
   configCommand
     .command('keys')
     .description('List all available configuration keys')
     .option('-v, --verbose', 'Show detailed information including types and examples')
     .action(async (options: { verbose?: boolean }) => {
       try {
-        const configKeys = getConfigKeys();
+        const manager = configManager || ConfigManager.getInstance();
+        await manager.initialize();
+        const configKeys = await manager.getConfigKeys();
 
-        console.log(
-          '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━',
-        );
-        console.log('🔧 Available Configuration Keys');
-        console.log(
-          '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━',
-        );
+        Logger.table([
+          {
+            header: 'Available Configuration Keys',
+            separator:
+              '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━',
+          },
+        ]);
 
         if (options.verbose) {
           // Detailed view with types and examples
-          configKeys.forEach(keyInfo => {
-            console.log(`\n📋 ${keyInfo.key}`);
-            console.log(`   Description: ${keyInfo.description}`);
-            console.log(`   Type: ${keyInfo.type}`);
-            console.log(`   Default: ${JSON.stringify(keyInfo.default)}`);
-            if (keyInfo.example) {
-              console.log(`   Example: ${keyInfo.example}`);
-            }
-          });
+          configKeys.forEach(
+            (keyInfo: {
+              key: string;
+              description: string;
+              type: string;
+              default: unknown;
+              example?: string;
+            }) => {
+              Logger.group(keyInfo.key, () => {
+                Logger.plain(`Description: ${keyInfo.description}`);
+                Logger.plain(`Type: ${keyInfo.type}`);
+                Logger.plain(`Default: ${JSON.stringify(keyInfo.default)}`);
+                if (keyInfo.example) {
+                  Logger.plain(`Example: ${keyInfo.example}`);
+                }
+              });
+            },
+          );
         } else {
           // Simple view with just keys and descriptions
-          configKeys.forEach(keyInfo => {
-            console.log(`  ${keyInfo.key.padEnd(25)} - ${keyInfo.description}`);
-          });
+          configKeys.forEach(
+            (keyInfo: {
+              key: string;
+              description: string;
+              type: string;
+              default: unknown;
+              example?: string;
+            }) => {
+              Logger.plain(`${keyInfo.key.padEnd(25)} - ${keyInfo.description}`);
+            },
+          );
         }
 
-        console.log('\n💡 Usage: ollama-git-commit config set <key> <value>');
-        console.log('💡 Example: ollama-git-commit config set model llama3');
-        console.log('💡 Example: ollama-git-commit config set timeouts.connection 5000');
+        Logger.plain('');
+        Logger.plain('Usage: ollama-git-commit config set <key> <value>');
+        Logger.plain('Example: ollama-git-commit config set model llama3');
+        Logger.plain('Example: ollama-git-commit config set timeouts.connection 5000');
       } catch (error) {
         Logger.error('Failed to list configuration keys:', error);
         process.exit(1);

@@ -9,22 +9,131 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- **config list-prompt-templates**: New subcommand to list all available built-in prompt templates and view the contents of any template. This makes it easy for users to discover and inspect the prompt templates used for commit message generation.
-- Short (`-x`) and long (`--xxx`) flags for all CLI commands and options, following best CLI practices.
-- Usage examples in documentation for both short and long forms.
-
-### Changed
-
-- **config list-prompt-templates**: Fixed template validation bug where the command could display "undefined" for template content due to a mismatch between `VALID_TEMPLATES` and actual service keys. Added proper validation similar to config keys with helpful suggestions for similar template names.
-- **config list-prompt-templates**: Fixed inconsistent logger usage where the catch block was using the static `Logger.error` method instead of the configured logger instance. This ensures error logging properly respects the `--verbose` flag configuration.
-- **config list-prompt-templates**: Removed unsafe `as any` type assertion and improved type safety throughout the template validation process.
-- All CLI commands now support both short and long flags for options where appropriate.
-- Improved consistency and discoverability of CLI options.
+- **CI/CD Workflow Improvements**: Enhanced GitHub Actions workflows for better reliability
+  - **Dependency Management**: Robust handling of package dependencies with fallback installation strategies
+  - **Cross-Platform Testing**: Fixed test compatibility issues between Windows and Linux environments
+  - **Dependency Verification**: Added comprehensive dependency checking and installation verification
+  - **Fallback Strategies**: Implemented npm install fallback when bun install fails
+  - **Debugging Capabilities**: Enhanced workflow debugging with detailed dependency verification steps
 
 ### Fixed
 
-- **config list-prompt-templates**: Fixed inconsistent logger usage where the catch block was using the static `Logger.error` method instead of the configured logger instance. This ensures error logging properly respects the `--verbose` flag configuration.
-- **config list-prompt-templates**: Removed unsafe `as any` type assertion and improved type safety throughout the template validation process.
+- **Type Safety Bug**: Fixed critical bug in `registerCommitCommand` function
+
+  - **Parameter Type Mismatch**: Fixed contradiction between optional `deps` parameter type and required implementation
+  - **Runtime Error Prevention**: Eliminated unexpected crashes when dependencies were missing
+  - **API Consistency**: Made function signature match implementation for predictable behavior
+  - **Test Reliability**: Updated tests to provide required dependencies instead of expecting optional behavior
+
+- **Test Reliability**: Fixed failing tests in CI/CD environment
+  - **Path Structure Tests**: Fixed cross-platform path validation to work on both Windows and Linux
+  - **System Prompt Tests**: Added proper filesystem mocking to prevent real file creation during tests
+  - **Dependency Resolution**: Fixed `string-width` package installation issues in CI environment
+  - **Test Isolation**: Ensured all tests use mocks to avoid real external calls (API, filesystem, git commands)
+  - **Package Version Compatibility**: Downgraded `string-width` to version 6.0.0 for better compatibility
+  - **Global Prototype Modification**: Fixed dangerous global `String.prototype.split` modification in tests that could cause unpredictable test failures
+    - Replaced global prototype modification with isolated mocking approach
+    - Implemented safe test function that simulates edge cases without affecting global state
+    - Maintained test coverage for error handling while eliminating side effects
+    - Fixed linter errors related to object comparison in proxy tests
+
+### Technical Details
+
+- **Type Safety Fix**: Resolved critical API inconsistency in `registerCommitCommand` function
+
+  - **Function Signature**: Changed `deps?: Partial<CommitCommandDeps>` to `deps: CommitCommandDeps` to match implementation
+  - **Implementation Simplification**: Removed runtime error throwing logic in favor of direct dependency destructuring
+  - **Test Updates**: Modified test that expected optional dependencies to provide required dependencies
+  - **API Predictability**: Ensured function signature accurately reflects required behavior
+
+- **CI/CD Enhancements**:
+
+  - **Dependency Installation**: Removed conditional cache-based installation that was preventing proper dependency resolution
+  - **Package Verification**: Added steps to verify package installation and detect missing dependencies
+  - **Cross-Platform Paths**: Updated path validation regex to accept both Windows (`C:\`) and Unix (`/`) paths
+  - **Filesystem Mocking**: Enhanced test mocks to prevent real filesystem operations during testing
+  - **Error Recovery**: Implemented fallback strategies for dependency installation failures
+
+- **Test Safety Improvements**: Eliminated dangerous global prototype modifications in test suite
+
+  - **Isolated Mocking**: Created `testCreateConfigUpdateWithCustomSplit` function for safe edge case testing
+  - **Global State Protection**: Removed `String.prototype.split` modifications that could affect other tests
+  - **Error Handling Coverage**: Maintained comprehensive test coverage for configuration update error scenarios
+  - **Linter Compliance**: Fixed object comparison issues in proxy-based tests
+
+- **Comprehensive Logging Refactoring**: Complete logging system overhaul with consistent emoji handling
+  - Extended Logger class with 15+ specialized methods for different use cases (version, increment, changelog, tag, rocket, package, memo, hammer, test, nail, magnifier, label, floppy, folder, house)
+  - Added static proxy methods for backward compatibility
+  - Implemented centralized emoji management - no hardcoded emojis in log messages
+  - Enhanced ILogger interface with all new log methods for complete type safety
+  - Standardized logging patterns across all CLI commands, core services, and utilities
+- **Dependency Injection Architecture**: Modern service architecture with centralized factory
+  - ServiceFactory provides centralized creation of all services with consistent configuration
+  - Proper dependency injection ensures testability and maintainability
+  - All commands use injected services instead of inline instantiation
+  - Improved error handling and user feedback across all service layers
+- **Enhanced CLI Commands**: Improved command structure and user experience
+  - Short (`-x`) and long (`--xxx`) flags for all CLI commands and options, following best CLI practices
+  - Usage examples in documentation for both short and long forms
+  - **config list-prompt-templates**: New subcommand to list all available built-in prompt templates and view the contents of any template
+  - Intelligent configuration key validation with typo suggestions and helpful error messages
+- **Test Infrastructure Improvements**: Enhanced testing capabilities and reliability
+  - Updated test mocks to implement complete IOllamaService interface
+  - Fixed function naming consistency across test command modules
+  - Enhanced test isolation through proper dependency injection
+  - Improved error handling and user feedback in test scenarios
+- **Code Quality Enhancements**: Improved maintainability and type safety
+  - Fixed unused variable declarations across test command files
+  - Removed unused logger instances in favor of static Logger class usage
+  - Cleaned up unused factory variables and parameters
+  - Improved code consistency and reduced linting warnings
+- **Enhanced Commit Message Display**: Improved commit message presentation and user experience
+  - Fixed commit message display to show properly regardless of verbose mode settings
+  - Replaced table-based display with plain text formatting for better compatibility
+  - Enhanced visual separation of commit messages with clear borders
+  - Improved user interaction flow with better message visibility
+- **Quiet Mode Improvements**: Enhanced quiet mode functionality across the application
+  - Fixed debug mode test prompts to respect quiet mode settings
+  - Improved verbose output control with `config.verbose && !config.quiet` logic
+  - Enhanced quiet mode behavior for all service layers
+  - Better user experience when running in quiet mode
+
+### Changed
+
+- **Comprehensive Logging Refactoring**: Standardized logging across the entire codebase
+  - Replaced all `console.log` and `console.error` calls with appropriate Logger methods
+  - Removed hardcoded emojis from all log messages - emojis are now handled exclusively by Logger methods
+  - Updated all CLI commands, core services, utilities, and scripts to use Logger consistently
+  - Fixed Logger.group usage to require function parameter for proper grouping
+  - Enhanced test files to spy on Logger methods instead of console.log for proper testing
+- **Service Architecture**: Refactored service instantiation to use dependency injection
+  - All commands now require explicit service injection instead of fallback instantiation
+  - CommitCommand, ModelsCommand, and TestCommand updated to use ServiceFactory
+  - CLI commands updated to create services through factory with proper configuration
+  - Removed inline service creation in favor of centralized factory pattern
+- **CLI Command Structure**: Enhanced command organization and user experience
+  - All CLI commands now support both short and long flags for options where appropriate
+  - Improved consistency and discoverability of CLI options
+  - Enhanced configuration validation with intelligent key suggestions
+  - Standardized error handling and user feedback across all commands
+- **Test Command Architecture**: Improved test command structure and naming
+  - Fixed import/export mismatches in test command modules
+  - Updated function names to follow consistent naming convention
+  - Enhanced test commands to use ServiceFactory for service creation
+  - Improved error handling and user feedback in test commands
+- **Commit Command Architecture**: Enhanced commit command with dependency injection and improved logging
+  - Added dependency injection support for file system, path, OS, and process operations
+  - Improved error handling and logging consistency throughout the commit process
+  - Enhanced quiet mode behavior with proper Logger method usage
+  - Better separation of concerns with injected dependencies
+
+### Fixed
+
+- **Logger Consistency**: Fixed inconsistent logging patterns across the codebase
+  - Eliminated double emojis in log output by removing hardcoded emojis from messages
+  - Fixed Logger.group usage to properly require function parameter for grouped content
+  - Updated test expectations to verify Logger method calls instead of console.log
+  - Ensured all logging follows the same pattern: no emojis in messages, all emojis handled by Logger
 - **Test Reliability**: Fixed test failures due to missing interface methods
   - Updated mock OllamaService objects to include all required interface methods
   - Fixed import/export mismatches in test command modules
@@ -35,11 +144,35 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Updated TestCommand to use interface instead of concrete class
   - Resolved TypeScript errors in build process
   - Enhanced type checking for service dependencies
-- **Linter and TypeScript errors related to CLI option handling and documentation**:
-- **config models list**: The `-t, --type` option now correctly lists models from the specified configuration type (`user` or `local`) instead of always showing the merged config. This prevents misleading output and matches user expectations.
+- **Configuration Validation**: Enhanced configuration key validation and error handling
+  - Fixed template validation bug where "undefined" could be displayed due to VALID_TEMPLATES mismatch
+  - Standardized logger usage to respect --verbose flag configuration
+  - Removed unsafe `as any` type assertions and improved type safety
+  - **config models list**: The `-t, --type` option now correctly lists models from the specified configuration type (`user` or `local`) instead of always showing the merged config
+- **Linter and TypeScript Errors**: Resolved code quality issues
+  - Fixed CLI option handling and documentation inconsistencies
+  - Resolved unused variable declarations and import/export mismatches
+  - Improved code consistency and reduced linting warnings
+- **Commit Message Display**: Fixed commit message visibility and formatting issues
+  - Fixed commit message not displaying properly when verbose mode was disabled
+  - Resolved table-based display issues that prevented message visibility
+  - Improved message formatting with consistent border styling
+  - Enhanced user experience with better message presentation
+- **Quiet Mode Behavior**: Fixed quiet mode inconsistencies across the application
+  - Fixed debug mode test prompts showing verbose output even when quiet mode was enabled
+  - Improved verbose output control logic to properly respect quiet mode settings
+  - Enhanced quiet mode behavior for all service layers and commands
+  - Better user experience when running with `--quiet` flag
 
 ### Technical Details
 
+- **Comprehensive Logging Refactoring**:
+  - **Logger Class Enhancement**: Extended Logger with 15+ specialized methods (version, increment, changelog, tag, rocket, package, memo, hammer, test, nail, magnifier, label, floppy, folder, house)
+  - **Emoji Management**: Centralized emoji handling in Logger methods - no hardcoded emojis in log messages
+  - **Static Proxies**: Added backward-compatible static methods for all Logger functionality
+  - **Interface Updates**: Enhanced ILogger interface with all new log methods for complete type safety
+  - **Test Infrastructure**: Updated all test files to spy on Logger methods instead of console.log
+  - **Build Scripts**: Refactored all build, release, and development scripts to use Logger consistently
 - **ServiceFactory Implementation**:
   - Singleton pattern for consistent service creation
   - Configurable service creation with options for verbose, quiet, and debug modes
@@ -51,12 +184,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Enhanced test isolation through proper dependency injection
   - Improved error handling and user feedback in test scenarios
 - **Build Process**:
-
   - Resolved TypeScript compilation errors
   - Fixed import/export mismatches
   - Ensured all type declarations build successfully
   - Maintained backward compatibility while improving architecture
-
 - **Enhanced Configuration Validation**: Added intelligent key validation to the `config set` command
   - Validates configuration keys before setting values to prevent invalid configurations
   - Provides helpful suggestions for similar keys when an invalid key is provided
@@ -68,9 +199,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Removed unused logger instances in favor of static Logger class usage
   - Cleaned up unused factory variables and parameters
   - Improved code consistency and reduced linting warnings
-- **Audited all `.option()` calls in CLI command registration to ensure non-conflicting, conventional short flags**:
-- **Updated tests and documentation to reflect new CLI option structure**:
-- Added `getConfigByType(type: 'user' | 'local')` to `ConfigManager` to fetch config from a specific file, used by the models list command.
+- **CLI Command Auditing**: Ensured consistent and conventional CLI option structure
+  - Audited all `.option()` calls in CLI command registration to ensure non-conflicting, conventional short flags
+  - Updated tests and documentation to reflect new CLI option structure
+  - Added `getConfigByType(type: 'user' | 'local')` to `ConfigManager` to fetch config from a specific file, used by the models list command
+- **Commit Command Enhancements**:
+  - **Dependency Injection**: Added `CommitCommandDeps` interface for file system, path, OS, and process operations
+  - **Improved Logging**: Replaced all `console.log` calls with appropriate Logger methods throughout the commit process
+  - **Quiet Mode Logic**: Enhanced verbose output control with `config.verbose && !config.quiet` pattern
+  - **Message Display**: Replaced table-based display with plain text formatting for better compatibility
+  - **Error Handling**: Improved error handling and user feedback with consistent logging patterns
+- **Quiet Mode Architecture**:
+  - **Verbose Control**: Implemented consistent `config.verbose && !config.quiet` logic across all service layers
+  - **Debug Mode Respect**: Fixed debug mode test prompts to respect quiet mode settings
+  - **Service Integration**: Enhanced quiet mode behavior for GitService, OllamaService, and PromptService
+  - **User Experience**: Improved quiet mode behavior with proper progress indicators and minimal output
 
 ## [1.0.18] - 2025-07-05
 

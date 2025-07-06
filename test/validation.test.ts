@@ -1,7 +1,7 @@
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, test } from 'bun:test';
 import { ENVIRONMENTAL_VARIABLES } from '../src/constants/enviornmental';
 import { validateEnvironment, validateNodeVersion } from '../src/utils/validation';
-import { mockConfig } from './setup';
+import { MockedConfig } from './setup';
 
 // Mock process.exit to prevent test termination
 const originalExit = process.exit;
@@ -52,7 +52,7 @@ describe('Validation Utils', () => {
 
   describe('validateEnvironment', () => {
     test('should pass when all required environment variables are set', async () => {
-      process.env[ENVIRONMENTAL_VARIABLES.OLLAMA_HOST] = mockConfig.host;
+      process.env[ENVIRONMENTAL_VARIABLES.OLLAMA_HOST] = MockedConfig.host;
 
       const result = await validateEnvironment();
       expect(result.valid).toBe(true);
@@ -61,9 +61,9 @@ describe('Validation Utils', () => {
 
     test('should fail when Ollama host is not set', async () => {
       delete process.env[ENVIRONMENTAL_VARIABLES.OLLAMA_HOST];
-      
+
       const result = await validateEnvironment();
-      
+
       // The global mock should handle this case correctly
       // If the mock is working, it should return valid: false with the error
       // If the mock is not working, we'll get the real function behavior
@@ -81,7 +81,7 @@ describe('Validation Utils', () => {
       // Simple test without mocks to see if the function works at all
       const originalHost = process.env[ENVIRONMENTAL_VARIABLES.OLLAMA_HOST];
       delete process.env[ENVIRONMENTAL_VARIABLES.OLLAMA_HOST];
-      
+
       try {
         const result = await validateEnvironment();
         // Don't assert here, just verify the function runs without error

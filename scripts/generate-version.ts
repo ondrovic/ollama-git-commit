@@ -3,6 +3,7 @@
 import { mkdir, writeFile } from 'fs/promises';
 import { join } from 'path';
 import { ConfigManager } from '../src/core/config';
+import { Logger } from '../src/utils/logger';
 
 async function main() {
   let isQuiet = process.env.QUIET === 'true';
@@ -18,6 +19,8 @@ async function main() {
     }
   }
 
+  Logger.setVerbose(!isQuiet);
+
   try {
     // Read package.json to get version
     const packageJson = JSON.parse(await Bun.file('package.json').text());
@@ -27,7 +30,7 @@ async function main() {
     const generatedDir = join(process.cwd(), 'src', 'generated');
     
     if (!isQuiet) {
-      console.log(`📁 Creating directory: ${generatedDir}`);
+      Logger.version(`Creating directory: ${generatedDir}`);
     }
     
     await mkdir(generatedDir, { recursive: true });
@@ -42,23 +45,25 @@ export const BUILD_DATE = '${new Date().toISOString()}';
     const versionFilePath = join(generatedDir, 'version.ts');
     
     if (!isQuiet) {
-      console.log(`📝 Writing version file: ${versionFilePath}`);
+      Logger.version(`Writing version file: ${versionFilePath}`);
     }
     
     await writeFile(versionFilePath, versionContent);
 
     if (!isQuiet) {
-      console.log(`✅ Generated version file: ${versionFilePath} (v${version})`);
+      Logger.success(`Generated version file: ${versionFilePath} (v${version})`);
     }
   } catch (error) {
     if (error instanceof Error) {
-      console.error('❌ Failed to generate version file:', error.message);
+      Logger.error('Failed to generate version file:', error.message);
+    } else {
+      Logger.error('Failed to generate version file:', String(error));
     }
     process.exit(1);
   }
 }
 
 main().catch(error => {
-  console.error('❌ Script failed:', error);
+  Logger.error('Script failed:', error instanceof Error ? error.message : String(error));
   process.exit(1);
 });

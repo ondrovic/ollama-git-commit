@@ -1,638 +1,430 @@
-import { describe, expect, spyOn, test } from 'bun:test';
-import * as path from 'path';
-import { GitService } from '../src/core/git';
-import { Logger } from '../src/utils/logger';
-import { mockFs, mockGit } from './setup';
+import { beforeEach, describe, expect, mock, test } from 'bun:test';
+import {
+  GitCommandError,
+  GitNoChangesError,
+  GitRepositoryError,
+  GitService,
+} from '../src/core/git';
 
-describe('Git Integration', () => {
-  const testRepoPath = '/mock/repo';
+// Mock child_process.execSync
+const mockExecSync = mock(() => 'mocked output');
 
-  describe('Git Commands', () => {
-    test('should get git status', async () => {
-      const status = await mockGit.exec('git', ['status', '--porcelain']);
-      expect(status).toBe('M  test.txt\n');
+// Mock logger
+const mockLogger = {
+  debug: mock(() => {}),
+  info: mock(() => {}),
+  warn: mock(() => {}),
+  error: mock(() => {}),
+};
+
+// Mock file system operations
+const mockFs = {
+  existsSync: mock(() => true),
+  readFileSync: mock(() => ''),
+  writeFileSync: mock(() => {}),
+  mkdirSync: mock(() => {}),
+  statSync: mock(() => ({ isDirectory: () => true })),
+};
+
+// Mock path operations
+const mockPath = {
+  join: mock((...args: string[]) => args.join('/')),
+  resolve: mock((...args: string[]) => args.join('/')),
+  dirname: mock((path: string) => path.split('/').slice(0, -1).join('/')),
+  basename: mock((path: string) => path.split('/').pop() || ''),
+  extname: mock((path: string) => {
+    const parts = path.split('.');
+    return parts.length > 1 ? `.${parts.pop()}` : '';
+  }),
+};
+
+// Mock OS operations
+const mockOs = {
+  platform: mock(() => 'win32'),
+  homedir: mock(() => '/mock/home'),
+  tmpdir: mock(() => '/mock/tmp'),
+  cpus: mock(() => []),
+  freemem: mock(() => 1000000),
+  totalmem: mock(() => 2000000),
+};
+
+// Mock process operations
+const mockProcess = {
+  cwd: mock(() => '/mock/cwd'),
+  env: {},
+  platform: 'win32',
+  exit: mock(() => {}),
+  on: mock(() => {}),
+  off: mock(() => {}),
+};
+
+// Mock spawn
+const mockSpawn = mock(() => ({
+  stdout: { on: mock(() => {}), pipe: mock(() => {}) },
+  stderr: { on: mock(() => {}), pipe: mock(() => {}) },
+  on: mock(() => {}),
+}));
+
+const testRepoPath = '/mock/repo';
+
+describe('GitService', () => {
+  let gitService: GitService;
+  let quietService: GitService;
+
+  beforeEach(() => {
+    // Clear all mocks
+    mockExecSync.mockClear();
+    mockLogger.debug.mockClear();
+    mockLogger.info.mockClear();
+    mockLogger.warn.mockClear();
+    mockLogger.error.mockClear();
+    mockFs.existsSync.mockClear();
+    mockFs.readFileSync.mockClear();
+    mockFs.writeFileSync.mockClear();
+    mockPath.join.mockClear();
+    mockPath.resolve.mockClear();
+    mockOs.platform.mockClear();
+    mockProcess.cwd.mockClear();
+    mockSpawn.mockClear();
+
+    // Create services with full dependency injection
+    gitService = new GitService(testRepoPath, mockLogger, false, {
+      execSync: mockExecSync,
+      fs: mockFs,
+      path: mockPath,
+      os: mockOs,
+      spawn: mockSpawn,
+    });
+
+    quietService = new GitService(testRepoPath, mockLogger, true, {
+      execSync: mockExecSync,
+      fs: mockFs,
+      path: mockPath,
+      os: mockOs,
+      spawn: mockSpawn,
     });
   });
 
-  describe('Version Extraction', () => {
-    test('should extract version changes from package.json diff', () => {
-      const gitService = new GitService(process.cwd(), new Logger());
+  describe('execCommand', () => {
+    test('should execute git command successfully', () => {
+      mockExecSync.mockReturnValue('success output');
 
-      // Mock the extractVersionChanges method by accessing it through the prototype
-      const extractVersionChanges = (gitService as any).extractVersionChanges.bind(gitService);
+      const result = gitService.execCommand('git status');
 
-      const mockDiff = `diff --git a/package.json b/package.json
-index e2b836d..b62d39a 100644
---- a/package.json
-+++ b/package.json
-@@ -1,6 +1,6 @@
- {
-   "name": "contentstack-search-cli",
--  "version": "1.0.1",
-+  "version": "1.0.2",
-   "type": "commonjs",
-   "description": "A powerful CLI tool for searching ContentStack CMS content"`;
-
-      const result = extractVersionChanges('package.json', mockDiff);
-      expect(result).toBe('📦 package.json: Bumped version from 1.0.1 to 1.0.2');
+      expect(result).toBe('success output');
+      expect(mockExecSync).toHaveBeenCalledWith('git status', {
+        cwd: testRepoPath,
+        stdio: ['pipe', 'pipe', 'inherit'],
+      });
     });
 
-    test('should extract version changes from package-lock.json diff', () => {
-      const gitService = new GitService(process.cwd(), new Logger());
+    test('should handle execCommand error', () => {
+      mockExecSync.mockImplementation(() => {
+        throw new Error('git command failed');
+      });
 
-      const extractVersionChanges = (gitService as any).extractVersionChanges.bind(gitService);
-
-      const mockDiff = `diff --git a/package-lock.json b/package-lock.json
-index e2b836d..b62d39a 100644
---- a/package-lock.json
-+++ b/package-lock.json
-@@ -1,6 +1,6 @@
- {
-   "name": "contentstack-search-cli",
--  "version": "1.0.1",
-+  "version": "1.0.2",
-   "lockfileVersion": 2`;
-
-      const result = extractVersionChanges('package-lock.json', mockDiff);
-      expect(result).toBe('📦 package-lock.json: Updated version from 1.0.1 to 1.0.2');
+      expect(() => gitService.execCommand('git invalid')).toThrow(GitCommandError);
+      expect(mockExecSync).toHaveBeenCalledWith('git invalid', {
+        cwd: testRepoPath,
+        stdio: ['pipe', 'pipe', 'inherit'],
+      });
     });
 
-    test('should return null for files without version changes', () => {
-      const gitService = new GitService(process.cwd(), new Logger());
+    test('should handle quiet mode', () => {
+      mockExecSync.mockReturnValue('quiet output');
 
-      const extractVersionChanges = (gitService as any).extractVersionChanges.bind(gitService);
+      const result = quietService.execCommand('git status');
 
-      const mockDiff = `diff --git a/src/index.js b/src/index.js
-index e2b836d..b62d39a 100644
---- a/src/index.js
-+++ b/src/index.js
-@@ -1,3 +1,4 @@
- function hello() {
-   console.log('Hello World');
-+  console.log('Goodbye World');
- }`;
-
-      const result = extractVersionChanges('src/index.js', mockDiff);
-      expect(result).toBeNull();
+      expect(result).toBe('quiet output');
+      expect(mockExecSync).toHaveBeenCalledWith('git status', {
+        cwd: testRepoPath,
+        stdio: ['pipe', 'pipe', 'pipe'],
+      });
     });
 
-    test('should not detect version change in package-lock.json when version is truncated', () => {
-      const gitService = new GitService(process.cwd(), new Logger());
+    test('should handle forceQuiet parameter', () => {
+      mockExecSync.mockReturnValue('forced quiet output');
 
-      const extractVersionChanges = (gitService as any).extractVersionChanges.bind(gitService);
+      const result = gitService.execCommand('git status', true);
 
-      // This simulates a case where the version line is truncated in the diff
-      const mockDiff = `diff --git a/package-lock.json b/package-lock.json
-index e2b836d..b62d39a 100644
---- a/package-lock.json
-+++ b/package-lock.json
-@@ -1,6 +1,6 @@
- {
-   "name": "test-package",
--  "version": "1.0.0",
-+  "version": "1.0.0",
-   "lockfileVersion": 2,
-   "requires": true,
-   "dependencies": {
-     "some-package": {
--      "version": "2.1.0",
-+      "version": "2.1.1",
-       "resolved": "https://registry.npmjs.org/some-package/-/some-package-2.1.1.tgz",
-       "integrity": "sha512-abc123"
-     }
-   }
- }`;
-
-      const result = extractVersionChanges('package-lock.json', mockDiff);
-      // Should return null because the main version didn't change, only a dependency version
-      expect(result).toBeNull();
+      expect(result).toBe('forced quiet output');
+      expect(mockExecSync).toHaveBeenCalledWith('git status', {
+        cwd: testRepoPath,
+        stdio: ['pipe', 'pipe', 'pipe'],
+      });
     });
 
-    test('should not detect version change when version line is incomplete', () => {
-      const gitService = new GitService(process.cwd(), new Logger());
+    test('should handle non-string error', () => {
+      mockExecSync.mockImplementation(() => {
+        throw 123; // Non-string error
+      });
 
-      const extractVersionChanges = (gitService as any).extractVersionChanges.bind(gitService);
-
-      // This simulates a case where the version line is incomplete or malformed
-      const mockDiff = `diff --git a/package-lock.json b/package-lock.json
-index e2b836d..b62d39a 100644
---- a/package-lock.json
-+++ b/package-lock.json
-@@ -1,6 +1,6 @@
- {
-   "name": "test-package",
--  "version": "1.0.0",
-+  "version": ".."
- }`;
-
-      const result = extractVersionChanges('package-lock.json', mockDiff);
-      // Should return null because the version is incomplete
-      expect(result).toBeNull();
+      expect(() => gitService.execCommand('git invalid')).toThrow(GitCommandError);
     });
   });
 
-  describe('File System Operations', () => {
-    test('should create and read files', async () => {
-      const filePath = path.join(testRepoPath, 'test.txt');
-      const content = 'Test content';
+  describe('isGitRepository', () => {
+    test('should return true for valid git repository', () => {
+      mockExecSync.mockReturnValue('.git');
 
-      await mockFs.writeFile(filePath, content);
-      const readContent = await mockFs.readFile(filePath, 'utf-8');
+      const result = gitService.isGitRepository();
 
-      expect(readContent).toBe(content);
+      expect(result).toBe(true);
+      expect(mockExecSync).toHaveBeenCalledWith('git rev-parse --git-dir', {
+        cwd: testRepoPath,
+        stdio: ['pipe', 'pipe', 'pipe'],
+      });
+      expect(mockLogger.debug).toHaveBeenCalledWith(
+        `Git repository check for ${testRepoPath}: Success`,
+      );
     });
 
-    test('should create directories', async () => {
-      const dirPath = path.join(testRepoPath, 'nested', 'dir');
-      await mockFs.mkdir(dirPath, { recursive: true });
+    test('should return false for invalid git repository', () => {
+      mockExecSync.mockImplementation(() => {
+        throw new Error('not a git repository');
+      });
 
-      const exists = await mockFs
-        .access(dirPath)
-        .then(() => true)
-        .catch(() => false);
-      expect(exists).toBe(true);
-    });
-  });
+      const result = gitService.isGitRepository();
 
-  describe('Git Rename Handling', () => {
-    test('should handle renamed files correctly without ambiguous argument', () => {
-      const mockExecSync = (command: string) => {
-        if (command.includes('git diff --cached') && !command.includes('--name-status') && !command.includes('--stat')) {
-          // Mock staged changes with renamed files
-          return `diff --git a/src/FaqsGrid.tsx b/src/faqs-grid.tsx
-similarity index 100%
-rename from src/FaqsGrid.tsx
-rename to src/faqs-grid.tsx
-diff --git a/src/MediacontentFaqs.tsx b/src/media-content-faqs.tsx
-similarity index 100%
-rename from src/MediacontentFaqs.tsx
-rename to src/media-content-faqs.tsx
-diff --git a/src/other-file.ts b/src/other-file.ts
-index 1234567..abcdefg 100644
---- a/src/other-file.ts
-+++ b/src/other-file.ts
-@@ -1,1 +1,2 @@
-export const test = true;
-+export const newValue = false;`;
-        }
-        
-        if (command.includes('git diff --cached --name-status')) {
-          // Mock git output for renamed files
-          return 'R100\tsrc/FaqsGrid.tsx\tsrc/faqs-grid.tsx\nR100\tsrc/MediacontentFaqs.tsx\tsrc/media-content-faqs.tsx\nM\tsrc/other-file.ts';
-        }
-        
-        if (command.includes('git diff --cached --stat')) {
-          return ` src/faqs-grid.tsx     | 0
- src/media-content-faqs.tsx | 0
- src/other-file.ts          | 1 +
- 3 files changed, 1 insertion(+)
-`;
-        }
-        
-        if (command.includes('git diff --cached "src/faqs-grid.tsx"')) {
-          return `diff --git a/src/FaqsGrid.tsx b/src/faqs-grid.tsx
-similarity index 100%
-rename from src/FaqsGrid.tsx
-rename to src/faqs-grid.tsx`;
-        }
-        
-        if (command.includes('git diff --cached "src/media-content-faqs.tsx"')) {
-          return `diff --git a/src/MediacontentFaqs.tsx b/src/media-content-faqs.tsx
-similarity index 100%
-rename from src/MediacontentFaqs.tsx
-rename to src/media-content-faqs.tsx`;
-        }
-        
-        if (command.includes('git diff --cached "src/other-file.ts"')) {
-          return `diff --git a/src/other-file.ts b/src/other-file.ts
-index 1234567..abcdefg 100644
---- a/src/other-file.ts
-+++ b/src/other-file.ts
-@@ -1,1 +1,2 @@
-export const test = true;
-+export const newValue = false;`;
-        }
-        
-        if (command.includes('git diff') && !command.includes('--cached')) {
-          // No unstaged changes
-          return '';
-        }
-        
-        if (command.includes('git rev-parse --git-dir')) {
-          return '.git';
-        }
-        
-        // Default fallback - return empty to avoid real git calls
-        return '';
-      };
-
-      const gitService = new GitService(process.cwd(), new Logger(), false, mockExecSync as any);
-      
-      // This should not throw an error
-      expect(() => {
-        const changes = gitService.getChanges(false);
-        
-        // Verify the structure is correct
-        expect(changes.diff).toBeDefined();
-        expect(changes.staged).toBe(true);
-        expect(changes.filesInfo).toBeDefined();
-        
-        // Check that renamed files are displayed correctly
-        expect(changes.filesInfo).toContain('src/FaqsGrid.tsx → src/faqs-grid.tsx');
-        expect(changes.filesInfo).toContain('src/MediacontentFaqs.tsx → src/media-content-faqs.tsx');
-        expect(changes.filesInfo).toContain('(renamed)');
-        expect(changes.filesInfo).toContain('src/other-file.ts (modified)');
-        
-      }).not.toThrow();
-    });
-
-    test('should handle copied files correctly', () => {
-      const mockExecSync = (command: string) => {
-        if (command.includes('git diff --cached') && !command.includes('--name-status') && !command.includes('--stat')) {
-          // Mock staged changes with copied files
-          return `diff --git a/src/original-file.tsx b/src/copied-file.tsx
-similarity index 100%
-copy from src/original-file.tsx
-copy to src/copied-file.tsx`;
-        }
-        
-        if (command.includes('git diff --cached --name-status')) {
-          // Mock git output for copied files
-          return 'C100\tsrc/original-file.tsx\tsrc/copied-file.tsx';
-        }
-        
-        if (command.includes('git diff --cached --stat')) {
-          return ` src/copied-file.tsx | 0
- 1 file changed, 0 insertions(+), 0 deletions(-)
-`;
-        }
-        
-        if (command.includes('git diff --cached "src/copied-file.tsx"')) {
-          // Mock diff for the copied file (using new path)
-          return `diff --git a/src/original-file.tsx b/src/copied-file.tsx
-  similarity index 100%
-  copy from src/original-file.tsx
-  copy to src/copied-file.tsx`;
-        }
-        
-        if (command.includes('git diff') && !command.includes('--cached')) {
-          // No unstaged changes
-          return '';
-        }
-        
-        if (command.includes('git rev-parse --git-dir')) {
-          return '.git';
-        }
-        
-        // Default fallback - return empty to avoid real git calls
-        return '';
-      };
-
-      const gitService = new GitService(process.cwd(), new Logger(), false, mockExecSync as any);
-      
-      expect(() => {
-        const changes = gitService.getChanges(false);
-        
-        expect(changes.filesInfo).toContain('src/original-file.tsx → src/copied-file.tsx');
-        expect(changes.filesInfo).toContain('(copied)');
-        
-      }).not.toThrow();
-    });
-
-    test('should handle malformed rename output gracefully', () => {
-      const mockExecSync = (command: string) => {
-        if (command.includes('git diff --cached') && !command.includes('--name-status') && !command.includes('--stat')) {
-          // Mock staged changes with malformed rename and normal file
-          return `diff --git a/src/normal-file.ts b/src/normal-file.ts
-index 1234567..abcdefg 100644
---- a/src/normal-file.ts
-+++ b/src/normal-file.ts
-@@ -1,1 +1,2 @@
-export const test = true;
-+export const newValue = false;`;
-        }
-        
-        if (command.includes('git diff --cached --name-status')) {
-          // Mock malformed git output (missing new path)
-          return 'R100\tsrc/only-old-path.tsx\nM\tsrc/normal-file.ts';
-        }
-        
-        if (command.includes('git diff --cached --stat')) {
-          return ` src/normal-file.ts | 1 +
- 1 file changed, 1 insertion(+)
-`;
-        }
-        
-        if (command.includes('git diff --cached "src/normal-file.ts"')) {
-          return `diff --git a/src/normal-file.ts b/src/normal-file.ts
-index 1234567..abcdefg 100644
---- a/src/normal-file.ts
-+++ b/src/normal-file.ts
-@@ -1,1 +1,2 @@
-export const test = true;
-+export const newValue = false;`;
-        }
-        
-        if (command.includes('git diff') && !command.includes('--cached')) {
-          // No unstaged changes
-          return '';
-        }
-        
-        if (command.includes('git rev-parse --git-dir')) {
-          return '.git';
-        }
-        
-        // Default fallback - return empty to avoid real git calls
-        return '';
-      };
-
-      const gitService = new GitService(process.cwd(), new Logger(), false, mockExecSync as any);
-      
-      // Should handle malformed input gracefully without throwing
-      expect(() => {
-        const changes = gitService.getChanges(false);
-        
-        // Should still process the normal file
-        expect(changes.filesInfo).toContain('src/normal-file.ts (modified)');
-        
-      }).not.toThrow();
-    });
-
-    test('should use correct file paths for git diff commands on renames', () => {
-      let diffCommandsExecuted: string[] = [];
-      
-      const mockExecSync = (command: string) => {
-        // Track which diff commands are executed
-        if (command.includes('git diff --cached "')) {
-          diffCommandsExecuted.push(command);
-        }
-        
-        if (command.includes('git diff --cached') && !command.includes('--name-status') && !command.includes('--stat')) {
-          return `diff --git a/old-name.tsx b/new-name.tsx
-similarity index 100%
-rename from old-name.tsx
-rename to new-name.tsx`;
-        }
-        
-        if (command.includes('git diff --cached --name-status')) {
-          return 'R100\told-name.tsx\tnew-name.tsx';
-        }
-        
-        if (command.includes('git diff --cached --stat')) {
-          return ` new-name.tsx | 0
- 1 file changed, 0 insertions(+), 0 deletions(-)
-`;
-        }
-        
-        if (command.includes('git diff --cached "new-name.tsx"')) {
-          return `diff --git a/old-name.tsx b/new-name.tsx
-similarity index 100%
-rename from old-name.tsx
-rename to new-name.tsx`;
-        }
-        
-        if (command.includes('git diff') && !command.includes('--cached')) {
-          // No unstaged changes
-          return '';
-        }
-        
-        if (command.includes('git rev-parse --git-dir')) {
-          return '.git';
-        }
-        
-        // Default fallback - return empty to avoid real git calls
-        return '';
-      };
-
-      const gitService = new GitService(process.cwd(), new Logger(), false, mockExecSync as any);
-      
-      gitService.getChanges(false);
-      
-      // Verify that git diff was called with the NEW file path, not the old one
-      expect(diffCommandsExecuted).toContain('git diff --cached "new-name.tsx"');
-      // Should NOT contain the old path
-      expect(diffCommandsExecuted.some(cmd => cmd.includes('old-name.tsx'))).toBe(false);
-      // Should NOT contain the malformed tab-separated path
-      expect(diffCommandsExecuted.some(cmd => cmd.includes('old-name.tsx\tnew-name.tsx'))).toBe(false);
-    });
-
-    test('should display version changes correctly for renamed version files', () => {
-      const mockExecSync = (command: string) => {
-        if (command.includes('git diff --cached') && !command.includes('--name-status') && !command.includes('--stat')) {
-          return `diff --git a/VERSION.old b/VERSION
-similarity index 90%
-rename from VERSION.old
-rename to VERSION
-index 1234567..abcdefg 100644
---- a/VERSION.old
-+++ b/VERSION
-@@ -1 +1 @@
--1.0.0
-+1.0.1`;
-        }
-        
-        if (command.includes('git diff --cached --name-status')) {
-          return 'R100\tVERSION.old\tVERSION';
-        }
-        
-        if (command.includes('git diff --cached --stat')) {
-          return ` VERSION | 1 +-
- 1 file changed, 1 insertion(+), 1 deletion(-)
-`;
-        }
-        
-        if (command.includes('git diff --cached "VERSION"')) {
-          return `diff --git a/VERSION.old b/VERSION
-  similarity index 90%
-  rename from VERSION.old
-  rename to VERSION
-  index 1234567..abcdefg 100644
-  --- a/VERSION.old
-  +++ b/VERSION
-  @@ -1 +1 @@
-  -1.0.0
-  +1.0.1`;
-        }
-        
-        if (command.includes('git diff') && !command.includes('--cached')) {
-          // No unstaged changes
-          return '';
-        }
-        
-        if (command.includes('git rev-parse --git-dir')) {
-          return '.git';
-        }
-        
-        // Default fallback - return empty to avoid real git calls
-        return '';
-      };
-
-      const gitService = new GitService(process.cwd(), new Logger(), false, mockExecSync as any);
-      
-      const changes = gitService.getChanges(false);
-      
-      // Should correctly identify version changes even in renamed files
-      expect(changes.filesInfo).toContain('📦 Version Changes:');
-      expect(changes.filesInfo).toContain('VERSION: Updated version from 1.0.0 to 1.0.1');
-      expect(changes.filesInfo).toContain('VERSION.old → VERSION (renamed)');
+      expect(result).toBe(false);
+      expect(mockLogger.debug).toHaveBeenCalledWith(
+        `Git repository check for ${testRepoPath}: Failed`,
+      );
     });
   });
 
-  describe('Quiet Functionality', () => {
-    test('should handle quiet parameter correctly', () => {
-      const mockExecSync: any = (command: string, options?: any) => 'mocked output';
-      const gitService = new GitService(process.cwd(), new Logger(), false, mockExecSync);
-      expect(() => gitService.execCommand('git status', true)).not.toThrow();
-      expect(() => gitService.execCommand('git status', false)).not.toThrow();
-      expect(() => gitService.execCommand('git status')).not.toThrow();
+  describe('getChanges', () => {
+    test('should throw if not a git repository', () => {
+      mockExecSync.mockImplementation(() => {
+        throw new Error('not a git repository');
+      });
+
+      expect(() => gitService.getChanges(false)).toThrow(GitRepositoryError);
     });
 
-    test('should handle quiet parameter in constructor', () => {
-      const gitService = new GitService(process.cwd(), new Logger(), true);
-      
-      // Test that the service can be created with quiet parameter
-      expect(gitService).toBeInstanceOf(GitService);
-    });
-
-    test('should use correct stdio configuration for quiet mode', () => {
-      let capturedOptions: any = null;
-      const mockExecSync: any = (command: string, options: any) => {
-        capturedOptions = options;
-        return 'mocked output';
-      };
-      
-      const gitService = new GitService(process.cwd(), new Logger(), false, mockExecSync);
-      
-      // Test quiet mode - should capture output without display
-      gitService.execCommand('git status', true);
-      expect(capturedOptions.stdio).toEqual(['pipe', 'pipe', 'pipe']);
-      
-      // Test non-quiet mode - should inherit stderr for real-time output
-      gitService.execCommand('git status', false);
-      expect(capturedOptions.stdio).toEqual(['pipe', 'pipe', 'inherit']);
-    });
-
-    test('should use instance quiet setting when parameter is omitted', () => {
-      let capturedOptions: any = null;
-      const mockExecSync: any = (command: string, options: any) => {
-        capturedOptions = options;
-        return 'mocked output';
-      };
-      
-      // Test with instance quiet = true
-      const quietGitService = new GitService(process.cwd(), new Logger(), true, mockExecSync);
-      quietGitService.execCommand('git status');
-      expect(capturedOptions.stdio).toEqual(['pipe', 'pipe', 'pipe']);
-      
-      // Test with instance quiet = false - should inherit stderr for real-time output
-      const nonQuietGitService = new GitService(process.cwd(), new Logger(), false, mockExecSync);
-      nonQuietGitService.execCommand('git status');
-      expect(capturedOptions.stdio).toEqual(['pipe', 'pipe', 'inherit']);
-    });
-
-    test('should return actual command output in both quiet and non-quiet modes', () => {
-      const mockOutput = 'mocked git output';
-      const mockExecSync: any = () => mockOutput;
-      const gitService = new GitService(process.cwd(), new Logger(), false, mockExecSync);
-      
-      // Both modes should return the actual output (this was the bug!)
-      const quietResult = gitService.execCommand('git status', true);
-      expect(quietResult).toBe(mockOutput);
-      
-      const nonQuietResult = gitService.execCommand('git status', false);
-      expect(nonQuietResult).toBe(mockOutput);
-    });
-
-    test('should return actual output for analysis methods', () => {
-      const mockExecSync: any = (command: string) => {
-        if (command.includes('branch --show-current')) {
-          return 'main';
-        }
-        if (command.includes('rev-parse HEAD')) {
-          return 'abc123';
-        }
-        if (command.includes('rev-parse --show-toplevel')) {
-          return '/path/to/repo';
-        }
-        return '';
-      };
-      
-      const gitService = new GitService(process.cwd(), new Logger(), false, mockExecSync);
-      
-      // These methods should return actual values, not empty strings
-      expect(gitService.getBranchName()).toBe('main');
-      expect(gitService.getLastCommitHash()).toBe('abc123');
-      expect(gitService.getRepositoryRoot()).toBe('/path/to/repo');
-    });
-
-    test('should suppress change statistics in quiet mode', () => {
-      const consoleSpy = spyOn(console, 'log').mockImplementation(() => {});
-      const mockLogger = new Logger();
-      const loggerSpy = spyOn(mockLogger, 'info').mockImplementation(() => {});
-      
-      const mockExecSync: any = (command: string) => {
-        if (command.includes('git diff --cached') && !command.includes('--name-status') && !command.includes('--stat')) {
-          return 'diff --git a/test.js b/test.js\nindex 123..456 100644\n--- a/test.js\n+++ b/test.js\n@@ -1 +1,2 @@\n+new line';
-        }
-        if (command.includes('git diff --cached --name-status')) {
-          return 'M\ttest.js';
-        }
-        if (command.includes('git diff --cached --stat')) {
-          return ' test.js | 1 +\n 1 file changed, 1 insertion(+)\n';
-        }
-        if (command.includes('git rev-parse --git-dir')) {
+    test('should throw if no changes found', () => {
+      mockExecSync.mockImplementation((command: string) => {
+        if (command === 'git rev-parse --git-dir') {
           return '.git';
         }
-        return '';
-      };
+        if (command.includes('git diff --cached') || command.includes('git diff')) {
+          return ''; // No changes
+        }
+        throw new Error('unexpected command');
+      });
 
-      // Test with quiet mode enabled
-      const quietGitService = new GitService(process.cwd(), mockLogger, true, mockExecSync);
-      quietGitService.getChanges(true); // verbose = true, but quiet = true
-      
-      // Should not display change statistics in quiet mode
-      expect(consoleSpy).not.toHaveBeenCalledWith('   Files changed: 1');
-      expect(consoleSpy).not.toHaveBeenCalledWith('   Insertions: 1');
-      expect(consoleSpy).not.toHaveBeenCalledWith('   Deletions: 0');
-      expect(loggerSpy).not.toHaveBeenCalledWith('Change Statistics:');
-      
-      consoleSpy.mockRestore();
-      loggerSpy.mockRestore();
+      expect(() => gitService.getChanges(false)).toThrow(GitNoChangesError);
     });
 
-    test('should display change statistics in non-quiet mode', () => {
-      const consoleSpy = spyOn(console, 'log').mockImplementation(() => {});
-      const mockLogger = new Logger();
-      const loggerSpy = spyOn(mockLogger, 'info').mockImplementation(() => {});
-      
-      const mockExecSync: any = (command: string) => {
-        if (command.includes('git diff --cached') && !command.includes('--name-status') && !command.includes('--stat')) {
-          return 'diff --git a/test.js b/test.js\nindex 123..456 100644\n--- a/test.js\n+++ b/test.js\n@@ -1 +1,2 @@\n+new line';
-        }
-        if (command.includes('git diff --cached --name-status')) {
-          return 'M\ttest.js';
-        }
-        if (command.includes('git diff --cached --stat')) {
-          return ' test.js | 1 +\n 1 file changed, 1 insertion(+)\n';
-        }
-        if (command.includes('git rev-parse --git-dir')) {
+    test('should return changes successfully with staged changes', () => {
+      mockExecSync.mockImplementation((command: string) => {
+        if (command === 'git rev-parse --git-dir') {
           return '.git';
         }
-        return '';
-      };
+        if (command.includes('git diff --cached')) {
+          return 'diff output'; // Staged changes
+        }
+        if (command.includes('git diff --stat')) {
+          return 'file1.txt | 5 +++++\n 1 file changed, 5 insertions(+)';
+        }
+        if (command.includes('git diff --name-status')) {
+          return 'M\tfile1.txt';
+        }
+        if (command.includes('git diff "file1.txt"')) {
+          return '+new line\n-old line';
+        }
+        throw new Error('unexpected command');
+      });
 
-      // Test with quiet mode disabled
-      const nonQuietGitService = new GitService(process.cwd(), mockLogger, false, mockExecSync);
-      nonQuietGitService.getChanges(true); // verbose = true, quiet = false
-      
-      // Should display change statistics in non-quiet mode
-      expect(consoleSpy).toHaveBeenCalledWith('   Files changed: 1');
-      expect(consoleSpy).toHaveBeenCalledWith('   Insertions: 1');
-      expect(consoleSpy).toHaveBeenCalledWith('   Deletions: 0');
-      expect(loggerSpy).toHaveBeenCalledWith('Change Statistics:');
-      
-      consoleSpy.mockRestore();
-      loggerSpy.mockRestore();
+      const result = gitService.getChanges(false);
+
+      expect(result).toHaveProperty('diff', 'diff output');
+      expect(result).toHaveProperty('staged', true);
+      expect(result).toHaveProperty('stats');
+      expect(result).toHaveProperty('filesInfo');
+    });
+
+    test('should return changes successfully with unstaged changes', () => {
+      mockExecSync.mockImplementation((command: string) => {
+        if (command === 'git rev-parse --git-dir') {
+          return '.git';
+        }
+        if (command.includes('git diff --cached')) {
+          return ''; // No staged changes
+        }
+        if (command.includes('git diff')) {
+          return 'unstaged diff output'; // Unstaged changes
+        }
+        if (command.includes('git diff --stat')) {
+          return 'file1.txt | 5 +++++\n 1 file changed, 5 insertions(+)';
+        }
+        if (command.includes('git diff --name-status')) {
+          return 'M\tfile1.txt';
+        }
+        if (command.includes('git diff "file1.txt"')) {
+          return '+new line\n-old line';
+        }
+        throw new Error('unexpected command');
+      });
+
+      const result = gitService.getChanges(true); // verbose = true
+
+      expect(result).toHaveProperty('diff', 'unstaged diff output');
+      expect(result).toHaveProperty('staged', false);
+      expect(result).toHaveProperty('stats');
+      expect(result).toHaveProperty('filesInfo');
+      expect(mockLogger.info).toHaveBeenCalledWith(
+        'Using unstaged changes for commit message generation',
+      );
+      expect(mockLogger.warn).toHaveBeenCalledWith(
+        "Note: You'll need to stage these changes before committing",
+      );
+    });
+
+    test('should handle staged changes error', () => {
+      mockExecSync.mockImplementation((command: string) => {
+        if (command === 'git rev-parse --git-dir') {
+          return '.git';
+        }
+        if (command.includes('git diff --cached')) {
+          throw new Error('staged diff failed');
+        }
+        throw new Error('unexpected command');
+      });
+
+      expect(() => gitService.getChanges(false)).toThrow(GitCommandError);
+    });
+
+    test('should handle unstaged changes error', () => {
+      mockExecSync.mockImplementation((command: string) => {
+        if (command === 'git rev-parse --git-dir') {
+          return '.git';
+        }
+        if (command.includes('git diff --cached')) {
+          return ''; // No staged changes
+        }
+        if (command.includes('git diff')) {
+          throw new Error('unstaged diff failed');
+        }
+        throw new Error('unexpected command');
+      });
+
+      expect(() => gitService.getChanges(false)).toThrow(GitCommandError);
+    });
+  });
+
+  describe('getBranchName', () => {
+    test('should return branch name successfully', () => {
+      mockExecSync.mockReturnValue('main');
+
+      const result = gitService.getBranchName();
+
+      expect(result).toBe('main');
+      expect(mockExecSync).toHaveBeenCalledWith('git branch --show-current', {
+        cwd: testRepoPath,
+        stdio: ['pipe', 'pipe', 'pipe'],
+      });
+    });
+
+    test('should return unknown on error', () => {
+      mockExecSync.mockImplementation(() => {
+        throw new Error('git branch failed');
+      });
+
+      const result = gitService.getBranchName();
+
+      expect(result).toBe('unknown');
+    });
+  });
+
+  describe('getLastCommitHash', () => {
+    test('should return commit hash successfully', () => {
+      mockExecSync.mockReturnValue('abc123');
+
+      const result = gitService.getLastCommitHash();
+
+      expect(result).toBe('abc123');
+      expect(mockExecSync).toHaveBeenCalledWith('git rev-parse HEAD', {
+        cwd: testRepoPath,
+        stdio: ['pipe', 'pipe', 'pipe'],
+      });
+    });
+
+    test('should return empty string on error', () => {
+      mockExecSync.mockImplementation(() => {
+        throw new Error('git rev-parse failed');
+      });
+
+      const result = gitService.getLastCommitHash();
+
+      expect(result).toBe('');
+    });
+  });
+
+  describe('getRepositoryRoot', () => {
+    test('should return repository root successfully', () => {
+      mockExecSync.mockReturnValue('/mock/repo');
+
+      const result = gitService.getRepositoryRoot();
+
+      expect(result).toBe('/mock/repo');
+      expect(mockExecSync).toHaveBeenCalledWith('git rev-parse --show-toplevel', {
+        cwd: testRepoPath,
+        stdio: ['pipe', 'pipe', 'pipe'],
+      });
+    });
+
+    test('should return cwd on error', () => {
+      mockExecSync.mockImplementation(() => {
+        throw new Error('git rev-parse failed');
+      });
+
+      const result = gitService.getRepositoryRoot();
+
+      expect(result).toBe(process.cwd());
+    });
+  });
+
+  describe('getChangeStats', () => {
+    test('should handle error gracefully', () => {
+      mockExecSync.mockImplementation((command: string) => {
+        if (command === 'git rev-parse --git-dir') return '.git';
+        if (command.includes('git diff --cached')) return 'diff output';
+        if (command.includes('git diff --stat')) throw new Error('git diff failed');
+        if (command.includes('git diff --name-status')) return 'M\tfile1.txt';
+        if (command.includes('git diff "file1.txt"')) return '+new line\n-old line';
+        throw new Error('unexpected command');
+      });
+      const result = gitService.getChanges(false);
+      expect(result.stats).toEqual({ files: 0, insertions: 0, deletions: 0 });
+    });
+
+    test('should handle empty stats output', () => {
+      mockExecSync.mockImplementation((command: string) => {
+        if (command === 'git rev-parse --git-dir') return '.git';
+        if (command.includes('git diff --cached')) return 'diff output';
+        if (command.includes('git diff --stat')) return ''; // Empty stats
+        if (command.includes('git diff --name-status')) return 'M\tfile1.txt';
+        if (command.includes('git diff "file1.txt"')) return '+new line\n-old line';
+        throw new Error('unexpected command');
+      });
+      const result = gitService.getChanges(false);
+      expect(result.stats).toEqual({ files: 0, insertions: 0, deletions: 0 });
+    });
+  });
+
+  describe('setQuiet', () => {
+    test('should set quiet mode', () => {
+      gitService.setQuiet(true);
+
+      mockExecSync.mockReturnValue('quiet output');
+      const result = gitService.execCommand('git status');
+
+      expect(result).toBe('quiet output');
+      expect(mockExecSync).toHaveBeenCalledWith('git status', {
+        cwd: testRepoPath,
+        stdio: ['pipe', 'pipe', 'pipe'],
+      });
     });
   });
 });

@@ -10,6 +10,15 @@ export const registerShowCommands = (configCommand: Command) => {
     .description('Show current configuration')
     .action(async () => {
       try {
+        // Section header
+        Logger.plain(
+          '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━',
+        );
+        Logger.settings('Configuration');
+        Logger.plain(
+          '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━',
+        );
+
         const configManager = ConfigManager.getInstance();
         await configManager.initialize();
         const config = await configManager.getConfig();
@@ -49,22 +58,13 @@ export const registerShowCommands = (configCommand: Command) => {
           },
         };
 
-        console.log(
-          '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━',
-        );
-        console.log('🔧 Configuration');
-        console.log(
-          '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━',
-        );
-
-        // Show config file locations
         const configFiles = await configManager.getConfigFiles();
         if (configFiles.active.length > 0) {
-          console.log('Config Files:');
+          Logger.plain('Configuration Files:');
           configFiles.active.forEach(file => {
-            console.log(`  ${file.type}: ${file.path}`);
+            Logger.plain(`  ${file.type}: ${file.path}`);
           });
-          console.log('');
+          Logger.plain('');
         }
 
         // Core Settings
@@ -72,7 +72,7 @@ export const registerShowCommands = (configCommand: Command) => {
         if (effectiveModelDetails) {
           modelDisplay = effectiveModelDetails.model;
         }
-        console.log(
+        Logger.plain(
           CONFIGURATIONS.MESSAGES.CORE_SETTINGS(
             modelDisplay,
             config.host,
@@ -83,7 +83,7 @@ export const registerShowCommands = (configCommand: Command) => {
         );
 
         // Behavior Settings
-        console.log(
+        Logger.plain(
           CONFIGURATIONS.MESSAGES.BEHAVIOR_SETTINGS(
             config.verbose,
             config.interactive,
@@ -98,7 +98,7 @@ export const registerShowCommands = (configCommand: Command) => {
         );
 
         // Timeouts
-        console.log(
+        Logger.plain(
           CONFIGURATIONS.MESSAGES.TIMEOUTS(
             config.timeouts.connection,
             config.timeouts.generation,
@@ -109,19 +109,19 @@ export const registerShowCommands = (configCommand: Command) => {
 
         // Models (if available)
         if (config.models && config.models.length > 0) {
-          console.log(
+          Logger.plain(
             CONFIGURATIONS.MESSAGES.MODELS(config.models, config.embeddingsProvider || 'none'),
           );
         }
 
         // Context Providers (if available)
         if (config.context && config.context.length > 0) {
-          console.log(CONFIGURATIONS.MESSAGES.CONTEXT(config.context));
+          Logger.plain(CONFIGURATIONS.MESSAGES.CONTEXT(config.context));
         }
 
         // Embeddings Model (if available)
         if (config.embeddingsModel) {
-          console.log(
+          Logger.plain(
             `Embeddings Model: ${config.embeddingsModel} (from ${sourceInfoObj.embeddingsModel || 'user'})`,
           );
         }
@@ -139,8 +139,8 @@ export const registerShowCommands = (configCommand: Command) => {
         const configManager = ConfigManager.getInstance();
         await configManager.initialize();
         const debugInfo = await configManager.getDebugInfo();
-        console.log('Debug info retrieved');
-        console.log(JSON.stringify(debugInfo, null, 2));
+        Logger.info('Debug info retrieved');
+        Logger.info(JSON.stringify(debugInfo, null, 2));
       } catch (error) {
         Logger.error('Failed to get debug information:', error);
         process.exit(1);

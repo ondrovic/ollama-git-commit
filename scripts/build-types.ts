@@ -2,6 +2,7 @@
 
 import { execSync } from 'child_process';
 import { ConfigManager } from '../src/core/config';
+import { Logger } from '../src/utils/logger';
 
 async function main() {
   let isQuiet = process.env.QUIET === 'true';
@@ -17,6 +18,8 @@ async function main() {
     }
   }
 
+  Logger.setVerbose(!isQuiet);
+
   // Create environment with QUIET propagation
   const env = { 
     ...process.env, 
@@ -25,7 +28,7 @@ async function main() {
 
   try {
     if (!isQuiet) {
-      console.log('🔨 Building type declarations...');
+      Logger.version('Building type declarations...');
     }
     
     execSync('tsc --emitDeclarationOnly --outDir dist', {
@@ -34,17 +37,19 @@ async function main() {
     });
     
     if (!isQuiet) {
-      console.log('✅ Type declarations built successfully!');
+      Logger.success('Type declarations built successfully!');
     }
   } catch (error) {
     if (error instanceof Error) {
-      console.error('❌ Failed to build type declarations:', error.message);
+      Logger.error('Failed to build type declarations:', error.message);
+    } else {
+      Logger.error('Failed to build type declarations:', String(error));
     }
     process.exit(1);
   }
 }
 
 main().catch(error => {
-  console.error('❌ Script failed:', error);
+  Logger.error('Script failed:', error instanceof Error ? error.message : String(error));
   process.exit(1);
 });

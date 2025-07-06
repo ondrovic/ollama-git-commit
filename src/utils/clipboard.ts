@@ -1,5 +1,5 @@
-import { spawn } from 'child_process';
-import { Logger } from './logger';
+import { spawn as realSpawn } from 'child_process';
+import { Logger as RealLogger } from './logger';
 
 interface ClipboardTool {
   cmd: string;
@@ -32,14 +32,13 @@ const clipboardTools: ClipboardTool[] = [
   },
 ];
 
-/**
- * Attempts to copy text to the system clipboard using available clipboard tools.
- * Supports multiple platforms (macOS, Linux X11, Linux Wayland, Windows).
- *
- * @param text - The text to copy to clipboard
- * @throws Will log warnings/errors if no clipboard tool is available
- */
-export async function copyToClipboard(text: string): Promise<void> {
+// Dependency-injectable clipboard logic
+export async function copyToClipboardDI(
+  text: string,
+  spawn: typeof realSpawn,
+  Logger: typeof RealLogger,
+  timeoutMs = 5000,
+): Promise<void> {
   if (!text || text.trim().length === 0) {
     Logger.warn('No text to copy to clipboard');
     return;
@@ -47,29 +46,31 @@ export async function copyToClipboard(text: string): Promise<void> {
 
   for (const tool of clipboardTools) {
     try {
-      // Test if this tool is appropriate for the current platform
       if (tool.test && !(await tool.test())) {
         continue;
       }
-
-      const success = await tryClipboardTool(tool, text);
+      const success = await tryClipboardToolDI(tool, text, spawn, Logger, timeoutMs);
       if (success) {
         Logger.success(`Message copied to clipboard (${tool.name})`);
         return;
       }
     } catch (error) {
-      Logger.debug(`Failed to use ${tool.cmd}: ${error}`);
+      Logger.error(`Failed to use ${tool.cmd}: ${error}`);
       continue;
     }
   }
 
   Logger.error('No clipboard tool found (pbcopy, xclip, wl-copy, or clip)');
-  // Note: This is a utility function, so we'll keep the static logger
-  // but ensure it's called before any spinner operations
   Logger.info('You can manually copy the commit message above');
 }
 
-async function tryClipboardTool(tool: ClipboardTool, text: string): Promise<boolean> {
+export async function tryClipboardToolDI(
+  tool: ClipboardTool,
+  text: string,
+  spawn: typeof realSpawn,
+  Logger: typeof RealLogger,
+  timeoutMs = 5000,
+): Promise<boolean> {
   return new Promise(resolve => {
     try {
       const proc = spawn(tool.cmd, tool.args || [], {
@@ -96,34 +97,35 @@ async function tryClipboardTool(tool: ClipboardTool, text: string): Promise<bool
         }
       });
 
-      // Set a timeout to avoid hanging
       const timeout = setTimeout(() => {
         proc.kill();
         Logger.debug(`${tool.cmd} timed out`);
         resolve(false);
-      }, 5000);
+      }, timeoutMs);
 
       proc.on('close', () => {
         clearTimeout(timeout);
       });
 
-      // Write the text to the process
       proc.stdin.write(text);
       proc.stdin.end();
     } catch (error) {
-      Logger.debug(`Exception with ${tool.cmd}: ${error}`);
+      Logger.error(`Exception with ${tool.cmd}: ${error}`);
       resolve(false);
     }
   });
 }
 
-export async function getClipboardCapabilities(): Promise<string[]> {
+export async function getClipboardCapabilitiesDI(
+  spawn: typeof realSpawn,
+  Logger: typeof RealLogger,
+  timeoutMs = 5000,
+): Promise<string[]> {
   const available: string[] = [];
-
   for (const tool of clipboardTools) {
     try {
       if (tool.test && (await tool.test())) {
-        const success = await tryClipboardTool(tool, 'test');
+        const success = await tryClipboardToolDI(tool, 'test', spawn, Logger, timeoutMs);
         if (success) {
           available.push(tool.name);
         }
@@ -132,16 +134,25 @@ export async function getClipboardCapabilities(): Promise<string[]> {
       // Tool not available
     }
   }
-
   return available;
 }
 
-/**
- * Checks if the system has clipboard support by testing available clipboard tools.
- *
- * @returns Promise resolving to true if any clipboard tool is available
- */
-export async function hasClipboardSupport(): Promise<boolean> {
-  const capabilities = await getClipboardCapabilities();
+export async function hasClipboardSupportDI(
+  spawn: typeof realSpawn,
+  Logger: typeof RealLogger,
+  timeoutMs = 5000,
+): Promise<boolean> {
+  const capabilities = await getClipboardCapabilitiesDI(spawn, Logger, timeoutMs);
   return capabilities.length > 0;
+}
+
+// Default exports using real spawn and Logger
+export async function copyToClipboard(text: string) {
+  return copyToClipboardDI(text, realSpawn, RealLogger);
+}
+export async function getClipboardCapabilities() {
+  return getClipboardCapabilitiesDI(realSpawn, RealLogger);
+}
+export async function hasClipboardSupport() {
+  return hasClipboardSupportDI(realSpawn, RealLogger);
 }

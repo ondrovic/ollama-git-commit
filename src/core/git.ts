@@ -25,22 +25,38 @@ export class GitCommandError extends Error {
   }
 }
 
+export interface GitServiceDeps {
+  fs?: typeof import('fs-extra');
+  path?: typeof import('path');
+  os?: typeof import('os');
+  spawn?: typeof import('child_process').spawn;
+  execSync?: typeof realExecSync;
+}
+
 export class GitService implements IGitService {
   private directory: string;
   private logger: ILogger;
   private quiet: boolean;
   private execSyncFn: typeof realExecSync;
+  private fs: typeof import('fs-extra') | undefined;
+  private path: typeof import('path') | undefined;
+  private os: typeof import('os') | undefined;
+  private spawn: typeof import('child_process').spawn | undefined;
 
   constructor(
     directory: string = process.cwd(),
     logger: ILogger = Logger.getDefault(),
     quiet = false,
-    execSyncFn: typeof realExecSync = realExecSync,
+    deps: GitServiceDeps = {},
   ) {
     this.directory = directory;
     this.logger = logger;
     this.quiet = quiet;
-    this.execSyncFn = execSyncFn;
+    this.execSyncFn = deps.execSync || realExecSync;
+    this.fs = deps.fs;
+    this.path = deps.path;
+    this.os = deps.os;
+    this.spawn = deps.spawn;
   }
 
   public setQuiet(quiet: boolean): void {
@@ -170,10 +186,10 @@ export class GitService implements IGitService {
 
     if (verbose && !this.quiet && stats.files > 0) {
       this.logger.info('Change Statistics:');
-      console.log(`   Files changed: ${stats.files}`);
-      console.log(`   Insertions: ${stats.insertions}`);
-      console.log(`   Deletions: ${stats.deletions}`);
-      console.log('');
+      this.logger.info(`   Files changed: ${stats.files}`);
+      this.logger.info(`   Insertions: ${stats.insertions}`);
+      this.logger.info(`   Deletions: ${stats.deletions}`);
+      this.logger.info('');
     }
 
     // Get file analysis

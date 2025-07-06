@@ -1,33 +1,45 @@
 import { TROUBLE_SHOOTING } from '@/constants/troubleshooting';
-import { getConfig } from '../core/config';
+import * as configModule from '../core/config';
 import { ILogger, IOllamaService } from '../core/interfaces';
 import { normalizeHost } from '../utils/url';
+
+// Add type for getConfig function
+export type GetConfigFn = typeof configModule.getConfig;
 
 /**
  * TestCommand is used for manual testing of the Ollama Git Commit Message Generator.
  * It provides methods to test connection, model availability, and prompt generation.
  * Note: Automated tests use mocks (MockedConfigManager, mockFs, mockGit, etc.) to isolate tests from real filesystem/network.
  */
+
+// TODO: non of the verbose is working
 export class TestCommand {
   private ollamaService: IOllamaService;
   private logger: ILogger;
+  private getConfig: GetConfigFn;
 
-  constructor(ollamaService: IOllamaService, logger: ILogger) {
+  constructor(
+    ollamaService: IOllamaService,
+    logger: ILogger,
+    getConfig: GetConfigFn = configModule.getConfig,
+  ) {
     this.logger = logger;
     this.ollamaService = ollamaService;
+    this.getConfig = getConfig;
   }
 
+  // QUESTION: does this to get called when doing test connection?
   async testConnection(host?: string, verbose = false): Promise<boolean> {
     try {
-      const config = await getConfig();
+      const config = await this.getConfig();
       const serverHost = normalizeHost(host || config.host);
       const timeouts = config.timeouts;
 
       if (verbose) {
-        this.logger.info(`Testing connection to ${serverHost}...`);
-        this.logger.info(`Connection timeout: ${timeouts.connection}ms`);
-        this.logger.info('Sending GET request to /api/tags');
-        this.logger.info('Headers: { "Content-Type": "application/json" }');
+        this.logger.plain(`Testing connection to ${serverHost}...`);
+        this.logger.plain(`Connection timeout: ${timeouts.connection}ms`);
+        this.logger.plain('Sending GET request to /api/tags');
+        this.logger.plain('Headers: { "Content-Type": "application/json" }');
       }
 
       const startTime = Date.now();
@@ -38,9 +50,10 @@ export class TestCommand {
         throw new Error('Connection test failed');
       }
 
+      // why is this not displaying when verbose
       if (verbose) {
-        this.logger.info('Response: HTTP 200 OK');
-        this.logger.info(`⏱️ Connection established in ${duration}ms`);
+        this.logger.success('Response: HTTP 200 OK');
+        this.logger.clock(`Connection established in ${duration}ms`);
       }
 
       return true;
@@ -53,12 +66,12 @@ export class TestCommand {
 
   async testModel(model?: string, host?: string, verbose = false): Promise<boolean> {
     try {
-      const config = await getConfig();
+      const config = await this.getConfig();
       const ollamaHost = normalizeHost(host || config.host);
       const testModel = model || config.model;
 
       if (verbose) {
-        this.logger.info(`Testing model '${testModel}' on ${ollamaHost}...`);
+        this.logger.test(`Testing model '${testModel}' on ${ollamaHost}...`);
       }
 
       // First test connection
@@ -89,16 +102,16 @@ export class TestCommand {
 
   async testAll(model?: string, host?: string, verbose = false): Promise<boolean> {
     try {
-      const config = await getConfig();
+      const config = await this.getConfig();
       const ollamaHost = normalizeHost(host || config.host);
       const testModel = model || config.model;
 
       if (verbose) {
-        this.logger.info(`Running all tests with model '${testModel}' on ${ollamaHost}...`);
+        this.logger.test(`Running all tests with model '${testModel}' on ${ollamaHost}...`);
       }
 
       // Test 1: Connection
-      console.log('1️⃣  Testing connection...');
+      this.logger.test('Testing connection...');
       const connectionOk = await this.testConnection(ollamaHost, verbose);
       if (!connectionOk) {
         this.logger.error('Connection test failed');
@@ -106,7 +119,8 @@ export class TestCommand {
       }
 
       // Test 2: Model
-      console.log('\n2️⃣  Testing model...');
+      this.logger.plain('');
+      this.logger.test('Testing model...');
       const modelOk = await this.testModel(testModel, ollamaHost, verbose);
       if (!modelOk) {
         this.logger.error('Model test failed');
@@ -114,7 +128,8 @@ export class TestCommand {
       }
 
       // Test 3: Simple Prompt
-      console.log('\n3️⃣  Testing simple prompt...');
+      this.logger.plain('');
+      this.logger.test('Testing simple prompt...');
       const promptOk = await this.testSimplePrompt(ollamaHost, testModel, verbose);
       if (!promptOk) {
         this.logger.error('Simple prompt test failed');
@@ -122,10 +137,11 @@ export class TestCommand {
       }
 
       // Test 4: Benchmark
-      console.log('\n4️⃣  Running benchmark...');
+      this.logger.plain('');
+      this.logger.test('Running benchmark...');
       await this.benchmarkModel(testModel, ollamaHost, 3);
 
-      console.log('\n✅ All tests passed!');
+      this.logger.success('All tests passed!');
       return true;
     } catch (error: unknown) {
       this.logger.error('Test all failed:', error);
@@ -139,14 +155,14 @@ export class TestCommand {
   }
 
   async testSimplePrompt(host?: string, model?: string, verbose = false): Promise<boolean> {
-    const config = await getConfig();
+    const config = await this.getConfig();
     const ollamaHost = normalizeHost(host || config.host);
     const testModel = model || config.model;
     const timeouts = config.timeouts;
 
     if (verbose) {
-      this.logger.info(`Testing simple prompt with model: ${testModel}`);
-      this.logger.info(`Host: ${ollamaHost}`);
+      this.logger.test(`Testing simple prompt with model: ${testModel}`);
+      this.logger.plain(`Host: ${ollamaHost}`);
       this.logger.debug(`Generation timeout: ${timeouts.generation}ms`);
     }
 
@@ -162,7 +178,7 @@ export class TestCommand {
 
     try {
       if (verbose) {
-        this.logger.info('Sending test request...');
+        this.logger.plain('Sending test request...');
       }
 
       const response = await fetch(`${ollamaHost}/api/generate`, {
@@ -175,7 +191,7 @@ export class TestCommand {
       const responseText = await response.text();
 
       if (verbose) {
-        this.logger.info(`Response received (${responseText.length} characters)`);
+        this.logger.success(`Response received (${responseText.length} characters)`);
         this.logger.debug(`First 500 chars: ${responseText.substring(0, 500)}`);
       }
 
@@ -189,18 +205,21 @@ export class TestCommand {
 
         if (verbose) {
           this.logger.success('Valid JSON response');
-          this.logger.info('Response field exists:', 'response' in data);
+          this.logger.success('Response field exists:', 'response' in data);
 
           if (data.response) {
-            this.logger.info('Response preview:', `${data.response.substring(0, 100)}...`);
+            this.logger.success('Response preview:', `${data.response.substring(0, 100)}...`);
           }
 
           if (data.model) {
-            this.logger.info('Model used:', data.model);
+            this.logger.success('Model used:', data.model);
           }
 
           if (data.total_duration) {
-            this.logger.info('Generation time:', `${(data.total_duration / 1000000).toFixed(0)}ms`);
+            this.logger.success(
+              'Generation time:',
+              `${(data.total_duration / 1000000).toFixed(0)}ms`,
+            );
           }
         } else {
           this.logger.success('Simple prompt test passed');
@@ -211,7 +230,7 @@ export class TestCommand {
           this.logger.error('Model returned error:', data.error);
 
           if (data.error.toString().toLowerCase().includes('not found')) {
-            this.logger.info(TROUBLE_SHOOTING.MODEL_NOT_FOUND(testModel));
+            this.logger.error(TROUBLE_SHOOTING.MODEL_NOT_FOUND(testModel));
           }
 
           return false;
@@ -233,7 +252,7 @@ export class TestCommand {
 
         if (verbose) {
           this.logger.debug('Raw response that failed to parse:');
-          console.log(responseText);
+          this.logger.error(responseText);
         }
 
         // Try to extract useful information from malformed response
@@ -241,7 +260,7 @@ export class TestCommand {
           this.logger.error('Response contains error information');
 
           if (responseText.toLowerCase().includes('not found')) {
-            this.logger.info(TROUBLE_SHOOTING.MODEL_NOT_FOUND(testModel));
+            this.logger.error(TROUBLE_SHOOTING.MODEL_NOT_FOUND(testModel));
           }
         }
 
@@ -256,7 +275,7 @@ export class TestCommand {
       ) {
         this.logger.error('Request timed out');
         if (verbose) {
-          this.logger.info(TROUBLE_SHOOTING.TIMEOUT(timeouts.generation));
+          this.logger.error(TROUBLE_SHOOTING.TIMEOUT(timeouts.generation));
         }
       } else if (
         typeof error === 'object' &&
@@ -289,7 +308,7 @@ export class TestCommand {
         if (!verbose) {
           this.logger.warn(`Model '${model}' is not available`);
         } else {
-          this.logger.info(TROUBLE_SHOOTING.MODEL_NOT_FOUND(model));
+          this.logger.error(TROUBLE_SHOOTING.MODEL_NOT_FOUND(model));
         }
       }
       return available;
@@ -305,112 +324,130 @@ export class TestCommand {
   }
 
   async testFullWorkflow(host?: string, model?: string, verbose = false): Promise<boolean> {
-    const config = await getConfig();
+    const config = await this.getConfig();
     const ollamaHost = normalizeHost(host || config.host);
     const testModel = model || config.model;
 
-    console.log('🧪 Running full workflow test...');
-    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+    this.logger.test('Running full workflow test...');
+    this.logger.table([
+      {
+        header: 'Full Workflow Test',
+        separator: '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━',
+      },
+    ]);
 
     // Test 1: Connection
-    console.log('1️⃣  Testing connection...');
+    this.logger.test('Testing connection...');
     const connectionOk = await this.testConnection(ollamaHost, verbose);
     if (!connectionOk) {
-      this.logger.error('❌ Connection test failed');
+      this.logger.error('Connection test failed');
       return false;
     }
 
     // Test 2: Model availability
-    console.log('\n2️⃣  Testing model availability...');
+    this.logger.plain('');
+    this.logger.test('Testing model availability...');
     const modelOk = await this.testModelAvailability(testModel, ollamaHost, verbose);
     if (!modelOk) {
-      this.logger.error('❌ Model availability test failed');
+      this.logger.error('Model availability test failed');
       return false;
     }
 
-    // Test 3: Simple prompt
-    console.log('\n3️⃣  Testing simple prompt generation...');
+    // Test 3: Simple prompt generation
+    this.logger.plain('');
+    this.logger.test('Testing simple prompt generation...');
     const promptOk = await this.testSimplePrompt(ollamaHost, testModel, verbose);
     if (!promptOk) {
-      this.logger.error('❌ Simple prompt test failed');
+      this.logger.error('Simple prompt generation test failed');
       return false;
     }
 
-    console.log('\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-    this.logger.success('All tests passed! Your setup is working correctly.');
+    // Summary
+    this.logger.table([
+      {
+        header: 'Test Summary',
+        separator: '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━',
+      },
+    ]);
 
-    console.log('');
-    console.log('📋 Test summary:');
-    console.log(`   ✅ Connection to ${ollamaHost}`);
-    console.log(`   ✅ Model '${testModel}' available`);
-    console.log('   ✅ Simple prompt generation working');
+    this.logger.group('Test summary:', () => {
+      this.logger.success(`Connection to ${ollamaHost}`);
+      this.logger.success(`Model '${testModel}' available`);
+      this.logger.success('Simple prompt generation working');
+      this.logger.plain('');
+    });
 
-    console.log('');
-    console.log('🚀 Ready to generate commit messages!');
-    console.log('   Try: ollama-commit -d /path/to/your/repo');
+    this.logger.rocket('Ready to generate commit messages!');
+    this.logger.info('Try: ollama-commit -d /path/to/your/repo');
 
     return true;
   }
 
   async benchmarkModel(model?: string, host?: string, iterations = 3): Promise<void> {
-    const config = await getConfig();
+    const config = await this.getConfig();
     const ollamaHost = normalizeHost(host || config.host);
     const testModel = model || config.model;
 
-    console.log(`⏱️  Benchmarking model: ${testModel}`);
-    console.log(`🎯 Running ${iterations} iterations...`);
-    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+    this.logger.test(`Benchmarking model: ${testModel}`);
+    this.logger.test(`Running ${iterations} iterations...`);
+    this.logger.table([
+      {
+        header: 'Benchmark Test',
+        separator: '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━',
+      },
+    ]);
 
-    const results: number[] = [];
+    const times: number[] = [];
 
     for (let i = 0; i < iterations; i++) {
-      console.log(`\n📊 Run ${i + 1}/${iterations}:`);
-
-      const startTime = Date.now();
+      this.logger.plain('');
+      this.logger.info(`Run ${i + 1}/${iterations}:`);
 
       try {
+        const startTime = Date.now();
         const success = await this.testSimplePrompt(ollamaHost, testModel, false);
         const duration = Date.now() - startTime;
 
         if (success) {
-          results.push(duration);
-          console.log(`   ✅ Completed in ${duration}ms`);
+          times.push(duration);
+          this.logger.success(`Completed in ${duration}ms`);
         } else {
-          console.log('   ❌ Failed');
+          this.logger.error('Failed');
         }
       } catch (error) {
-        console.log(`   ❌ Error: ${error}`);
+        this.logger.error(`Error: ${error}`);
       }
     }
 
-    if (results.length > 0) {
-      const avgTime = Math.round(results.reduce((a, b) => a + b, 0) / results.length);
-      const minTime = Math.min(...results);
-      const maxTime = Math.max(...results);
+    if (times.length > 0) {
+      const avgTime = Math.round(times.reduce((a, b) => a + b, 0) / times.length);
+      const minTime = Math.min(...times);
+      const maxTime = Math.max(...times);
 
-      console.log(
-        '\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━',
-      );
-      console.log('📈 Benchmark Results:');
-      console.log(`   Average time: ${avgTime}ms`);
-      console.log(`   Fastest time: ${minTime}ms`);
-      console.log(`   Slowest time: ${maxTime}ms`);
-      console.log(
-        `   Success rate: ${results.length}/${iterations} (${Math.round((results.length / iterations) * 100)}%)`,
-      );
+      this.logger.table([
+        {
+          header: 'Benchmark Results',
+          separator:
+            '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━',
+        },
+      ]);
+
+      this.logger.info(`Average time: ${avgTime}ms`);
+      this.logger.info(`Fastest time: ${minTime}ms`);
+      this.logger.info(`Slowest time: ${maxTime}ms`);
 
       // Performance rating
       if (avgTime < 2000) {
-        console.log('   🚀 Performance: Excellent (< 2s)');
+        this.logger.rocket('Performance: Excellent (< 2s)');
       } else if (avgTime < 5000) {
-        console.log('   ⚡ Performance: Good (< 5s)');
+        this.logger.success('Performance: Good (< 5s)');
       } else if (avgTime < 10000) {
-        console.log('   🐌 Performance: Slow (< 10s)');
+        this.logger.warn('Performance: Slow (< 10s)');
       } else {
-        console.log('   🦴 Performance: Very Slow (> 10s)');
+        this.logger.error('Performance: Very Slow (> 10s)');
       }
     } else {
-      console.log('\n❌ No successful runs completed');
+      this.logger.error('No successful runs completed');
     }
   }
 
@@ -420,14 +457,14 @@ export class TestCommand {
     prompt?: string,
     verbose = false,
   ): Promise<boolean> {
-    const config = await getConfig();
+    const config = await this.getConfig();
     const ollamaHost = normalizeHost(host || config.host);
     const testModel = model || config.model;
     const testPrompt = prompt || 'Test prompt';
     const timeouts = config.timeouts;
 
     if (verbose) {
-      this.logger.info(`Testing prompt with model '${testModel}' on ${ollamaHost}...`);
+      this.logger.test(`Testing prompt with model '${testModel}' on ${ollamaHost}...`);
       this.logger.debug(`Prompt length: ${testPrompt.length} characters`);
     }
 
@@ -446,7 +483,7 @@ export class TestCommand {
       const responseText = await response.text();
 
       if (verbose) {
-        this.logger.info(`Response received (${responseText.length} characters)`);
+        this.logger.success(`Response received (${responseText.length} characters)`);
         this.logger.debug(`First 500 chars: ${responseText.substring(0, 500)}`);
       }
 
@@ -460,19 +497,20 @@ export class TestCommand {
 
         if (verbose) {
           this.logger.success('Valid JSON response');
-          this.logger.info('Response field exists:', 'response' in data);
+          this.logger.success('Response field exists:', 'response' in data);
 
           if (data.response) {
-            this.logger.info('Response preview:', `${data.response.substring(0, 100)}...`);
+            this.logger.success('Response preview:', `${data.response.substring(0, 100)}...`);
           }
 
           if (data.model) {
-            this.logger.info('Model used:', data.model);
+            this.logger.success('Model used:', data.model);
           }
+        }
 
-          if (data.total_duration) {
-            this.logger.info('Generation time:', `${(data.total_duration / 1000000).toFixed(0)}ms`);
-          }
+        // Show full response in verbose mode
+        if (verbose) {
+          this.logger.success(responseText);
         }
 
         // Check for error in response
@@ -497,7 +535,7 @@ export class TestCommand {
 
         if (verbose) {
           this.logger.debug('Raw response that failed to parse:');
-          console.log(responseText);
+          this.logger.error(responseText);
         }
 
         return false;
@@ -511,7 +549,7 @@ export class TestCommand {
       ) {
         this.logger.error('Request timed out');
         if (verbose) {
-          this.logger.info(TROUBLE_SHOOTING.TIMEOUT(timeouts.generation));
+          this.logger.error(TROUBLE_SHOOTING.TIMEOUT(timeouts.generation));
         }
       } else if (
         typeof error === 'object' &&
@@ -521,7 +559,7 @@ export class TestCommand {
       ) {
         this.logger.error('Network request failed:', (error as { message: string }).message);
         if (verbose) {
-          this.logger.info(TROUBLE_SHOOTING.GENERAL);
+          this.logger.error(TROUBLE_SHOOTING.GENERAL);
         }
       } else {
         if (typeof error === 'object' && error && 'message' in error) {

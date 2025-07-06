@@ -24,6 +24,7 @@
     "dev:watch": "bun --watch src/cli.ts",
     "dev:run": "bun run src/cli.ts",
     "test": "bun test",
+    "test:coverage": "bun test --coverage",
     "test:watch": "bun test --watch",
     "lint": "eslint",
     "lint:fix": "eslint --fix",
@@ -56,9 +57,11 @@
   "dependencies": {
     "@types/node": "^24.0.1",
     "commander": "^14.0.0",
-    "fs-extra": "^11.3.0"
+    "fs-extra": "^11.3.0",
+    "string-width": "^6.0.0"
   },
   "devDependencies": {
+    "@types/bun": "latest",
     "@types/eslint": "^9.6.1",
     "@types/fs-extra": "^11.0.4",
     "bun": "1.2.16",
@@ -68,8 +71,7 @@
     "prettier": "^3.5.3",
     "ts-node": "^10.9.2",
     "typescript": "^5.8.3",
-    "typescript-eslint": "^8.34.0",
-    "@types/bun": "latest"
+    "typescript-eslint": "^8.34.0"
   },
   "repository": {
     "type": "git",
@@ -82,5 +84,12 @@
   "publishConfig": {
     "access": "public"
   },
-  "private": false
+  "private": false,
+  "nyc": {
+    "exclude": [
+      "**/test/mocks/*",
+      "test/mocks/*",
+      "test\\mocks\\*"
+    ]
+  }
 }

@@ -1,7 +1,7 @@
-import { execSync, spawn } from 'child_process';
-import { readFileSync } from 'fs';
-import { homedir } from 'os';
-import { join } from 'path';
+import { execSync as realExecSync, spawn as realSpawn } from 'child_process';
+import { readFileSync as realReadFileSync } from 'fs';
+import { homedir as realHomedir } from 'os';
+import { join as realJoin } from 'path';
 import { VALID_TEMPLATES, type VALID_TEMPLATE } from '../constants/prompts';
 import { ConfigManager, getConfig } from '../core/config';
 import { GitCommandError, GitNoChangesError, GitRepositoryError } from '../core/git';
@@ -12,6 +12,14 @@ import { askCommitAction } from '../utils/interactive';
 import { validateGitRepository } from '../utils/validation';
 import { ModelsCommand } from './models';
 import { TestCommand } from './test';
+
+export interface CommitCommandDeps {
+  fs?: { readFileSync?: typeof realReadFileSync };
+  path?: { join?: typeof realJoin };
+  os?: { homedir?: typeof realHomedir };
+  spawn?: typeof realSpawn;
+  execSync?: typeof realExecSync;
+}
 
 type ConfigProvider = () => Promise<Required<CommitConfig>>;
 
@@ -24,6 +32,11 @@ export class CommitCommand {
   private logger: ILogger;
   private configProvider: ConfigProvider;
   private quiet: boolean;
+  private fs: { readFileSync: typeof realReadFileSync };
+  private path: { join: typeof realJoin };
+  private os: { homedir: typeof realHomedir };
+  private spawn: typeof realSpawn;
+  private execSync: typeof realExecSync;
 
   constructor(
     private directory: string,
@@ -33,6 +46,7 @@ export class CommitCommand {
     logger: ILogger,
     configProvider?: ConfigProvider,
     quiet = false,
+    deps: CommitCommandDeps = {},
   ) {
     this.logger = logger;
     this.quiet = quiet;
@@ -45,6 +59,11 @@ export class CommitCommand {
     this.testCommand = new TestCommand(ollamaService, logger);
 
     this.configProvider = configProvider || (async () => await getConfig());
+    this.fs = { readFileSync: deps.fs?.readFileSync || realReadFileSync };
+    this.path = { join: deps.path?.join || realJoin };
+    this.os = { homedir: deps.os?.homedir || realHomedir };
+    this.spawn = deps.spawn || realSpawn;
+    this.execSync = deps.execSync || realExecSync;
   }
 
   async execute(options: CommitOptions): Promise<void> {
@@ -88,22 +107,22 @@ export class CommitCommand {
 
     // Show initial progress even in quiet mode
     if (this.quiet) {
-      console.log('🚀 Starting commit process...');
+      this.logger.rocket('Starting commit process...');
     }
 
     // Run staging script for both auto-stage and auto-commit
     if (config.autoStage || config.autoCommit) {
       // Show staging progress even in quiet mode
       if (this.quiet) {
-        console.log('📦 Staging changes...');
+        this.logger.package('Staging changes...');
       }
 
       // Check if staging script exists
-      const packageJsonPath = join(this.directory, 'package.json');
+      const packageJsonPath = this.path.join(this.directory, 'package.json');
       let hasStageScript = false;
 
       try {
-        const packageJson = JSON.parse(readFileSync(packageJsonPath, 'utf8'));
+        const packageJson = JSON.parse(this.fs.readFileSync(packageJsonPath, 'utf8'));
         hasStageScript = packageJson.scripts && packageJson.scripts.stage;
       } catch {
         // If package.json doesn't exist or is invalid, assume no stage script
@@ -112,8 +131,8 @@ export class CommitCommand {
 
       if (hasStageScript) {
         // Run the full staging script
-        this.logger.info('Running staging script (format, lint, test, stage)...');
-        execSync('bun run stage', {
+        this.logger.hammer('Running staging script (format, lint, test, stage)...');
+        this.execSync('bun run stage', {
           cwd: this.directory,
           stdio: this.quiet ? ['pipe', 'pipe', 'pipe'] : 'inherit',
           env: { ...process.env, ...(this.quiet && { QUIET: 'true' }) },
@@ -144,12 +163,12 @@ export class CommitCommand {
 
     // Show analysis progress even in quiet mode
     if (this.quiet) {
-      console.log('🔍 Analyzing changes...');
+      this.logger.magnifier('Analyzing changes...');
     }
 
     // Test Ollama connection
     if (config.verbose || config.debug) {
-      this.logger.info(`Testing connection to ${config.host}...`);
+      this.logger.test(`Testing connection to ${config.host}...`);
     }
 
     if (!(await this.ollamaService.testConnection(config.host, config.verbose))) {
@@ -177,15 +196,15 @@ export class CommitCommand {
     // Show prompt template info in verbose/debug mode
     if (config.verbose || config.debug) {
       const currentTemplate = config.promptTemplate || 'default';
-      this.logger.info(`Using prompt template: ${currentTemplate}`);
+      this.logger.settings(`Using prompt template: ${currentTemplate}`);
       if (currentTemplate === 'custom') {
-        this.logger.info(`Custom prompt file: ${config.promptFile}`);
+        this.logger.settings(`Custom prompt file: ${config.promptFile}`);
       }
     }
 
     // Run prompt test if in debug mode
     if (config.debug) {
-      this.logger.info('Running in debug mode...');
+      this.logger.debug('Running in debug mode...');
       this.logger.debug('Configuration:', config);
 
       // Test the actual prompt template instead of a simple test
@@ -193,11 +212,11 @@ export class CommitCommand {
         config.host,
         config.model,
         systemPrompt,
-        true,
+        config.verbose && !config.quiet, // Only show verbose output if verbose is true AND quiet is false
       );
 
       if (!testSuccess) {
-        this.logger.error('❌ Prompt test failed');
+        this.logger.error('Prompt test failed');
         process.exit(1);
       }
 
@@ -251,10 +270,13 @@ export class CommitCommand {
       while (errorRetryCount < maxErrorRetries) {
         try {
           // Get git changes
-          const gitChanges = this.gitService.getChanges(config.verbose, config.autoStage);
+          const gitChanges = this.gitService.getChanges(
+            config.verbose && !config.quiet,
+            config.autoStage,
+          );
 
-          if (config.verbose) {
-            this.logger.info('Analysis complete, generating commit message...');
+          if (config.verbose && !config.quiet) {
+            this.logger.success('Analysis complete, generating commit message...');
           }
 
           // Check if embeddings model and context providers are available
@@ -272,10 +294,10 @@ export class CommitCommand {
               systemPrompt,
               contextProviders,
               this.directory,
-              config.verbose,
+              config.verbose && !config.quiet, // Only show verbose output if verbose is true AND quiet is false
             );
-            if (config.verbose) {
-              this.logger.info(`Using ${contextProviders.length} context providers`);
+            if (config.verbose && !config.quiet) {
+              this.logger.settings(`Using ${contextProviders.length} context providers`);
             }
           } else if (embeddingsModel) {
             // Use embeddings-enhanced prompt
@@ -287,8 +309,8 @@ export class CommitCommand {
               embeddingsModel.model,
               config.host,
             );
-            if (config.verbose) {
-              this.logger.info(`Using embeddings model: ${embeddingsModel.model}`);
+            if (config.verbose && !config.quiet) {
+              this.logger.settings(`Using embeddings model: ${embeddingsModel.model}`);
             }
           } else {
             // Use basic prompt
@@ -304,7 +326,7 @@ export class CommitCommand {
             config.model,
             config.host,
             fullPrompt,
-            config.verbose,
+            config.verbose && !config.quiet, // Only show verbose output if verbose is true AND quiet is false
           );
 
           // Post-processing: Replace incorrect version lines with correct ones in their proper position
@@ -334,7 +356,7 @@ export class CommitCommand {
           if (!isRetryableError(error as Error)) {
             // Non-retryable error - handle immediately and exit
             if (error instanceof GitNoChangesError) {
-              console.log(`ℹ️  ${error.message}`);
+              this.logger.error(error.message);
               process.exit(0); // Only exit for NoChangesError
             } else if (error instanceof GitRepositoryError) {
               // Allow GitRepositoryError to throw
@@ -351,29 +373,29 @@ export class CommitCommand {
           errorRetryCount++;
           if (typeof error === 'object' && error && 'message' in error) {
             this.logger.error(
-              `❌ Failed on attempt ${errorRetryCount}: ${(error as { message: string }).message}`,
+              `Failed on attempt ${errorRetryCount}: ${(error as { message: string }).message}`,
             );
           } else {
-            this.logger.error(`❌ Failed on attempt ${errorRetryCount}: ${String(error)}`);
+            this.logger.error(`Failed on attempt ${errorRetryCount}: ${String(error)}`);
           }
 
           if (errorRetryCount >= maxErrorRetries) {
-            this.logger.error(`❌ Maximum error retries (${maxErrorRetries}) reached. Giving up.`);
+            this.logger.error(`Maximum error retries (${maxErrorRetries}) reached. Giving up.`);
             throw error;
           }
 
-          if (config.verbose) {
-            this.logger.info(`Retrying... (${errorRetryCount}/${maxErrorRetries})`);
+          if (config.verbose && !config.quiet) {
+            this.logger.retry(`Retrying... (${errorRetryCount}/${maxErrorRetries})`);
             if (error instanceof Error) {
-              this.logger.debug(`Error type: ${error.constructor.name} (retryable)`);
+              this.logger.error(`Error type: ${error.constructor.name} (retryable)`);
             } else {
-              this.logger.debug('Error type: Unknown (retryable)');
+              this.logger.error('Error type: Unknown (retryable)');
             }
           }
 
           // Add backoff delay for retryable errors
           const delay = Math.min(1000 * Math.pow(2, errorRetryCount - 1), 5000);
-          if (config.verbose) {
+          if (config.verbose && !config.quiet) {
             this.logger.info(`Waiting ${delay}ms before retry...`);
           }
           await new Promise(resolve => setTimeout(resolve, delay));
@@ -393,8 +415,8 @@ export class CommitCommand {
 
       if (displayResult === 2) {
         // User requested regeneration - continue loop
-        if (config.verbose) {
-          this.logger.info('Regenerating commit message...');
+        if (config.verbose && !config.quiet) {
+          this.logger.retry('Regenerating commit message...');
         }
         continue; // Generate a new message
       } else if (displayResult === 0) {
@@ -402,23 +424,28 @@ export class CommitCommand {
         break;
       } else {
         // User cancelled (displayResult === 1)
-        this.logger.info('Operation cancelled by user');
+        this.logger.error('Operation cancelled by user');
         break;
       }
     }
   }
 
+  // QUESTION: this is a really large function anything we can do to make it more maintainable?
   private async displayCommitResult(
     message: string,
     interactive: boolean,
     config: Required<CommitConfig>,
   ): Promise<number> {
-    console.log('');
     this.logger.success('Generated commit message:');
-    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-    console.log(message);
-    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-    console.log('');
+    // Use plain output instead of table to ensure it shows regardless of verbose mode
+    this.logger.plain(
+      '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━',
+    );
+    this.logger.plain(message);
+    this.logger.plain(
+      '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━',
+    );
+    this.logger.plain('');
 
     if (interactive) {
       try {
@@ -433,7 +460,7 @@ export class CommitCommand {
                 // Helper to run a command and await its completion
                 const runSpawn = (cmd: string, args: string[]) =>
                   new Promise<number>((resolve, reject) => {
-                    const child = spawn(cmd, args, {
+                    const child = this.spawn(cmd, args, {
                       cwd: this.directory,
                       stdio: this.quiet ? ['pipe', 'pipe', 'pipe'] : 'inherit',
                       env: process.env,
@@ -445,7 +472,7 @@ export class CommitCommand {
                 const commitCode = await runSpawn('git', ['commit', '-m', message]);
                 if (commitCode === 0) {
                   this.logger.success('Changes committed successfully!');
-                  this.logger.info('Pushing changes to remote repository...');
+                  this.logger.up('Pushing changes to remote repository...');
                   const pushCode = await runSpawn('git', ['push']);
                   if (pushCode === 0) {
                     this.logger.success('Changes pushed successfully!');
@@ -476,10 +503,11 @@ export class CommitCommand {
               }
             } else {
               // Auto-stage mode: require manual commit (user types the message)
-              console.log('');
-              console.log('📋 Copy and run this command:');
-              const escapedMessage = message.replace(/"/g, '\\"');
-              console.log(`git commit -m "${escapedMessage}"`);
+              this.logger.plain('');
+              this.logger.group('Copy and run this command:', () => {
+                const escapedMessage = message.replace(/"/g, '\\"');
+                this.logger.info(`git commit -m "${escapedMessage}"`);
+              });
               result = 0;
             }
             break;
@@ -521,9 +549,9 @@ export class CommitCommand {
 
             // Always push after commit in auto-commit mode
             if (this.quiet) {
-              console.log('🚀 Pushing to remote...');
+              this.logger.rocket('Pushing to remote...');
             } else {
-              this.logger.info('Pushing changes to remote repository...');
+              this.logger.up('Pushing changes to remote repository...');
             }
             try {
               this.gitService.execCommand('git push', this.quiet);
@@ -551,10 +579,11 @@ export class CommitCommand {
           }
         } else {
           // Auto-stage mode: require manual commit (user types the message)
-          console.log('📋 To commit with this message, run:');
-          const escapedMessage = message.replace(/"/g, '\\"');
-          console.log(`git commit -m "${escapedMessage}"`);
-          console.log('');
+          this.logger.group('To commit with this message, run:', () => {
+            const escapedMessage = message.replace(/"/g, '\\"');
+            this.logger.info(`git commit -m "${escapedMessage}"`);
+            this.logger.plain('');
+          });
           return 0;
         }
       }
@@ -569,7 +598,7 @@ export class CommitCommand {
 
           // Always push after commit in auto-commit mode
           if (this.quiet) {
-            console.log('🚀 Pushing to remote...');
+            this.logger.rocket('Pushing to remote...');
           } else {
             this.logger.info('Pushing changes to remote repository...');
           }
@@ -599,10 +628,11 @@ export class CommitCommand {
         }
       } else {
         // Auto-stage mode: require manual commit (user types the message)
-        console.log('📋 To commit with this message, run:');
-        const escapedMessage = message.replace(/"/g, '\\"');
-        console.log(`git commit -m "${escapedMessage}"`);
-        console.log('');
+        this.logger.group('To commit with this message, run:', () => {
+          const escapedMessage = message.replace(/"/g, '\\"');
+          this.logger.info(`git commit -m "${escapedMessage}"`);
+          this.logger.info('');
+        });
         return 0;
       }
     }
@@ -638,7 +668,7 @@ export class CommitCommand {
       promptFile:
         options.promptFile ||
         baseConfig.promptFile ||
-        join(homedir(), '.config', 'ollama-git-commit', 'prompt.txt'),
+        this.path.join(this.os.homedir(), '.config', 'ollama-git-commit', 'prompt.txt'),
       debug: options.debug || baseConfig.debug,
       autoStage,
       autoModel: options.autoModel || baseConfig.autoModel,

@@ -20,15 +20,16 @@ function validateTemplateName(
     template => template.includes(normalizedName) || normalizedName.includes(template),
   );
 
-  logger.error(`❌ Invalid template name: "${templateName}"`);
+  logger.error(`Invalid template name: "${templateName}"`);
   if (suggestions.length > 0) {
-    console.log('💡 Did you mean one of these?');
-    suggestions.forEach(suggestion => console.log(`   ${suggestion}`));
+    logger.info('Did you mean one of these?');
+    suggestions.forEach(suggestion => logger.info(`   ${suggestion}`));
   }
-  console.log(`💡 Available templates: ${validTemplates.join(', ')}`);
+  logger.info(`Available templates: ${validTemplates.join(', ')}`);
   process.exit(1);
 }
 
+// TODO: refactor from list-prompt-templates to prompts, then subcommand the commands like list use models as example
 export const registerPromptsCommands = (configCommand: Command) => {
   configCommand
     .command('list-prompt-templates')
@@ -49,6 +50,7 @@ export const registerPromptsCommands = (configCommand: Command) => {
 
         const templates = promptService.getPromptTemplates();
 
+        // TODO: this only displays when verbose is true, should display all the time
         if (options.name) {
           // Show specific template contents
           const templateName = options.name.toLowerCase();
@@ -59,46 +61,39 @@ export const registerPromptsCommands = (configCommand: Command) => {
 
           // Additional safety check
           if (!templateContent) {
-            logger.error(`❌ Template content for '${validatedTemplateName}' is undefined.`);
-            console.log(`💡 Available templates: ${Object.keys(templates).join(', ')}`);
+            logger.error(`Template content for '${validatedTemplateName}' is undefined.`);
+            logger.plain(`Available templates: ${Object.keys(templates).join(', ')}`);
             process.exit(1);
           }
 
-          console.log(
-            '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━',
-          );
-          console.log(`📝 Prompt Template: ${validatedTemplateName}`);
-          console.log(
-            '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━',
-          );
-          console.log(templateContent);
-          console.log(
-            '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━',
-          );
+          logger.table([
+            {
+              header: `Prompt Template: ${validatedTemplateName}`,
+              separator:
+                '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━',
+            },
+          ]);
+          logger.plain(templateContent);
         } else {
           // List all templates
-          console.log(
-            '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━',
-          );
-          console.log('📝 Available Prompt Templates');
-          console.log(
-            '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━',
-          );
+          logger.table([
+            {
+              header: 'Available Prompt Templates',
+              separator:
+                '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━',
+            },
+          ]);
 
           Object.keys(templates).forEach(templateName => {
             const content = templates[templateName];
             if (content) {
-              const lineCount = content.split('\n').length;
-              const charCount = content.length;
-              console.log(`\n📋 ${templateName}`);
-              console.log(`   Lines: ${lineCount}, Characters: ${charCount}`);
-              console.log(
-                `   Usage: ollama-git-commit config list-prompt-templates -n ${templateName}`,
-              );
+              logger.group(templateName, () => {
+                logger.plain(
+                  `Usage: ollama-git-commit config list-prompt-templates -n ${templateName}`,
+                );
+              });
             }
           });
-
-          console.log('\n💡 Use -n <template> to view specific template contents');
         }
       } catch (error) {
         logger.error('Failed to list prompt templates:', error);

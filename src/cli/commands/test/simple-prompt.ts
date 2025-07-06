@@ -26,7 +26,7 @@ export const registerSimplePromptTestCommand = (testCommand: Command) => {
         );
 
         Logger.success('Simple prompt test passed');
-        Logger.info(`Generated message: ${message}`);
+        Logger.plain(`Generated message: ${message}`);
       } catch (error) {
         Logger.error('Simple prompt test failed:', error);
         process.exit(1);
