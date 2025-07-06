@@ -14,9 +14,9 @@ function mockLogger() {
   Logger.table = (...args: any[]) => {
     loggerTableCalls.push(args);
   };
-  Logger.group = (...args: any[]) => {
+  Logger.group = async (...args: any[]) => {
     loggerGroupCalls.push(args);
-    if (args[1]) args[1]();
+    if (args[1]) await args[1]();
   };
   Logger.plain = (...args: any[]) => {
     loggerPlainCalls.push(args);

@@ -370,7 +370,7 @@ export class TestCommand {
       },
     ]);
 
-    this.logger.group('Test summary:', () => {
+    await this.logger.group('Test summary:', () => {
       this.logger.success(`Connection to ${ollamaHost}`);
       this.logger.success(`Model '${testModel}' available`);
       this.logger.success('Simple prompt generation working');

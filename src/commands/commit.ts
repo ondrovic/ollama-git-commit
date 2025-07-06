@@ -504,7 +504,7 @@ export class CommitCommand {
             } else {
               // Auto-stage mode: require manual commit (user types the message)
               this.logger.plain('');
-              this.logger.group('Copy and run this command:', () => {
+              await this.logger.group('Copy and run this command:', () => {
                 const escapedMessage = message.replace(/"/g, '\\"');
                 this.logger.info(`git commit -m "${escapedMessage}"`);
               });
@@ -579,7 +579,7 @@ export class CommitCommand {
           }
         } else {
           // Auto-stage mode: require manual commit (user types the message)
-          this.logger.group('To commit with this message, run:', () => {
+          await this.logger.group('To commit with this message, run:', () => {
             const escapedMessage = message.replace(/"/g, '\\"');
             this.logger.info(`git commit -m "${escapedMessage}"`);
             this.logger.plain('');
@@ -628,7 +628,7 @@ export class CommitCommand {
         }
       } else {
         // Auto-stage mode: require manual commit (user types the message)
-        this.logger.group('To commit with this message, run:', () => {
+        await this.logger.group('To commit with this message, run:', () => {
           const escapedMessage = message.replace(/"/g, '\\"');
           this.logger.info(`git commit -m "${escapedMessage}"`);
           this.logger.info('');

@@ -33,24 +33,16 @@ export const registerKeysCommands = (configCommand: Command, configManager?: ICo
 
         if (options.verbose) {
           // Detailed view with types and examples
-          configKeys.forEach(
-            (keyInfo: {
-              key: string;
-              description: string;
-              type: string;
-              default: unknown;
-              example?: string;
-            }) => {
-              Logger.group(keyInfo.key, () => {
-                Logger.plain(`Description: ${keyInfo.description}`);
-                Logger.plain(`Type: ${keyInfo.type}`);
-                Logger.plain(`Default: ${JSON.stringify(keyInfo.default)}`);
-                if (keyInfo.example) {
-                  Logger.plain(`Example: ${keyInfo.example}`);
-                }
-              });
-            },
-          );
+          for (const keyInfo of configKeys) {
+            await Logger.group(keyInfo.key, () => {
+              Logger.plain(`Description: ${keyInfo.description}`);
+              Logger.plain(`Type: ${keyInfo.type}`);
+              Logger.plain(`Default: ${JSON.stringify(keyInfo.default)}`);
+              if (keyInfo.example) {
+                Logger.plain(`Example: ${keyInfo.example}`);
+              }
+            });
+          }
         } else {
           // Simple view with just keys and descriptions
           configKeys.forEach(

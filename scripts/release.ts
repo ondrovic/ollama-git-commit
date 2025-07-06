@@ -199,45 +199,45 @@ async function main() {
     process.exit(1);
   }
 
-  Logger.group(`Release type: ${versionType}`);
+  await Logger.group(`Release type: ${versionType}`, async () => {
+    // Check if we're on main branch
+    const currentBranch = getCurrentBranch();
+    Logger.info(`Current branch: ${currentBranch}`);
 
-  // Check if we're on main branch
-  const currentBranch = getCurrentBranch();
-  Logger.info(`Current branch: ${currentBranch}`);
+    if (currentBranch !== 'main') {
+      Logger.error('Error: You must be on the main branch to create a release');
+      process.exit(1);
+    }
 
-  if (currentBranch !== 'main') {
-    Logger.error('Error: You must be on the main branch to create a release');
-    process.exit(1);
-  }
+    // Check for uncommitted changes
+    if (hasUncommittedChanges()) {
+      Logger.error('Error: You have uncommitted changes. Please commit or stash them first.');
+      Logger.info('Run: git status');
+      process.exit(1);
+    }
 
-  // Check for uncommitted changes
-  if (hasUncommittedChanges()) {
-    Logger.error('Error: You have uncommitted changes. Please commit or stash them first.');
-    Logger.info('Run: git status');
-    process.exit(1);
-  }
+    const currentVersion = getPackageVersion();
+    Logger.package(`Current version: ${currentVersion}`);
 
-  const currentVersion = getPackageVersion();
-  Logger.package(`Current version: ${currentVersion}`);
+    try {
+      // Increment version in package.json
+      const newVersion = incrementVersion(versionType);
 
-  try {
-    // Increment version in package.json
-    const newVersion = incrementVersion(versionType);
+      // Create tag and push
+      await createAndPushTag(newVersion);
 
-    // Create tag and push
-    await createAndPushTag(newVersion);
-
-    Logger.success(`Successfully released version ${newVersion}!`);
-    Logger.info('The GitHub Actions workflow will now handle the NPM publish process.');
-    Logger.info('Local build test completed - CI/CD will regenerate version file for production.');
-  } catch (error) {
-    Logger.error('Release failed:', error instanceof Error ? error.message : String(error));
-    Logger.info('Debug info:');
-    Logger.info('- Check git status: git status');
-    Logger.info('- Check git remote: git remote -v');
-    Logger.info('- Check git config: git config user.name && git config user.email');
-    process.exit(1);
-  }
+      Logger.success(`Successfully released version ${newVersion}!`);
+      Logger.info('The GitHub Actions workflow will now handle the NPM publish process.');
+      Logger.info('Local build test completed - CI/CD will regenerate version file for production.');
+    } catch (error) {
+      Logger.error('Release failed:', error instanceof Error ? error.message : String(error));
+      Logger.info('Debug info:');
+      Logger.info('- Check git status: git status');
+      Logger.info('- Check git remote: git remote -v');
+      Logger.info('- Check git config: git config user.name && git config user.email');
+      process.exit(1);
+    }
+  });
 }
 
 main().catch(error => {

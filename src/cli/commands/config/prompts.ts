@@ -84,16 +84,16 @@ export const registerPromptsCommands = (configCommand: Command) => {
             },
           ]);
 
-          Object.keys(templates).forEach(templateName => {
+          for (const templateName of Object.keys(templates)) {
             const content = templates[templateName];
             if (content) {
-              logger.group(templateName, () => {
+              await logger.group(templateName, () => {
                 logger.plain(
                   `Usage: ollama-git-commit config list-prompt-templates -n ${templateName}`,
                 );
               });
             }
-          });
+          }
         }
       } catch (error) {
         logger.error('Failed to list prompt templates:', error);

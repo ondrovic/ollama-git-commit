@@ -175,19 +175,41 @@ describe('Logger Instance Methods', () => {
   });
 
   describe('Group Method', () => {
-    test('should use console.group when verbose is enabled', () => {
+    test('should use console.group when verbose is enabled', async () => {
       logger.setVerbose(true);
       const mockFn = mock(() => {});
-      logger.group('Test Group', mockFn);
+      await logger.group('Test Group', mockFn);
       expect(mockConsole.group).toHaveBeenCalledWith('📋 Test Group');
       expect(mockConsole.groupEnd).toHaveBeenCalled();
       expect(mockFn).toHaveBeenCalled();
     });
 
-    test('should not use console.group when verbose is disabled', () => {
+    test('should not use console.group when verbose is disabled', async () => {
       logger.setVerbose(false);
       const mockFn = mock(() => {});
-      logger.group('Test Group', mockFn);
+      await logger.group('Test Group', mockFn);
+      expect(mockConsole.group).not.toHaveBeenCalled();
+      expect(mockConsole.groupEnd).not.toHaveBeenCalled();
+      expect(mockFn).toHaveBeenCalled();
+    });
+
+    test('should handle async functions in verbose mode', async () => {
+      logger.setVerbose(true);
+      const mockFn = mock(async () => {
+        await new Promise(resolve => setTimeout(resolve, 10));
+      });
+      await logger.group('Test Group', mockFn);
+      expect(mockConsole.group).toHaveBeenCalledWith('📋 Test Group');
+      expect(mockConsole.groupEnd).toHaveBeenCalled();
+      expect(mockFn).toHaveBeenCalled();
+    });
+
+    test('should handle async functions in non-verbose mode', async () => {
+      logger.setVerbose(false);
+      const mockFn = mock(async () => {
+        await new Promise(resolve => setTimeout(resolve, 10));
+      });
+      await logger.group('Test Group', mockFn);
       expect(mockConsole.group).not.toHaveBeenCalled();
       expect(mockConsole.groupEnd).not.toHaveBeenCalled();
       expect(mockFn).toHaveBeenCalled();
@@ -425,10 +447,10 @@ describe('Logger Static Methods', () => {
       expect(mockConsole.table).toHaveBeenCalledWith(data);
     });
 
-    test('should call group via static method', () => {
+    test('should call group via static method', async () => {
       Logger.setVerbose(true);
       const mockFn = mock(() => {});
-      Logger.group('Test Group', mockFn);
+      await Logger.group('Test Group', mockFn);
       expect(mockConsole.group).toHaveBeenCalledWith('📋 Test Group');
       expect(mockConsole.groupEnd).toHaveBeenCalled();
       expect(mockFn).toHaveBeenCalled();
