@@ -15,17 +15,23 @@ import { Logger } from '../utils/logger';
 import { IConfigManager, ILogger } from './interfaces';
 
 export class ConfigManager implements IConfigManager {
-  private static instance: ConfigManager;
+  private static instance: ConfigManager | undefined;
   private config: OllamaCommitConfig;
   private readonly defaultConfigFile: string;
   private readonly localConfigFile: string;
   private initialized = false;
   private logger: ILogger;
   private fs: typeof fsExtra;
+  private env: Record<string, string | undefined>;
 
-  private constructor(logger: ILogger = Logger.getDefault(), fs: typeof fsExtra = fsExtra) {
+  private constructor(
+    logger: ILogger = Logger.getDefault(),
+    fs: typeof fsExtra = fsExtra,
+    env: Record<string, string | undefined> = process.env,
+  ) {
     this.logger = logger;
     this.fs = fs;
+    this.env = env;
     // Define config file locations
     this.defaultConfigFile = join(homedir(), '.config', 'ollama-git-commit', 'config.json');
     this.localConfigFile = join(process.cwd(), '.ollama-git-commit.json');
@@ -38,14 +44,16 @@ export class ConfigManager implements IConfigManager {
    *
    * @param logger - Optional logger instance (defaults to default Logger)
    * @param fs - Optional filesystem module (defaults to fs-extra)
+   * @param env - Optional environment object (defaults to process.env)
    * @returns The singleton ConfigManager instance
    */
   static getInstance(
     logger: ILogger = Logger.getDefault(),
     fs: typeof fsExtra = fsExtra,
+    env: Record<string, string | undefined> = process.env,
   ): ConfigManager {
     if (!ConfigManager.instance) {
-      ConfigManager.instance = new ConfigManager(logger, fs);
+      ConfigManager.instance = new ConfigManager(logger, fs, env);
     }
     return ConfigManager.instance;
   }
@@ -58,12 +66,8 @@ export class ConfigManager implements IConfigManager {
   }
 
   private getDefaults(): OllamaCommitConfig {
-    const defaults = CONFIGURATIONS.DEFAULT;
-    return {
-      ...defaults,
-      models: [...defaults.models],
-      context: [...defaults.context],
-    } as OllamaCommitConfig;
+    // Deep clone to avoid mutation of CONFIGURATIONS.DEFAULT
+    return JSON.parse(JSON.stringify(CONFIGURATIONS.DEFAULT)) as OllamaCommitConfig;
   }
 
   private async loadConfigFile(filePath: string): Promise<Record<string, unknown>> {
@@ -195,7 +199,8 @@ export class ConfigManager implements IConfigManager {
   }
 
   private applyEnvironmentVariables(config: OllamaCommitConfig): void {
-    for (const [envKey, envValue] of Object.entries(process.env)) {
+    const defaults = CONFIGURATIONS.DEFAULT;
+    for (const [envKey, envValue] of Object.entries(this.env)) {
       if (envValue === undefined) continue;
 
       // Handle OLLAMA_HOST
@@ -213,10 +218,13 @@ export class ConfigManager implements IConfigManager {
           const timeoutType = configKey
             .replace('TIME_OUTS_', '')
             .toLowerCase() as keyof OllamaCommitConfig['timeouts'];
-          const timeoutValue = parseInt(envValue, 10);
-          if (!isNaN(timeoutValue)) {
-            config.timeouts[timeoutType] = timeoutValue;
-          }
+          const defaultTimeout = defaults.timeouts[timeoutType];
+          const timeoutValue = this.convertEnvValue(
+            envValue,
+            config.timeouts[timeoutType],
+            defaultTimeout,
+          );
+          config.timeouts[timeoutType] = timeoutValue as number;
         } else if (configKey === 'CONTEXT') {
           // Handle context providers
           const providers = envValue
@@ -237,7 +245,12 @@ export class ConfigManager implements IConfigManager {
           // Convert SNAKE_CASE to camelCase and handle type conversion
           const normalizedKey = this.snakeToCamelCase(configKey) as keyof OllamaCommitConfig;
           if (normalizedKey in config) {
-            const convertedValue = this.convertEnvValue(envValue, config[normalizedKey]);
+            const defaultValue = (defaults as Record<string, unknown>)[normalizedKey];
+            const convertedValue = this.convertEnvValue(
+              envValue,
+              config[normalizedKey],
+              defaultValue,
+            );
             (config as unknown as Record<string, unknown>)[normalizedKey] = convertedValue;
           }
         }
@@ -245,18 +258,16 @@ export class ConfigManager implements IConfigManager {
     }
   }
 
-  private snakeToCamelCase(str: string): string {
-    return str.toLowerCase().replace(/_([a-z])/g, (_, letter) => letter.toUpperCase());
-  }
-
-  private convertEnvValue(envValue: string, currentValue: unknown): unknown {
+  private convertEnvValue(envValue: string, currentValue: unknown, defaultValue: unknown): unknown {
     // Convert based on the current value's type
-    if (typeof currentValue === 'boolean') {
-      return envValue.toLowerCase() === 'true' || envValue === '1';
+    if (typeof defaultValue === 'boolean') {
+      if (envValue.toLowerCase() === 'true' || envValue === '1') return true;
+      if (envValue.toLowerCase() === 'false' || envValue === '0') return false;
+      return defaultValue;
     }
-    if (typeof currentValue === 'number') {
+    if (typeof defaultValue === 'number') {
       const num = parseInt(envValue, 10);
-      return isNaN(num) ? currentValue : num;
+      return isNaN(num) ? defaultValue : num;
     }
     // For strings and other types, return as-is
     return envValue;
@@ -704,6 +715,14 @@ export class ConfigManager implements IConfigManager {
       const message = error instanceof Error ? error.message : String(error);
       throw new Error(`Failed to remove config: ${message}`);
     }
+  }
+
+  private snakeToCamelCase(str: string): string {
+    return str.toLowerCase().replace(/_([a-z])/g, (_, letter) => letter.toUpperCase());
+  }
+
+  static resetInstance(): void {
+    ConfigManager.instance = undefined;
   }
 }
 

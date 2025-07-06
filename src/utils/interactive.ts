@@ -38,6 +38,7 @@ export class InteractivePromptDI {
     return new Promise((resolve, reject) => {
       const globalTimeout = (setTimeoutFn || setTimeout)(() => {
         this.cleanup();
+        logger.plain('');
         logger.warn('Prompt timed out, using default choice');
         resolve(defaultChoice || 'n');
       }, 60000);

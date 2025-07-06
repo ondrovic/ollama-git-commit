@@ -45,6 +45,8 @@ describe('CONFIGURATIONS', () => {
     });
 
     test('should have correct timeout values', () => {
+      // No reliance on process.env or real config files
+      // If CONFIGURATIONS.DEFAULT is affected by env/config, mock or override as needed
       expect(CONFIGURATIONS.DEFAULT.timeouts.connection).toBe(10000);
       expect(CONFIGURATIONS.DEFAULT.timeouts.generation).toBe(120000);
       expect(CONFIGURATIONS.DEFAULT.timeouts.modelPull).toBe(300000);

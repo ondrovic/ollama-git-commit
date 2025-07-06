@@ -3,7 +3,7 @@ export const SIZE_UNITS = ['B', 'KB', 'MB', 'GB'] as const;
 export const EMOJIS = {
   SUCCESS: '✅',
   ERROR: '❌',
-  WARNING: '⚠️',
+  WARNING: '🚨',
   INFO: 'ℹ️',
   VERSION: '🆚',
   DEBUG: '🐛',

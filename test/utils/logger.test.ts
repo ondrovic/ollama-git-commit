@@ -82,7 +82,7 @@ describe('Logger Instance Methods', () => {
 
     test('should log warning messages', () => {
       logger.warn('Test warning message');
-      expect(mockConsole.warn).toHaveBeenCalledWith('⚠️ Test warning message');
+      expect(mockConsole.warn).toHaveBeenCalledWith('🚨 Test warning message');
     });
 
     test('should log error messages', () => {
@@ -115,7 +115,7 @@ describe('Logger Instance Methods', () => {
 
     test('should log warn level', () => {
       logger.log('warn', 'Test message');
-      expect(mockConsole.warn).toHaveBeenCalledWith('⚠️ Test message');
+      expect(mockConsole.warn).toHaveBeenCalledWith('🚨 Test message');
     });
 
     test('should log error level', () => {
@@ -387,7 +387,7 @@ describe('Logger Static Methods', () => {
 
     test('should log warning via static method', () => {
       Logger.warn('Test warning');
-      expect(mockConsole.warn).toHaveBeenCalledWith('⚠️ Test warning');
+      expect(mockConsole.warn).toHaveBeenCalledWith('🚨 Test warning');
     });
 
     test('should log error via static method', () => {
@@ -600,7 +600,7 @@ describe('Logger Edge Cases', () => {
     expect(mockConsole.log).toHaveBeenCalledWith('✅ Test', ...args);
 
     logger.warn('Test', ...args);
-    expect(mockConsole.warn).toHaveBeenCalledWith('⚠️ Test', ...args);
+    expect(mockConsole.warn).toHaveBeenCalledWith('🚨 Test', ...args);
 
     logger.error('Test', ...args);
     expect(mockConsole.error).toHaveBeenCalledWith('❌ Test', ...args);
