@@ -21,7 +21,7 @@ describe('Prompts Commands', () => {
       expect(templates).toHaveProperty('conventional');
       expect(templates).toHaveProperty('simple');
       expect(templates).toHaveProperty('detailed');
-      
+
       expect(templates.default).toBe(PROMPTS.DEFAULT);
       expect(templates.conventional).toBe(PROMPTS.CONVENTIONAL);
       expect(templates.simple).toBe(PROMPTS.SIMPLE);
@@ -80,7 +80,7 @@ describe('Prompts Commands', () => {
 
       const contents = Object.values(templates);
       const uniqueContents = new Set(contents);
-      
+
       expect(uniqueContents.size).toBe(contents.length);
     });
 
@@ -90,7 +90,7 @@ describe('Prompts Commands', () => {
       Object.entries(templates).forEach(([name, content]) => {
         // All templates should contain key phrases
         expect(content).toContain('commit message');
-        
+
         // Templates should be substantial
         expect(content.length).toBeGreaterThan(50);
       });
@@ -111,15 +111,15 @@ describe('Prompts Commands', () => {
 
     test('should find similar template names', () => {
       const validTemplates = ['default', 'conventional', 'simple', 'detailed'];
-      
+
       // Test exact substring matches
       const suggestions1 = findSimilarTemplates('def', validTemplates);
       expect(suggestions1).toContain('default');
-      
+
       // Test similar length and characters
       const suggestions2 = findSimilarTemplates('convent', validTemplates);
       expect(suggestions2).toContain('conventional');
-      
+
       // Test no matches
       const suggestions3 = findSimilarTemplates('xyz', validTemplates);
       expect(suggestions3).toHaveLength(0);
@@ -142,15 +142,15 @@ describe('Prompts Commands', () => {
 
     test('should handle edge cases in template similarity', () => {
       const validTemplates = ['default', 'conventional', 'simple', 'detailed'];
-      
+
       // Test very long string
       const suggestions2 = findSimilarTemplates('verylongstringthatdoesnotmatch', validTemplates);
       expect(suggestions2).toHaveLength(0);
-      
+
       // Test exact match
       const suggestions3 = findSimilarTemplates('default', validTemplates);
       expect(suggestions3).toContain('default');
-      
+
       // Test partial matches
       const suggestions4 = findSimilarTemplates('sim', validTemplates);
       expect(suggestions4).toContain('simple');
@@ -164,19 +164,19 @@ describe('Prompts Commands', () => {
       const systemPrompt = 'test system prompt';
       const contextProviders: ContextProvider[] = [
         { provider: 'docs', enabled: true },
-        { provider: 'code', enabled: true }
+        { provider: 'code', enabled: true },
       ];
       const directory = '/test/directory';
-      
+
       const result = await promptService.buildCommitPromptWithContext(
         filesInfo,
         diff,
         systemPrompt,
         contextProviders,
         directory,
-        false
+        false,
       );
-      
+
       expect(result).toBeTruthy();
       expect(typeof result).toBe('string');
       expect(result).toContain(diff);
@@ -192,7 +192,7 @@ describe('Prompts Commands', () => {
       } as any;
       const embeddingsModel = 'test-model';
       const host = 'http://localhost:11434';
-      
+
       const result = await promptService.buildCommitPromptWithEmbeddings(
         filesInfo,
         diff,
@@ -201,7 +201,7 @@ describe('Prompts Commands', () => {
         embeddingsModel,
         host
       );
-      
+
       expect(result).toBeTruthy();
       expect(typeof result).toBe('string');
       expect(result).toContain(diff);
@@ -211,21 +211,47 @@ describe('Prompts Commands', () => {
     test('should build system prompt', () => {
       const promptFile = '/test/prompt.txt';
       const verbose = false;
-      
-      const result = promptService.getSystemPrompt(promptFile, verbose);
-      
+
+      // Mock the filesystem operations to avoid real file creation
+      let fileExists = false;
+      const mockFs = {
+        existsSync: mock((path: string) => {
+          if (path === promptFile) {
+            return fileExists;
+          }
+          return false; // Directory doesn't exist
+        }),
+        mkdirSync: mock(() => {}),
+        writeFileSync: mock(() => {
+          fileExists = true; // File is created
+        }),
+        readFileSync: mock(() => 'Mocked prompt content'),
+      };
+
+      const mockPath = {
+        dirname: mock(() => '/test'),
+      };
+
+      const mockedPromptService = new PromptService(logger, false, undefined, {
+        fs: mockFs as any,
+        path: mockPath as any,
+      });
+
+      const result = mockedPromptService.getSystemPrompt(promptFile, verbose);
+
       expect(result).toBeTruthy();
       expect(typeof result).toBe('string');
       expect(result.length).toBeGreaterThan(0);
+      expect(result).toBe('Mocked prompt content');
     });
 
     test('should build commit prompt', () => {
       const filesInfo = 'test files info';
       const diff = 'test diff content';
       const systemPrompt = 'test system prompt';
-      
+
       const result = promptService.buildCommitPrompt(filesInfo, diff, systemPrompt);
-      
+
       expect(result).toBeTruthy();
       expect(typeof result).toBe('string');
       expect(result).toContain(diff);
@@ -244,7 +270,7 @@ describe('Prompts Commands', () => {
     test('should have valid template names in constants', () => {
       expect(VALID_TEMPLATES).toBeInstanceOf(Array);
       expect(VALID_TEMPLATES.length).toBeGreaterThan(0);
-      
+
       VALID_TEMPLATES.forEach(template => {
         expect(typeof template).toBe('string');
         expect(template.length).toBeGreaterThan(0);
@@ -255,7 +281,7 @@ describe('Prompts Commands', () => {
     test('should have consistent naming between constants', () => {
       const promptKeys = Object.keys(PROMPTS);
       const templateNames = VALID_TEMPLATES.map(t => t.toUpperCase());
-      
+
       templateNames.forEach(templateName => {
         expect(promptKeys).toContain(templateName);
       });
@@ -287,4 +313,4 @@ function findSimilarTemplates(invalidTemplate: string, validTemplates: string[])
 
   // Remove duplicates and limit to 5 suggestions
   return [...new Set(suggestions)].slice(0, 5);
-} 
+}

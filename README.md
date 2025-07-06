@@ -9,14 +9,17 @@ A powerful CLI tool that generates meaningful, contextual commit messages using 
 
 ## 🚦 Continuous Integration & Automated Publishing
 
-This project uses **GitHub Actions** for automated testing and NPM publishing:
+This project uses **GitHub Actions** for automated testing and NPM publishing with robust dependency management and cross-platform compatibility:
 
 ### Automated Testing
 
 - The test workflow is defined in `.github/workflows/test.yml`
 - All branches are tested automatically on push and pull requests
 - Tests are run using [Bun](https://bun.sh/) for fast execution
-- Comprehensive test coverage for all features including context providers and embeddings
+- **Cross-platform compatibility**: Tests work on Windows, macOS, and Linux
+- **Dependency management**: Robust handling of package dependencies with fallback strategies
+- **Comprehensive test coverage** for all features including context providers and embeddings
+- **Isolated testing**: All tests use mocks to avoid real external calls (API, filesystem, git commands)
 
 ### Automated NPM Publishing
 
@@ -25,6 +28,7 @@ This project uses **GitHub Actions** for automated testing and NPM publishing:
 - **Validates** that the version doesn't already exist on NPM
 - **Builds and tests** the package before publishing
 - **Publishes to NPM** with zero manual intervention
+- **Dependency verification**: Ensures all required packages are properly installed
 
 **How it works:**
 

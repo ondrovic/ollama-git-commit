@@ -678,9 +678,9 @@ describe('CONFIGURATIONS', () => {
       expect(promptFile).toEndWith('prompt.txt');
       expect(configFile).toEndWith('config.json');
 
-      // Should be absolute paths
-      expect(promptFile).toMatch(/^[A-Z]:\\/); // Windows path
-      expect(configFile).toMatch(/^[A-Z]:\\/); // Windows path
+      // Should be absolute paths (cross-platform)
+      expect(promptFile).toMatch(/^[A-Z]:\\|\//); // Windows or Unix path
+      expect(configFile).toMatch(/^[A-Z]:\\|\//); // Windows or Unix path
     });
   });
 

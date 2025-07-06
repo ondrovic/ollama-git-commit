@@ -51,6 +51,18 @@ The project provides scripts to ensure code quality and consistency:
 
 For detailed information about these scripts and development workflow, see the [Development Workflow](#development-workflow) section in README.md.
 
+### CI/CD and Testing
+
+The project uses GitHub Actions for automated testing and publishing:
+
+- **Automated Testing**: All branches are tested on push and pull requests
+- **Cross-Platform Compatibility**: Tests run on Windows, macOS, and Linux
+- **Dependency Management**: Robust handling of package dependencies with fallback strategies
+- **Test Isolation**: All tests use mocks to avoid real external calls
+- **Automated Publishing**: Releases are automatically published to NPM when tags are pushed
+
+The CI/CD workflows are defined in `.github/workflows/` and include comprehensive dependency verification and error recovery strategies.
+
 ## Project Structure
 
 ```
@@ -162,12 +174,15 @@ ollama-git-commit/
 - Maintain existing test coverage
 - Use descriptive test names
 - Follow the AAA pattern (Arrange, Act, Assert)
-- Mock external dependencies
+- **Mock external dependencies**: All tests must use mocks to avoid real external calls (API, filesystem, git commands)
 - Place tests in the corresponding test directory structure
 - Use the provided test utilities and mocks in `test/mocks/`
+- **Cross-platform compatibility**: Ensure tests work on Windows, macOS, and Linux
 - **Ensure tests cover edge cases for model auto-sync, including invalid/empty model values and preservation of custom models.**
 - **Use proper interface implementations**: All mock services should implement the complete interface (e.g., `IOllamaService` with all required methods)
 - **Dependency Injection**: Use the ServiceFactory for creating services in tests to ensure consistency with production code
+- **Filesystem Mocking**: Always mock filesystem operations to prevent real file creation during tests
+- **Path Validation**: Use cross-platform path validation that works on both Windows and Unix systems
 
 ### Git Commit Messages
 

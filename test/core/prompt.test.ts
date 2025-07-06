@@ -93,7 +93,8 @@ describe('PromptService', () => {
     });
 
     test('validatePrompt should accept valid prompts', () => {
-      const validPrompt = 'This is a valid prompt that is long enough to pass validation. It contains meaningful content for testing purposes and mentions commit messages.';
+      const validPrompt =
+        'This is a valid prompt that is long enough to pass validation. It contains meaningful content for testing purposes and mentions commit messages.';
       const result = promptService.validatePrompt(validPrompt);
       expect(result.valid).toBe(true);
       expect(result.errors).toHaveLength(0);
@@ -125,7 +126,10 @@ describe('PromptService', () => {
       // Extract the GIT DIFF section
       const diffSection = result.split('GIT DIFF:')[1];
       // Get the lines before the truncation message
-      const truncatedLines = diffSection.split('[... diff truncated')[0].split('\n').filter(Boolean);
+      const truncatedLines = diffSection
+        .split('[... diff truncated')[0]
+        .split('\n')
+        .filter(Boolean);
       // Should be 100 lines
       expect(truncatedLines.length).toBe(100);
       expect(result).toContain('[... diff truncated');
@@ -135,7 +139,11 @@ describe('PromptService', () => {
     test('buildCommitPrompt should handle diffs with file count', () => {
       const filesInfo = 'test files';
       // Create a diff that's long enough to trigger truncation
-      const diffWithFiles = Array(5000).fill('diff --git a/file1.txt b/file1.txt\nindex 123..456\n--- a/file1.txt\n+++ b/file1.txt\n@@ -1,1 +1,1 @@\n-old\n+new\ndiff --git a/file2.txt b/file2.txt\nindex 789..abc\n--- a/file2.txt\n+++ b/file2.txt\n@@ -1,1 +1,1 @@\n-old2\n+new2').join('\n');
+      const diffWithFiles = Array(5000)
+        .fill(
+          'diff --git a/file1.txt b/file1.txt\nindex 123..456\n--- a/file1.txt\n+++ b/file1.txt\n@@ -1,1 +1,1 @@\n-old\n+new\ndiff --git a/file2.txt b/file2.txt\nindex 789..abc\n--- a/file2.txt\n+++ b/file2.txt\n@@ -1,1 +1,1 @@\n-old2\n+new2',
+        )
+        .join('\n');
       const systemPrompt = 'test system prompt';
 
       const result = promptService.buildCommitPrompt(filesInfo, diffWithFiles, systemPrompt);
@@ -147,7 +155,11 @@ describe('PromptService', () => {
       const diffWithCarriageReturns = 'test\r\ndiff\r\nwith\r\ncarriage\r\nreturns';
       const systemPrompt = 'test system prompt';
 
-      const result = promptService.buildCommitPrompt(filesInfo, diffWithCarriageReturns, systemPrompt);
+      const result = promptService.buildCommitPrompt(
+        filesInfo,
+        diffWithCarriageReturns,
+        systemPrompt,
+      );
       expect(result).not.toContain('\r');
       expect(result).toContain('test\ndiff\nwith\ncarriage\nreturns');
     });
@@ -168,7 +180,32 @@ describe('PromptService', () => {
       const promptFile = '/tmp/test-prompt.txt';
       const verbose = false;
 
-      const result = promptService.getSystemPrompt(promptFile, verbose);
+      // Mock the filesystem operations to avoid real file creation
+      let fileExists = false;
+      const mockFs = {
+        existsSync: mock((path: string) => {
+          if (path === promptFile) {
+            return fileExists;
+          }
+          return false; // Directory doesn't exist
+        }),
+        mkdirSync: mock(() => {}),
+        writeFileSync: mock(() => {
+          fileExists = true; // File is created
+        }),
+        readFileSync: mock(() => 'Mocked prompt content'),
+      };
+
+      const mockPath = {
+        dirname: mock(() => '/tmp'),
+      };
+
+      const mockedPromptService = new PromptService(logger, false, undefined, {
+        fs: mockFs as any,
+        path: mockPath as any,
+      });
+
+      const result = mockedPromptService.getSystemPrompt(promptFile, verbose);
       expect(result).toBeTruthy();
       expect(typeof result).toBe('string');
       expect(result.length).toBeGreaterThan(0);
@@ -179,7 +216,32 @@ describe('PromptService', () => {
       const verbose = false;
       const promptTemplate = 'conventional';
 
-      const result = promptService.getSystemPrompt(promptFile, verbose, promptTemplate);
+      // Mock the filesystem operations to avoid real file creation
+      let fileExists = false;
+      const mockFs = {
+        existsSync: mock((path: string) => {
+          if (path === promptFile) {
+            return fileExists;
+          }
+          return false; // Directory doesn't exist
+        }),
+        mkdirSync: mock(() => {}),
+        writeFileSync: mock(() => {
+          fileExists = true; // File is created
+        }),
+        readFileSync: mock(() => 'conventional template content'),
+      };
+
+      const mockPath = {
+        dirname: mock(() => '/tmp'),
+      };
+
+      const mockedPromptService = new PromptService(logger, false, undefined, {
+        fs: mockFs as any,
+        path: mockPath as any,
+      });
+
+      const result = mockedPromptService.getSystemPrompt(promptFile, verbose, promptTemplate);
       expect(result).toBeTruthy();
       expect(result).toContain('conventional');
     });
@@ -188,13 +250,38 @@ describe('PromptService', () => {
       const promptFile = '/tmp/test-prompt-verbose.txt';
       const verbose = true;
 
+      // Mock the filesystem operations to avoid real file creation
+      let fileExists = false;
+      const mockFs = {
+        existsSync: mock((path: string) => {
+          if (path === promptFile) {
+            return fileExists;
+          }
+          return false; // Directory doesn't exist
+        }),
+        mkdirSync: mock(() => {}),
+        writeFileSync: mock(() => {
+          fileExists = true; // File is created
+        }),
+        readFileSync: mock(() => 'Mocked prompt content'),
+      };
+
+      const mockPath = {
+        dirname: mock(() => '/tmp'),
+      };
+
+      const mockedPromptService = new PromptService(logger, false, undefined, {
+        fs: mockFs as any,
+        path: mockPath as any,
+      });
+
       // Mock logger.info to verify it's called
       const originalInfo = logger.info;
       const mockInfo = mock();
       logger.info = mockInfo;
 
       try {
-        const result = promptService.getSystemPrompt(promptFile, verbose);
+        const result = mockedPromptService.getSystemPrompt(promptFile, verbose);
         expect(result).toBeTruthy();
         expect(mockInfo).toHaveBeenCalled();
       } finally {
@@ -217,7 +304,7 @@ describe('PromptService', () => {
         systemPrompt,
         contextProviders,
         directory,
-        false
+        false,
       );
 
       expect(result).toBeTruthy();
@@ -233,7 +320,7 @@ describe('PromptService', () => {
       const systemPrompt = 'test system prompt';
       const contextProviders: ContextProvider[] = [
         { provider: 'code', enabled: true },
-        { provider: 'docs', enabled: true }
+        { provider: 'docs', enabled: true },
       ];
       const directory = '/test/directory';
 
@@ -243,7 +330,7 @@ describe('PromptService', () => {
         systemPrompt,
         contextProviders,
         directory,
-        false
+        false,
       );
 
       expect(result).toBeTruthy();
@@ -270,7 +357,7 @@ describe('PromptService', () => {
         systemPrompt,
         mockOllamaService,
         embeddingsModel,
-        host
+        host,
       );
 
       expect(result).toBeTruthy();
@@ -298,7 +385,7 @@ describe('PromptService', () => {
         systemPrompt,
         mockOllamaService,
         embeddingsModel,
-        host
+        host,
       );
 
       expect(result).toBeTruthy();
@@ -313,7 +400,7 @@ describe('PromptService', () => {
     test('should set quiet mode', () => {
       expect(promptService.setQuiet).toBeDefined();
       expect(typeof promptService.setQuiet).toBe('function');
-      
+
       // Test that it doesn't throw
       expect(() => promptService.setQuiet(true)).not.toThrow();
       expect(() => promptService.setQuiet(false)).not.toThrow();

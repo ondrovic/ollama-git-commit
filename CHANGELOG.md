@@ -9,6 +9,32 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **CI/CD Workflow Improvements**: Enhanced GitHub Actions workflows for better reliability
+  - **Dependency Management**: Robust handling of package dependencies with fallback installation strategies
+  - **Cross-Platform Testing**: Fixed test compatibility issues between Windows and Linux environments
+  - **Dependency Verification**: Added comprehensive dependency checking and installation verification
+  - **Fallback Strategies**: Implemented npm install fallback when bun install fails
+  - **Debugging Capabilities**: Enhanced workflow debugging with detailed dependency verification steps
+
+### Fixed
+
+- **Test Reliability**: Fixed failing tests in CI/CD environment
+  - **Path Structure Tests**: Fixed cross-platform path validation to work on both Windows and Linux
+  - **System Prompt Tests**: Added proper filesystem mocking to prevent real file creation during tests
+  - **Dependency Resolution**: Fixed `string-width` package installation issues in CI environment
+  - **Test Isolation**: Ensured all tests use mocks to avoid real external calls (API, filesystem, git commands)
+  - **Package Version Compatibility**: Downgraded `string-width` to version 6.0.0 for better compatibility
+
+### Technical Details
+
+- **CI/CD Enhancements**:
+
+  - **Dependency Installation**: Removed conditional cache-based installation that was preventing proper dependency resolution
+  - **Package Verification**: Added steps to verify package installation and detect missing dependencies
+  - **Cross-Platform Paths**: Updated path validation regex to accept both Windows (`C:\`) and Unix (`/`) paths
+  - **Filesystem Mocking**: Enhanced test mocks to prevent real filesystem operations during testing
+  - **Error Recovery**: Implemented fallback strategies for dependency installation failures
+
 - **Comprehensive Logging Refactoring**: Complete logging system overhaul with consistent emoji handling
   - Extended Logger class with 15+ specialized methods for different use cases (version, increment, changelog, tag, rocket, package, memo, hammer, test, nail, magnifier, label, floppy, folder, house)
   - Added static proxy methods for backward compatibility
