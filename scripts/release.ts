@@ -199,7 +199,7 @@ async function main() {
     process.exit(1);
   }
 
-  Logger.group(`Release type: ${versionType}`, async () => {
+  await Logger.group(`Release type: ${versionType}`, async () => {
     // Check if we're on main branch
     const currentBranch = getCurrentBranch();
     Logger.info(`Current branch: ${currentBranch}`);

@@ -109,17 +109,22 @@ export class Logger implements ILogger {
     }
   }
 
-  group(label: string, fn: () => void | Promise<void>): void {
+  async group(label: string, fn: () => void | Promise<void>): Promise<void> {
     if (this.verbose) {
       console.group(`${EMOJIS.GROUP} ${label}`);
-      const result = fn();
-      if (result instanceof Promise) {
-        result.finally(() => console.groupEnd());
-      } else {
+      try {
+        const result = fn();
+        if (result instanceof Promise) {
+          await result;
+        }
+      } finally {
         console.groupEnd();
       }
     } else {
-      fn();
+      const result = fn();
+      if (result instanceof Promise) {
+        await result;
+      }
     }
   }
 
@@ -286,8 +291,8 @@ export class Logger implements ILogger {
   static table(data: Record<string, unknown>[]): void {
     Logger.getDefault().table(data);
   }
-  static group(label: string, fn: () => void | Promise<void>): void {
-    Logger.getDefault().group(label, fn);
+  static async group(label: string, fn: () => void | Promise<void>): Promise<void> {
+    await Logger.getDefault().group(label, fn);
   }
   static time(label: string): void {
     Logger.getDefault().time(label);
