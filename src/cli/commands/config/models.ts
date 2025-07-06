@@ -49,9 +49,9 @@ export const registerModelsCommands = (configCommand: Command) => {
         await configManager.saveConfig({ models }, options.type as 'user' | 'local');
 
         Logger.success(`Model '${name}' added successfully`);
-        Logger.info(`  Provider: ${provider}`);
-        Logger.info(`  Model: ${model}`);
-        Logger.info(`  Roles: ${roles.join(', ')}`);
+        Logger.plain(`  Provider: ${provider}`);
+        Logger.plain(`  Model: ${model}`);
+        Logger.plain(`  Roles: ${roles.join(', ')}`);
       } catch (error) {
         Logger.error('Failed to add model:', error);
         process.exit(1);

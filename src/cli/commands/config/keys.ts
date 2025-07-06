@@ -42,11 +42,11 @@ export const registerKeysCommands = (configCommand: Command, configManager?: ICo
               example?: string;
             }) => {
               Logger.group(keyInfo.key, () => {
-                Logger.text(`Description: ${keyInfo.description}`);
-                Logger.text(`Type: ${keyInfo.type}`);
-                Logger.text(`Default: ${JSON.stringify(keyInfo.default)}`);
+                Logger.plain(`Description: ${keyInfo.description}`);
+                Logger.plain(`Type: ${keyInfo.type}`);
+                Logger.plain(`Default: ${JSON.stringify(keyInfo.default)}`);
                 if (keyInfo.example) {
-                  Logger.text(`Example: ${keyInfo.example}`);
+                  Logger.plain(`Example: ${keyInfo.example}`);
                 }
               });
             },
@@ -61,15 +61,15 @@ export const registerKeysCommands = (configCommand: Command, configManager?: ICo
               default: unknown;
               example?: string;
             }) => {
-              Logger.text(`${keyInfo.key.padEnd(25)} - ${keyInfo.description}`);
+              Logger.plain(`${keyInfo.key.padEnd(25)} - ${keyInfo.description}`);
             },
           );
         }
 
-        Logger.text('');
-        Logger.text('Usage: ollama-git-commit config set <key> <value>');
-        Logger.text('Example: ollama-git-commit config set model llama3');
-        Logger.text('Example: ollama-git-commit config set timeouts.connection 5000');
+        Logger.plain('');
+        Logger.plain('Usage: ollama-git-commit config set <key> <value>');
+        Logger.plain('Example: ollama-git-commit config set model llama3');
+        Logger.plain('Example: ollama-git-commit config set timeouts.connection 5000');
       } catch (error) {
         Logger.error('Failed to list configuration keys:', error);
         process.exit(1);

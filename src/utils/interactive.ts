@@ -29,12 +29,12 @@ export class InteractivePromptDI {
       throw new Error('Process object not available');
     }
 
-    logger.info(message);
+    logger.plain(message);
     choices.forEach(choice => {
       const isDefault = choice.key === defaultChoice ? ' (default)' : '';
-      logger.info(`   [${choice.key}] ${choice.description}${isDefault}`);
+      logger.plain(`   [${choice.key}] ${choice.description}${isDefault}`);
     });
-    logger.info('');
+    logger.plain('');
     return new Promise((resolve, reject) => {
       const globalTimeout = (setTimeoutFn || setTimeout)(() => {
         this.cleanup();
@@ -75,6 +75,7 @@ export class InteractivePromptDI {
   private isBunRuntime(processObj?: typeof process): boolean {
     return typeof processObj !== 'undefined' && processObj.versions?.bun !== undefined;
   }
+  // QUESTION: can we make a considate the handelBunInput, handleNodeInput into one function that just takes isBunRuntime instead of having two functions that are almost identical?
   private handleBunInput(
     choices: { key: string; description: string }[],
     defaultChoice: string | undefined,
@@ -106,8 +107,6 @@ export class InteractivePromptDI {
             const input = data.toString().trim().toLowerCase();
             processObj.stdin.setRawMode(false);
             processObj.stdin.pause();
-
-            logger.info(input); // Echo the choice
 
             this.handleChoice(input || defaultChoice || '', choices, resolve, askQuestion, logger);
           });
@@ -178,8 +177,6 @@ export class InteractivePromptDI {
         processObj.stdin.removeListener('data', onData);
         processObj.stdin.removeListener('error', onError);
 
-        logger.info(choice); // Echo the choice
-
         this.handleChoice(choice || defaultChoice || '', choices, resolve, askQuestion, logger);
       };
 
@@ -214,11 +211,11 @@ export class InteractivePromptDI {
       if (hasDefault) {
         resolve(choice);
       } else {
-        logger.info(`Please choose one of: ${choices.map(c => c.key).join(', ')}`);
+        logger.plain(`Please choose one of: ${choices.map(c => c.key).join(', ')}`);
         (this.deps.setTimeoutFn || setTimeout)(askQuestion, 100); // Small delay to prevent rapid loops
       }
     } else {
-      logger.info(`Please choose one of: ${choices.map(c => c.key).join(', ')}`);
+      logger.plain(`Please choose one of: ${choices.map(c => c.key).join(', ')}`);
       (this.deps.setTimeoutFn || setTimeout)(askQuestion, 100); // Small delay to prevent rapid loops
     }
   }
@@ -265,6 +262,7 @@ process.on('SIGTERM', () => {
   process.exit(0);
 });
 
+// Question: can we consolidate the askYesNoDI, askCommitActionDI into one function that just takes autoCommit as a boolean and interactivePromptDI as a dependency, and then builds the choices dynamically?
 /**
  * Prompts the user with a yes/no question and returns their choice.
  *
@@ -327,7 +325,9 @@ export async function askCommitActionDI(
             ? 'Use this message and commit changes'
             : 'Use this message and copy commit command',
         },
+        // TODO: hide option c if autoCommitm or not interactive
         { key: 'c', description: 'Copy message to clipboard (if available)' },
+        // TODO: hide if not interactive prompt
         { key: 'r', description: 'Regenerate message' },
         { key: 'n', description: 'Cancel' },
       ],
@@ -337,6 +337,7 @@ export async function askCommitActionDI(
     switch (choice) {
       case 'y':
         return 'use';
+      // TODO: hide option c if autoCommit
       case 'c':
         return 'copy';
       case 'r':
@@ -354,6 +355,7 @@ export async function askCommitActionDI(
 
 // Default exports using real dependencies
 export const InteractivePrompt = defaultInteractivePrompt;
+// QUESTION consilidate these maybe since they are similar then build the choices dynamically?
 export const askYesNo = async (message: string, defaultChoice: 'y' | 'n' = 'n') =>
   askYesNoDI(message, defaultChoice);
 export const askCommitAction = async (autoCommit = false) => askCommitActionDI(autoCommit);

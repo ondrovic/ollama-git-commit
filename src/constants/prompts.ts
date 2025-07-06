@@ -31,6 +31,7 @@ Group related changes together. For example:
   - Fixed typo in installation guide
 - src/core/config.ts: Improved error handling
 - test/config.test.ts: Added new test cases
+- **Only if there are version changes, include the version changes in the commit message**
 - package.json: Bumped version from 1.0.1 to 1.0.2
 
 What you write will be passed directly to git commit -m "[message]"`,
@@ -127,6 +128,7 @@ Tests:
 - test/config.test.ts: Added new test cases
 - test/ollama.test.ts: Enhanced connection tests
 
+- **If a 'Version Changes' section is present in the context, you MUST include each line from it verbatim in your commit message**
 Version management:
 - package.json: Bumped version from 1.0.1 to 1.0.2
 - package-lock.json: Updated version to match package.json

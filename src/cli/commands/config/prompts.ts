@@ -29,6 +29,7 @@ function validateTemplateName(
   process.exit(1);
 }
 
+// TODO: refactor from list-prompt-templates to prompts, then subcommand the commands like list use models as example
 export const registerPromptsCommands = (configCommand: Command) => {
   configCommand
     .command('list-prompt-templates')
@@ -49,6 +50,7 @@ export const registerPromptsCommands = (configCommand: Command) => {
 
         const templates = promptService.getPromptTemplates();
 
+        // TODO: this only displays when verbose is true, should display all the time
         if (options.name) {
           // Show specific template contents
           const templateName = options.name.toLowerCase();
@@ -60,7 +62,7 @@ export const registerPromptsCommands = (configCommand: Command) => {
           // Additional safety check
           if (!templateContent) {
             logger.error(`Template content for '${validatedTemplateName}' is undefined.`);
-            logger.info(`Available templates: ${Object.keys(templates).join(', ')}`);
+            logger.plain(`Available templates: ${Object.keys(templates).join(', ')}`);
             process.exit(1);
           }
 
@@ -71,7 +73,7 @@ export const registerPromptsCommands = (configCommand: Command) => {
                 '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━',
             },
           ]);
-          logger.info(templateContent);
+          logger.plain(templateContent);
         } else {
           // List all templates
           logger.table([
@@ -85,19 +87,13 @@ export const registerPromptsCommands = (configCommand: Command) => {
           Object.keys(templates).forEach(templateName => {
             const content = templates[templateName];
             if (content) {
-              const lineCount = content.split('\n').length;
-              const charCount = content.length;
               logger.group(templateName, () => {
-                logger.info(`Lines: ${lineCount}, Characters: ${charCount}`);
-                logger.info(
+                logger.plain(
                   `Usage: ollama-git-commit config list-prompt-templates -n ${templateName}`,
                 );
               });
             }
           });
-
-          logger.info('');
-          logger.info('Use -n <template> to view specific template contents');
         }
       } catch (error) {
         logger.error('Failed to list prompt templates:', error);

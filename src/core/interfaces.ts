@@ -96,6 +96,11 @@ export interface ILogger {
   settings(message: string, ...args: unknown[]): void;
   current(message: string, ...args: unknown[]): void;
   tableInfo(message: string, ...args: unknown[]): void;
+  clock(message: string, ...args: unknown[]): void;
+  celebrate(message: string, ...args: unknown[]): void;
+  question(message: string, ...args: unknown[]): void;
+  retry(message: string, ...args: unknown[]): void;
+  up(message: string, ...args: unknown[]): void;
 }
 
 /**

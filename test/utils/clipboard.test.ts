@@ -140,7 +140,7 @@ describe('copyToClipboardDI', () => {
     });
 
     await copyToClipboardDI('test text', mockSpawn, mockLogger);
-    expect(mockLogger.debug).toHaveBeenCalledWith(expect.stringContaining('Exception with pbcopy'));
+    expect(mockLogger.error).toHaveBeenCalledWith(expect.stringContaining('Exception with pbcopy'));
     expect(mockLogger.error).toHaveBeenCalledWith(
       expect.stringContaining('No clipboard tool found'),
     );

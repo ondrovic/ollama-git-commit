@@ -59,6 +59,7 @@ The project uses GitHub Actions for automated testing and publishing:
 - **Cross-Platform Compatibility**: Tests run on Windows, macOS, and Linux
 - **Dependency Management**: Robust handling of package dependencies with fallback strategies
 - **Test Isolation**: All tests use mocks to avoid real external calls
+- **Test Safety**: Eliminated dangerous global prototype modifications that could cause unpredictable test failures
 - **Automated Publishing**: Releases are automatically published to NPM when tags are pushed
 
 The CI/CD workflows are defined in `.github/workflows/` and include comprehensive dependency verification and error recovery strategies.
@@ -183,6 +184,10 @@ ollama-git-commit/
 - **Dependency Injection**: Use the ServiceFactory for creating services in tests to ensure consistency with production code
 - **Filesystem Mocking**: Always mock filesystem operations to prevent real file creation during tests
 - **Path Validation**: Use cross-platform path validation that works on both Windows and Unix systems
+- **Global State Protection**: Never modify global prototypes (like `String.prototype`) in tests
+  - Use isolated mocking approaches instead of global modifications
+  - Create test-specific functions that simulate edge cases without affecting global state
+  - Ensure tests don't interfere with each other by maintaining clean global state
 
 ### Git Commit Messages
 

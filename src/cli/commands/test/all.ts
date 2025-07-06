@@ -27,12 +27,12 @@ export const registerAllTestCommand = (testCommand: Command) => {
           verbose: options.verbose,
         });
 
-        Logger.info('🧪 Running all tests...');
+        Logger.test('Running all tests...');
 
         // Test connection
         const connectionSuccess = await ollamaService.testConnection(options.host, options.verbose);
         if (!connectionSuccess) {
-          Logger.error('❌ Connection test failed');
+          Logger.error('Connection test failed');
           process.exit(1);
         }
         Logger.success('Connection test passed');
@@ -40,7 +40,7 @@ export const registerAllTestCommand = (testCommand: Command) => {
         // Test model availability
         const modelSuccess = await ollamaService.isModelAvailable(options.host, modelToTest);
         if (!modelSuccess) {
-          Logger.error('❌ Model availability test failed');
+          Logger.error('Model availability test failed');
           process.exit(1);
         }
         Logger.success('Model availability test passed');
@@ -55,7 +55,7 @@ export const registerAllTestCommand = (testCommand: Command) => {
         );
         Logger.success('Simple prompt test passed');
 
-        Logger.success('🎉 All tests passed!');
+        Logger.celebrate('All tests passed!');
       } catch (error) {
         Logger.error('All tests failed:', error);
         process.exit(1);

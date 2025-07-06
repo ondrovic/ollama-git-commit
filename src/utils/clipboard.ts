@@ -55,7 +55,7 @@ export async function copyToClipboardDI(
         return;
       }
     } catch (error) {
-      Logger.debug(`Failed to use ${tool.cmd}: ${error}`);
+      Logger.error(`Failed to use ${tool.cmd}: ${error}`);
       continue;
     }
   }
@@ -110,7 +110,7 @@ export async function tryClipboardToolDI(
       proc.stdin.write(text);
       proc.stdin.end();
     } catch (error) {
-      Logger.debug(`Exception with ${tool.cmd}: ${error}`);
+      Logger.error(`Exception with ${tool.cmd}: ${error}`);
       resolve(false);
     }
   });

@@ -276,7 +276,7 @@ export class ConfigManager implements IConfigManager {
     try {
       await this.fs.ensureDir(dirname(this.defaultConfigFile));
       await this.fs.writeJson(this.defaultConfigFile, this.getDefaults(), { spaces: 2 });
-      this.logger.info(`✅ Configuration file created at: ${this.defaultConfigFile}`);
+      this.logger.success(`Configuration file created at: ${this.defaultConfigFile}`);
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       throw new Error(`Failed to create default config: ${message}`);
@@ -664,7 +664,7 @@ export class ConfigManager implements IConfigManager {
       const configFile = _type === 'local' ? this.localConfigFile : this.defaultConfigFile;
       await this.fs.ensureDir(dirname(configFile));
       await this.fs.writeJson(configFile, this.config, { spaces: 2 });
-      this.logger.info(`✅ Configuration saved to ${configFile}`);
+      this.logger.success(`Configuration saved to ${configFile}`);
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       throw new Error(`Failed to save config: ${message}`);
@@ -677,7 +677,7 @@ export class ConfigManager implements IConfigManager {
       const exists = await this.fs.pathExists(configFile);
       if (exists) {
         await this.fs.remove(configFile);
-        this.logger.info(`✅ Configuration removed from ${configFile}`);
+        this.logger.success(`Configuration removed from ${configFile}`);
       } else {
         this.logger.info(`Configuration file ${configFile} does not exist`);
       }

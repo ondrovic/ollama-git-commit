@@ -53,7 +53,7 @@ export class Logger implements ILogger {
 
   debug(message: string, ...args: LogArgs): void {
     if (this.debugMode) {
-      console.log(`🐛 ${message}`, ...args);
+      console.log(`${EMOJIS.DEBUG} ${message}`, ...args);
     }
   }
 
@@ -111,7 +111,7 @@ export class Logger implements ILogger {
 
   group(label: string, fn: () => void): void {
     if (this.verbose) {
-      console.group(`📋 ${label}`);
+      console.group(`${EMOJIS.GROUP} ${label}`);
       fn();
       console.groupEnd();
     } else {
@@ -199,6 +199,26 @@ export class Logger implements ILogger {
 
   tableInfo(message: string, ...args: LogArgs): void {
     console.log(`${EMOJIS.TABLE} ${message}`, ...args);
+  }
+
+  clock(message: string, ...args: LogArgs): void {
+    console.log(`${EMOJIS.CLOCK} ${message}`, ...args);
+  }
+
+  celebrate(message: string, ...args: LogArgs): void {
+    console.log(`${EMOJIS.CELEBRATE} ${message}`, ...args);
+  }
+
+  question(message: string, ...args: LogArgs): void {
+    console.log(`${EMOJIS.QUESTION} ${message}`, ...args);
+  }
+
+  retry(message: string, ...args: LogArgs): void {
+    console.log(`${EMOJIS.RETRY} ${message}`, ...args);
+  }
+
+  up(message: string, ...args: LogArgs): void {
+    console.log(`${EMOJIS.UP} ${message}`, ...args);
   }
 
   // Box utility methods
@@ -322,7 +342,21 @@ export class Logger implements ILogger {
   static tableInfo(message: string, ...args: LogArgs): void {
     Logger.getDefault().tableInfo(message, ...args);
   }
-
+  static clock(message: string, ...args: LogArgs): void {
+    Logger.getDefault().clock(message, ...args);
+  }
+  static celebrate(message: string, ...args: LogArgs): void {
+    Logger.getDefault().celebrate(message, ...args);
+  }
+  static question(message: string, ...args: LogArgs): void {
+    Logger.getDefault().question(message, ...args);
+  }
+  static retry(message: string, ...args: LogArgs): void {
+    Logger.getDefault().retry(message, ...args);
+  }
+  static up(message: string, ...args: LogArgs): void {
+    Logger.getDefault().up(message, ...args);
+  }
   // Static box utility methods
   static box(content: string | string[], options?: BoxOptions): void {
     Logger.getDefault().box(content, options);

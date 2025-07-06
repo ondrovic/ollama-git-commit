@@ -22,10 +22,10 @@ export const registerSetCommands = (configCommand: Command, configManager?: ICon
             const suggestions = findSimilarKeys(key, validKeys);
             Logger.error(`Invalid configuration key: "${key}"`);
             if (suggestions.length > 0) {
-              Logger.info('Did you mean one of these?');
-              suggestions.forEach(suggestion => Logger.info(`   ${suggestion}`));
+              Logger.question('Did you mean one of these?');
+              suggestions.forEach(suggestion => Logger.plain(`   ${suggestion}`));
             }
-            Logger.info("Run 'ollama-git-commit config keys' to see all available keys.");
+            Logger.plain("Run 'ollama-git-commit config keys' to see all available keys.");
             process.exit(1);
           }
 
@@ -55,8 +55,8 @@ export const registerSetCommands = (configCommand: Command, configManager?: ICon
           }
 
           // Show the updated configuration
-          Logger.text('');
-          Logger.text('Updated configuration:');
+          Logger.plain('');
+          Logger.plain('Updated configuration:');
           const updatedConfig = await manager.getConfig();
           const sourceInfo = await manager.getConfigSources();
 
@@ -153,8 +153,12 @@ export function displayUpdatedKey(
     }
   }
 
-  const source = typeof currentSource === 'string' ? currentSource : 'unknown';
-  Logger.info(`  ${key}: ${JSON.stringify(currentValue)} (from ${source})`);
+  // Log the updated key and value, including the config source if available
+  if (typeof currentSource === 'string') {
+    Logger.plain(`  ${key}: ${JSON.stringify(currentValue)} (from ${currentSource})`);
+  } else {
+    Logger.plain(`  ${key}: ${JSON.stringify(currentValue)}`);
+  }
 }
 
 /**

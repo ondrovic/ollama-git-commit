@@ -25,4 +25,9 @@ export const EMOJIS = {
   TAG: '🏷️',
   SETTINGS: '⚙️',
   CURRENT: '⭐',
+  CLOCK: '⏰',
+  CELEBRATE: '🎉',
+  QUESTION: '❓',
+  RETRY: '🔁',
+  UP: '⬆️',
 } as const;

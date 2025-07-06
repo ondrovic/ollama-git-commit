@@ -27,7 +27,7 @@ const defaultTimer: ITimer = {
   setInterval: (callback: () => void, ms: number) => setInterval(callback, ms),
   clearInterval: (id: NodeJS.Timeout) => clearInterval(id),
 };
-
+// QUESTION: should this be using ILogger
 const defaultLogger: ILogger = {
   info: (message: string) => Logger.info(message),
   success: (message: string) => Logger.success(message),
@@ -45,6 +45,7 @@ export class Spinner {
   constructor(
     private processOutput: IProcessOutput = defaultProcessOutput,
     private timer: ITimer = defaultTimer,
+    // QUESTION: should this be using ILogger
     private logger: ILogger = defaultLogger,
   ) {}
 

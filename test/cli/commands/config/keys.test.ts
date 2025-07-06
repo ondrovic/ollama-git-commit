@@ -6,25 +6,36 @@ import { MockedConfigManager } from '../../../mocks/MockedConfigManager';
 
 let loggerTableCalls: any[] = [];
 let loggerGroupCalls: any[] = [];
-let loggerTextCalls: any[] = [];
+let loggerPlainCalls: any[] = [];
 let loggerErrorCalls: any[] = [];
 let processExitCalled = false;
 
 function mockLogger() {
-  Logger.table = (...args: any[]) => { loggerTableCalls.push(args); };
-  Logger.group = (...args: any[]) => { loggerGroupCalls.push(args); if (args[1]) args[1](); };
-  Logger.text = (...args: any[]) => { loggerTextCalls.push(args); };
-  Logger.error = (...args: any[]) => { loggerErrorCalls.push(args); };
+  Logger.table = (...args: any[]) => {
+    loggerTableCalls.push(args);
+  };
+  Logger.group = (...args: any[]) => {
+    loggerGroupCalls.push(args);
+    if (args[1]) args[1]();
+  };
+  Logger.plain = (...args: any[]) => {
+    loggerPlainCalls.push(args);
+  };
+  Logger.error = (...args: any[]) => {
+    loggerErrorCalls.push(args);
+  };
 }
 
 function mockProcessExit() {
-  (process as any).exit = () => { processExitCalled = true; };
+  (process as any).exit = () => {
+    processExitCalled = true;
+  };
 }
 
 beforeEach(() => {
   loggerTableCalls = [];
   loggerGroupCalls = [];
-  loggerTextCalls = [];
+  loggerPlainCalls = [];
   loggerErrorCalls = [];
   processExitCalled = false;
   mockLogger();
@@ -38,9 +49,13 @@ describe('registerKeysCommands', () => {
     registerKeysCommands(program, mockConfigManager);
     await program.parseAsync(['node', 'config', 'keys']);
     expect(loggerTableCalls.length).toBe(1);
-    expect(loggerTextCalls.some(call => call[0].includes('model'))).toBe(true);
-    expect(loggerTextCalls.some(call => call[0] === 'Usage: ollama-git-commit config set <key> <value>')).toBe(true);
-    expect(loggerTextCalls.some(call => call[0] === '')).toBe(true);
+    expect(loggerPlainCalls.some(call => call[0].includes('model'))).toBe(true);
+    expect(
+      loggerPlainCalls.some(
+        call => call[0] === 'Usage: ollama-git-commit config set <key> <value>',
+      ),
+    ).toBe(true);
+    expect(loggerPlainCalls.some(call => call[0] === '')).toBe(true);
     expect(loggerGroupCalls.length).toBe(0);
     expect(loggerErrorCalls.length).toBe(0);
     expect(processExitCalled).toBe(false);
@@ -53,9 +68,13 @@ describe('registerKeysCommands', () => {
     await program.parseAsync(['node', 'config', 'keys', '--verbose']);
     expect(loggerTableCalls.length).toBe(1);
     expect(loggerGroupCalls.length).toBeGreaterThan(0);
-    expect(loggerTextCalls.some(call => call[0].includes('Description:'))).toBe(true);
-    expect(loggerTextCalls.some(call => call[0] === 'Usage: ollama-git-commit config set <key> <value>')).toBe(true);
-    expect(loggerTextCalls.some(call => call[0] === '')).toBe(true);
+    expect(loggerPlainCalls.some(call => call[0].includes('Description:'))).toBe(true);
+    expect(
+      loggerPlainCalls.some(
+        call => call[0] === 'Usage: ollama-git-commit config set <key> <value>',
+      ),
+    ).toBe(true);
+    expect(loggerPlainCalls.some(call => call[0] === '')).toBe(true);
     expect(loggerErrorCalls.length).toBe(0);
     expect(processExitCalled).toBe(false);
   });
@@ -64,7 +83,9 @@ describe('registerKeysCommands', () => {
     // Create a mock config manager that throws when getConfigKeys is called
     const mockConfigManager = new MockedConfigManager(Logger);
     const originalGetConfigKeys = mockConfigManager.getConfigKeys.bind(mockConfigManager);
-    mockConfigManager.getConfigKeys = async () => { throw new Error('fail'); };
+    mockConfigManager.getConfigKeys = async () => {
+      throw new Error('fail');
+    };
 
     const program = new Command();
     registerKeysCommands(program, mockConfigManager);
@@ -86,4 +107,4 @@ describe('getConfigKeys', () => {
       expect(key).toHaveProperty('default');
     }
   });
-}); 
+});

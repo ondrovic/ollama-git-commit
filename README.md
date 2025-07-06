@@ -20,6 +20,7 @@ This project uses **GitHub Actions** for automated testing and NPM publishing wi
 - **Dependency management**: Robust handling of package dependencies with fallback strategies
 - **Comprehensive test coverage** for all features including context providers and embeddings
 - **Isolated testing**: All tests use mocks to avoid real external calls (API, filesystem, git commands)
+- **Test safety**: Eliminated dangerous global prototype modifications that could cause unpredictable test failures
 
 ### Automated NPM Publishing
 

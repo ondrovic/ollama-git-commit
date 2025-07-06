@@ -6,6 +6,7 @@ const mockLogger = {
   info: mock(() => {}),
   warn: mock(() => {}),
   debug: mock(() => {}),
+  plain: mock(() => {}),
 };
 
 const mockProcess = {
@@ -180,7 +181,7 @@ describe('InteractivePrompt', () => {
 
     prompt['handleChoice']('z', choices, resolve, askQuestion, mockLogger);
 
-    expect(mockLogger.info).toHaveBeenCalledWith('Please choose one of: y, n');
+    expect(mockLogger.plain).toHaveBeenCalledWith('Please choose one of: y, n');
     expect(mockGlobalSetTimeout).toHaveBeenCalled();
     expect(resolve).not.toHaveBeenCalled();
 
@@ -211,7 +212,7 @@ describe('InteractivePrompt', () => {
 
     prompt['handleChoice']('', choices, resolve, askQuestion, mockLogger);
 
-    expect(mockLogger.info).toHaveBeenCalledWith('Please choose one of: y, n');
+    expect(mockLogger.plain).toHaveBeenCalledWith('Please choose one of: y, n');
     expect(mockGlobalSetTimeout).toHaveBeenCalled();
     expect(resolve).not.toHaveBeenCalled();
 
@@ -284,10 +285,10 @@ describe('InteractivePrompt', () => {
     // Let the timeout fire
     await new Promise(resolve => setTimeout(resolve, 10));
 
-    expect(mockLogger.info).toHaveBeenCalledWith('Test?');
-    expect(mockLogger.info).toHaveBeenCalledWith('   [y] Yes (default)');
-    expect(mockLogger.info).toHaveBeenCalledWith('   [n] No');
-    expect(mockLogger.info).toHaveBeenCalledWith('');
+    expect(mockLogger.plain).toHaveBeenCalledWith('Test?');
+    expect(mockLogger.plain).toHaveBeenCalledWith('   [y] Yes (default)');
+    expect(mockLogger.plain).toHaveBeenCalledWith('   [n] No');
+    expect(mockLogger.plain).toHaveBeenCalledWith('');
   });
 
   it('should test prompt method with cleanup functions', async () => {

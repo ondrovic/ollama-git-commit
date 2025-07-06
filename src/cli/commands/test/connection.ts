@@ -20,7 +20,7 @@ export const registerConnectionTestCommand = (testCommand: Command) => {
         if (success) {
           Logger.success('Connection test passed');
         } else {
-          Logger.error('❌ Connection test failed');
+          Logger.error('Connection test failed');
           process.exit(1);
         }
       } catch (error) {
