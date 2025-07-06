@@ -666,7 +666,7 @@ describe('askCommitActionDI', () => {
     );
 
     const result = await interactive.askCommitActionDI(false, deps);
-    expect(result).toBe('use');
+    expect(result).toBe('cancel');
 
     interactive.InteractivePromptDI.prototype.prompt = originalPrompt;
   });

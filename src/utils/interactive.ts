@@ -366,36 +366,40 @@ export async function askCommitActionDI(
 
   choices.push({ key: 'n', description: 'Cancel' });
 
-  return askQuestionDI(
-    'Available actions:',
-    choices,
-    'y',
-    (choice: string) => {
-      switch (choice) {
-        case 'y':
-          return 'use';
-        case 'c':
-          // Only allow copy if not autoCommit and clipboard is available
-          if (!autoCommit && hasClipboard) {
-            return 'copy';
-          }
-          // Fall through to cancel if conditions not met
-          return 'cancel';
-        case 'r':
-          // Only allow regenerate if interactive
-          if (isInteractive) {
-            return 'regenerate';
-          }
-          // Fall through to cancel if conditions not met
-          return 'cancel';
-        case 'n':
-          return 'cancel';
-        default:
-          return 'cancel';
-      }
-    },
-    deps,
-  );
+  try {
+    const choice = await new InteractivePromptDI(deps).prompt({
+      message: 'Available actions:',
+      choices,
+      defaultChoice: 'y',
+    });
+
+    switch (choice) {
+      case 'y':
+        return 'use';
+      case 'c':
+        // Only allow copy if not autoCommit and clipboard is available
+        if (!autoCommit && hasClipboard) {
+          return 'copy';
+        }
+        // Fall through to cancel if conditions not met
+        return 'cancel';
+      case 'r':
+        // Only allow regenerate if interactive
+        if (isInteractive) {
+          return 'regenerate';
+        }
+        // Fall through to cancel if conditions not met
+        return 'cancel';
+      case 'n':
+        return 'cancel';
+      default:
+        return 'cancel';
+    }
+  } catch (error) {
+    deps.logger.debug('askCommitAction error:', error);
+    // Return cancel on error to prevent unintended actions
+    return 'cancel';
+  }
 }
 
 // Default exports using real dependencies
