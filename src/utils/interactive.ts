@@ -1,4 +1,5 @@
 import { createInterface } from 'readline';
+import { hasClipboardSupport } from './clipboard';
 import { Logger } from './logger';
 
 interface PromptOptions {
@@ -52,32 +53,21 @@ export class InteractivePromptDI {
         this.cleanup();
         reject(error);
       };
-      if (this.isBunRuntime(processObj)) {
-        this.handleBunInput(
-          choices,
-          defaultChoice,
-          cleanupAndResolve,
-          cleanupAndReject,
-          processObj,
-          logger,
-        );
-      } else {
-        this.handleNodeInput(
-          choices,
-          defaultChoice,
-          cleanupAndResolve,
-          cleanupAndReject,
-          processObj,
-          logger,
-        );
-      }
+      this.handleInput(
+        choices,
+        defaultChoice,
+        cleanupAndResolve,
+        cleanupAndReject,
+        processObj,
+        logger,
+      );
     });
   }
   private isBunRuntime(processObj?: typeof process): boolean {
     return typeof processObj !== 'undefined' && processObj.versions?.bun !== undefined;
   }
-  // QUESTION: can we make a considate the handelBunInput, handleNodeInput into one function that just takes isBunRuntime instead of having two functions that are almost identical?
-  private handleBunInput(
+
+  private handleInput(
     choices: { key: string; description: string }[],
     defaultChoice: string | undefined,
     resolve: (value: string) => void,
@@ -85,6 +75,8 @@ export class InteractivePromptDI {
     processObj: typeof process,
     logger: typeof Logger,
   ): void {
+    const isBun = this.isBunRuntime(processObj);
+
     const askQuestion = async () => {
       if (!processObj) {
         reject(new Error('Process object not available'));
@@ -98,98 +90,83 @@ export class InteractivePromptDI {
       }
 
       try {
-        // For Bun, try to use readline-like functionality
-        if (processObj.stdin.isTTY) {
-          // Set raw mode for single character input
-          processObj.stdin.setRawMode(true);
+        if (isBun) {
+          // For Bun, try to use readline-like functionality
+          if (processObj.stdin.isTTY) {
+            // Set raw mode for single character input
+            processObj.stdin.setRawMode(true);
+            processObj.stdin.resume();
+
+            processObj.stdin.once('data', data => {
+              const input = data.toString().trim().toLowerCase();
+              processObj.stdin.setRawMode(false);
+              processObj.stdin.pause();
+
+              this.handleChoice(
+                input || defaultChoice || '',
+                choices,
+                resolve,
+                askQuestion,
+                logger,
+              );
+            });
+
+            processObj.stdin.once('error', error => {
+              processObj.stdin.setRawMode(false);
+              processObj.stdin.pause();
+              reject(error);
+            });
+          } else {
+            // Fallback for non-TTY environments
+            const rl = createInterface({
+              input: processObj.stdin,
+              output: processObj.stdout,
+            });
+
+            rl.question('', (answer: string) => {
+              rl.close();
+              const input = answer.trim().toLowerCase() || defaultChoice || '';
+              this.handleChoice(input, choices, resolve, askQuestion, logger);
+            });
+          }
+        } else {
+          // Node.js implementation
+          // Only set raw mode if it's not already enabled and stdin supports it
+          if (!this.isRawModeEnabled && processObj.stdin.setRawMode && processObj.stdin.isTTY) {
+            try {
+              processObj.stdin.setRawMode(true);
+              this.isRawModeEnabled = true;
+            } catch (error) {
+              logger.debug('Failed to set raw mode:', error);
+            }
+          }
+
           processObj.stdin.resume();
 
-          processObj.stdin.once('data', data => {
-            const input = data.toString().trim().toLowerCase();
-            processObj.stdin.setRawMode(false);
-            processObj.stdin.pause();
+          const onData = (data: Buffer) => {
+            const choice = data.toString().toLowerCase().trim();
 
-            this.handleChoice(input || defaultChoice || '', choices, resolve, askQuestion, logger);
-          });
+            // Clean up listeners first
+            processObj.stdin.removeListener('data', onData);
+            processObj.stdin.removeListener('error', onError);
 
-          processObj.stdin.once('error', error => {
-            processObj.stdin.setRawMode(false);
-            processObj.stdin.pause();
+            this.handleChoice(choice || defaultChoice || '', choices, resolve, askQuestion, logger);
+          };
+
+          const onError = (error: Error) => {
+            logger.debug('Stdin error:', error);
+            processObj.stdin.removeListener('data', onData);
+            processObj.stdin.removeListener('error', onError);
             reject(error);
-          });
-        } else {
-          // Fallback for non-TTY environments
-          const rl = createInterface({
-            input: processObj.stdin,
-            output: processObj.stdout,
-          });
+          };
 
-          rl.question('', (answer: string) => {
-            rl.close();
-            const input = answer.trim().toLowerCase() || defaultChoice || '';
-            this.handleChoice(input, choices, resolve, askQuestion, logger);
-          });
+          processObj.stdin.once('data', onData);
+          processObj.stdin.once('error', onError);
         }
       } catch (error) {
-        logger.debug('Bun input error:', error);
+        logger.debug(`${isBun ? 'Bun' : 'Node'} input error:`, error);
         reject(error as Error);
       }
-    };
-
-    askQuestion();
-  }
-
-  private handleNodeInput(
-    choices: { key: string; description: string }[],
-    defaultChoice: string | undefined,
-    resolve: (value: string) => void,
-    reject: (error: Error) => void,
-    processObj: typeof process,
-    logger: typeof Logger,
-  ): void {
-    const askQuestion = () => {
-      if (!processObj) {
-        reject(new Error('Process object not available'));
-        return;
-      }
-
-      processObj.stdout.write('What would you like to do? ');
-
-      if (defaultChoice) {
-        processObj.stdout.write(`[${defaultChoice}]: `);
-      }
-
-      // Only set raw mode if it's not already enabled and stdin supports it
-      if (!this.isRawModeEnabled && processObj.stdin.setRawMode && processObj.stdin.isTTY) {
-        try {
-          processObj.stdin.setRawMode(true);
-          this.isRawModeEnabled = true;
-        } catch (error) {
-          logger.debug('Failed to set raw mode:', error);
-        }
-      }
-
-      processObj.stdin.resume();
-
-      const onData = (data: Buffer) => {
-        const choice = data.toString().toLowerCase().trim();
-
-        // Clean up listeners first
-        processObj.stdin.removeListener('data', onData);
-        processObj.stdin.removeListener('error', onError);
-
-        this.handleChoice(choice || defaultChoice || '', choices, resolve, askQuestion, logger);
-      };
-
-      const onError = (error: Error) => {
-        logger.debug('Stdin error:', error);
-        processObj.stdin.removeListener('data', onData);
-        processObj.stdin.removeListener('error', onError);
-        reject(error);
-      };
-
-      processObj.stdin.once('data', onData);
-      processObj.stdin.once('error', onError);
     };
 
     askQuestion();
@@ -205,6 +182,8 @@ export class InteractivePromptDI {
     const validChoice = choices.find(c => c.key === choice);
 
     if (validChoice) {
+      // Echo the choice back to the user
+      logger.plain(` ${choice} `);
       // Add a newline after user input to separate from subsequent logger messages
       if (this.deps.processObj?.stdout?.write) {
         this.deps.processObj.stdout.write('\n');
@@ -271,7 +250,41 @@ process.on('SIGTERM', () => {
   process.exit(0);
 });
 
-// Question: can we consolidate the askYesNoDI, askCommitActionDI into one function that just takes autoCommit as a boolean and interactivePromptDI as a dependency, and then builds the choices dynamically?
+/**
+ * Generic function to ask questions with custom choices and result mapping.
+ *
+ * @param message - The question to ask the user
+ * @param choices - Array of choice objects with key and description
+ * @param defaultChoice - The default choice if user doesn't provide input
+ * @param resultMapper - Function to map the choice to the desired return type
+ * @param deps - Dependencies for the interactive prompt
+ * @returns Promise resolving to the mapped result
+ */
+export async function askQuestionDI<T>(
+  message: string,
+  choices: { key: string; description: string }[],
+  defaultChoice: string,
+  resultMapper: (choice: string) => T,
+  deps: IInteractiveDeps = {
+    logger: Logger,
+    processObj: process,
+    setTimeoutFn: setTimeout,
+    clearTimeoutFn: clearTimeout,
+  },
+): Promise<T> {
+  try {
+    const choice = await new InteractivePromptDI(deps).prompt({
+      message,
+      choices,
+      defaultChoice,
+    });
+    return resultMapper(choice);
+  } catch (error) {
+    deps.logger.debug('askQuestion error:', error);
+    return resultMapper(defaultChoice);
+  }
+}
+
 /**
  * Prompts the user with a yes/no question and returns their choice.
  *
@@ -289,26 +302,30 @@ export async function askYesNoDI(
     clearTimeoutFn: clearTimeout,
   },
 ): Promise<boolean> {
-  try {
-    const choice = await new InteractivePromptDI(deps).prompt({
-      message,
-      choices: [
-        { key: 'y', description: 'Yes' },
-        { key: 'n', description: 'No' },
-      ],
-      defaultChoice,
-    });
-    return choice === 'y';
-  } catch (error) {
-    deps.logger.debug('askYesNo error:', error);
-    return defaultChoice === 'y';
-  }
+  return askQuestionDI(
+    message,
+    [
+      { key: 'y', description: 'Yes' },
+      { key: 'n', description: 'No' },
+    ],
+    defaultChoice,
+    (choice: string) => choice === 'y',
+    deps,
+  );
+}
+
+/**
+ * Checks if the current environment supports interactive prompts
+ */
+function isInteractiveEnvironment(processObj?: typeof process): boolean {
+  return processObj?.stdin?.isTTY === true;
 }
 
 /**
  * Prompts the user to choose an action for the commit message.
  *
  * @param autoCommit - Whether to include the option to commit changes
+ * @param deps - Dependencies for the interactive prompt
  * @returns Promise resolving to the chosen action:
  * - 'use': Use the message and copy commit command
  * - 'copy': Copy message to clipboard
@@ -324,33 +341,55 @@ export async function askCommitActionDI(
     clearTimeoutFn: clearTimeout,
   },
 ): Promise<'use' | 'copy' | 'regenerate' | 'cancel'> {
+  const isInteractive = isInteractiveEnvironment(deps.processObj);
+  const hasClipboard = await hasClipboardSupport();
+
+  // Build choices array conditionally
+  const choices: { key: string; description: string }[] = [
+    {
+      key: 'y',
+      description: autoCommit
+        ? 'Use this message and commit changes'
+        : 'Use this message and copy commit command',
+    },
+  ];
+
+  // Only show copy option if not autoCommit, interactive, and clipboard is available
+  if (!autoCommit && isInteractive && hasClipboard) {
+    choices.push({ key: 'c', description: 'Copy message to clipboard (if available)' });
+  }
+
+  // Only show regenerate option if interactive
+  if (isInteractive) {
+    choices.push({ key: 'r', description: 'Regenerate message' });
+  }
+
+  choices.push({ key: 'n', description: 'Cancel' });
+
   try {
     const choice = await new InteractivePromptDI(deps).prompt({
       message: 'Available actions:',
-      choices: [
-        {
-          key: 'y',
-          description: autoCommit
-            ? 'Use this message and commit changes'
-            : 'Use this message and copy commit command',
-        },
-        // TODO: hide option c if autoCommitm or not interactive
-        { key: 'c', description: 'Copy message to clipboard (if available)' },
-        // TODO: hide if not interactive prompt
-        { key: 'r', description: 'Regenerate message' },
-        { key: 'n', description: 'Cancel' },
-      ],
+      choices,
       defaultChoice: 'y',
     });
 
     switch (choice) {
       case 'y':
         return 'use';
-      // TODO: hide option c if autoCommit
       case 'c':
-        return 'copy';
+        // Only allow copy if not autoCommit and clipboard is available
+        if (!autoCommit && hasClipboard) {
+          return 'copy';
+        }
+        // Fall through to cancel if conditions not met
+        return 'cancel';
       case 'r':
-        return 'regenerate';
+        // Only allow regenerate if interactive
+        if (isInteractive) {
+          return 'regenerate';
+        }
+        // Fall through to cancel if conditions not met
+        return 'cancel';
       case 'n':
         return 'cancel';
       default:
@@ -358,13 +397,13 @@ export async function askCommitActionDI(
     }
   } catch (error) {
     deps.logger.debug('askCommitAction error:', error);
+    // Return cancel on error to prevent unintended actions
     return 'cancel';
   }
 }
 
 // Default exports using real dependencies
 export const InteractivePrompt = defaultInteractivePrompt;
-// QUESTION consilidate these maybe since they are similar then build the choices dynamically?
 export const askYesNo = async (message: string, defaultChoice: 'y' | 'n' = 'n') =>
   askYesNoDI(message, defaultChoice);
 export const askCommitAction = async (autoCommit = false) => askCommitActionDI(autoCommit);

@@ -7,6 +7,46 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **New Test Commands**: Added comprehensive testing capabilities
+  - **`test prompt`**: New command to test custom prompt generation with optional prompt parameter
+  - **`test full-workflow`**: New command to run complete workflow test (connection, model, and prompt generation)
+  - **Enhanced Testing**: Both commands support model specification, host configuration, and verbose output
+
+- **Type Checking Scripts**: Added new development scripts for better type safety
+  - **`check:types`**: Type-check main TypeScript files without emitting output
+  - **`check:tests`**: Type-check test TypeScript files without emitting output
+  - **Development Workflow**: Improved development experience with faster type checking
+
+### Changed
+
+- **Config Prompts Command**: Refactored prompt template management for better organization
+  - **Command Structure**: Changed from `config list-prompt-templates` to `config prompts list` for better subcommand organization
+  - **Enhanced Output**: Improved template listing with better formatting and information display
+  - **Verbose Mode**: Added detailed template information including character count, validation status, and descriptions
+  - **User Experience**: Better organized command structure following CLI best practices
+
+- **Commit Command Architecture**: Improved code maintainability and readability
+  - **Method Refactoring**: Split large `displayCommitResult` method into smaller, focused methods
+  - **Interactive Mode**: Separated interactive and non-interactive logic into dedicated methods
+  - **Error Handling**: Enhanced error handling with dedicated methods for different scenarios
+  - **Code Organization**: Better separation of concerns with `handleInteractiveMode`, `handleNonInteractiveMode`, `handleUserAction`, `performAutoCommit`, `performInteractiveAutoCommit`, `performAutoPush`, `showManualCommitInstructions`, `handleCommitError`, and `handlePushError` methods
+
+### Technical Details
+
+- **Test Command Architecture**: Enhanced test command structure with new subcommands
+  - **Prompt Testing**: Added `registerPromptTestCommand` for testing custom prompt generation
+  - **Full Workflow Testing**: Added `registerFullWorkflowTestCommand` for comprehensive testing
+  - **Service Integration**: Both commands use ServiceFactory for consistent service creation
+  - **Error Handling**: Proper error handling and exit codes for test failures
+
+- **Development Scripts**: Added TypeScript checking capabilities
+  - **Type Safety**: `check:types` script validates main TypeScript compilation without output
+  - **Test Type Safety**: `check:tests` script validates test TypeScript compilation without output
+  - **Build Process**: Enhanced development workflow with faster type checking feedback
+  - **CI/CD Integration**: Scripts can be integrated into CI/CD pipelines for type safety validation
+
 ## [1.0.19] - 2025-07-06
 
 ### Added
@@ -91,7 +131,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Enhanced CLI Commands**: Improved command structure and user experience
   - Short (`-x`) and long (`--xxx`) flags for all CLI commands and options, following best CLI practices
   - Usage examples in documentation for both short and long forms
-  - **config list-prompt-templates**: New subcommand to list all available built-in prompt templates and view the contents of any template
+  - **config prompts list**: Refactored subcommand to list all available built-in prompt templates and view the contents of any template
   - Intelligent configuration key validation with typo suggestions and helpful error messages
 - **Test Infrastructure Improvements**: Enhanced testing capabilities and reliability
   - Updated test mocks to implement complete IOllamaService interface

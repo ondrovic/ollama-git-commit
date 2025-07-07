@@ -48,6 +48,8 @@ The project provides scripts to ensure code quality and consistency:
 
 - **`precommit` script** (`bun run precommit`): Runs linting with auto-fix, tests, and type build checks
 - **`stage` script** (`bun run stage`): Formats, lints, tests, builds type declarations, and stages files
+- **`check:types` script** (`bun run check:types`): Type-check main TypeScript files without emitting output
+- **`check:tests` script** (`bun run check:tests`): Type-check test TypeScript files without emitting output
 
 For detailed information about these scripts and development workflow, see the [Development Workflow](#development-workflow) section in README.md.
 
@@ -308,6 +310,12 @@ bun test --coverage
 
 # Run tests with verbose output
 bun test --verbose
+
+# Type-check main TypeScript files
+bun run check:types
+
+# Type-check test TypeScript files
+bun run check:tests
 ```
 
 ### Debugging
@@ -379,6 +387,7 @@ This invokes Prettier via npx, ensuring compatibility and avoiding Bun-specific 
 By contributing to Ollama Git Commit, you agree that your contributions will be licensed under the project's MIT License.
 
 - When adding new config subcommands (e.g., under `src/cli/commands/config/`), update the README.md with usage and examples, and add an entry to CHANGELOG.md under [Unreleased].
+- When refactoring existing commands (like `config list-prompt-templates` to `config prompts list`), ensure documentation is updated to reflect the new command structure and usage patterns.
 
 ## CLI Option Guidelines
 

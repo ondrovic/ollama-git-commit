@@ -1,4 +1,5 @@
 import { TROUBLE_SHOOTING } from '@/constants/troubleshooting';
+import { EMOJIS } from '@/constants/ui';
 import type { ModelInfo, OllamaCommitConfig } from '../types';
 import { Logger } from '../utils/logger';
 import { Spinner } from '../utils/spinner';
@@ -267,6 +268,9 @@ export class OllamaService implements IOllamaService {
 
     this.logger.info(`Pulling model: ${_model} from ${formattedHost}`);
 
+    // Start spinner for progress tracking
+    this.spinner.start(`${EMOJIS.PULL} Pulling ${_model}...`);
+
     try {
       const response = await this.fetchFn(`${formattedHost}/api/pull`, {
         method: 'POST',
@@ -280,16 +284,58 @@ export class OllamaService implements IOllamaService {
         throw new Error(`HTTP ${response.status}: ${response.statusText}. Details: ${errorText}`);
       }
 
-      // TODO: Implement progress tracking for streaming response
-      // For now, just consume the stream
+      // Implement progress tracking for streaming response with fallback
       const reader = (response.body as ReadableStream<Uint8Array>).getReader();
-      while (true) {
-        const { done } = await reader.read();
-        if (done) break;
+      const decoder = new TextDecoder();
+      let buffer = '';
+      let progressEnabled = true;
+
+      try {
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+
+          if (progressEnabled) {
+            buffer += decoder.decode(value, { stream: true });
+            const lines = buffer.split('\n');
+            buffer = lines.pop() || ''; // Keep incomplete line in buffer
+
+            for (const line of lines) {
+              if (line.trim()) {
+                try {
+                  const progress = JSON.parse(line);
+                  const message = this.formatPullProgress(progress, _model);
+                  if (message) {
+                    this.spinner.updateMessage(message);
+                  }
+                } catch {
+                  // If JSON parsing fails, continue with fallback mode
+                  progressEnabled = false;
+                  break;
+                }
+              }
+            }
+          }
+        }
+      } catch {
+        // Fallback to simple stream consumption if progress tracking fails
+        progressEnabled = false;
+        this.logger.debug('Progress tracking failed, using fallback mode');
+
+        // Continue reading with the same reader until the stream is complete
+        try {
+          while (true) {
+            const { done } = await reader.read();
+            if (done) break;
+          }
+        } catch (fallbackError) {
+          this.logger.debug('Fallback stream reading also failed:', fallbackError);
+        }
       }
 
-      this.logger.success(`Model '${_model}' pulled successfully.`);
+      this.spinner.succeed(`Model '${_model}' pulled successfully.`);
     } catch (error: unknown) {
+      this.spinner.stop();
       this.logger.error(`Failed to pull model '${_model}':`);
       if (typeof error === 'object' && error && 'message' in error) {
         this.logger.error(`Error: ${(error as { message: string }).message}`);
@@ -332,6 +378,46 @@ export class OllamaService implements IOllamaService {
     // Placeholder for actual prompt building logic
     // For now, just return the diff as-is
     return _diff;
+  }
+
+  private formatPullProgress(progress: unknown, modelName: string): string | null {
+    try {
+      // Handle different progress states from Ollama API
+      const p = progress as { status?: string; total?: number; completed?: number; size?: number };
+      if (p.status === 'pulling') {
+        if (p.total && p.completed) {
+          const percentage = Math.round((p.completed / p.total) * 100);
+          return `${EMOJIS.PULL} Pulling ${modelName}... ${percentage}% (${p.completed}/${p.total})`;
+        }
+        return `${EMOJIS.PULL} Pulling ${modelName}...`;
+      }
+
+      if (p.status === 'verifying') {
+        return `${EMOJIS.MAGNIFIER} Verifying ${modelName}...`;
+      }
+
+      if (p.status === 'writing') {
+        return `${EMOJIS.FLOPPY} Writing ${modelName} to disk...`;
+      }
+
+      if (p.status === 'downloading') {
+        if (p.size) {
+          const sizeMB = Math.round(p.size / (1024 * 1024));
+          return `${EMOJIS.DOWNLOAD} Downloading ${modelName}... ${sizeMB}MB`;
+        }
+        return `${EMOJIS.DOWNLOAD} Downloading ${modelName}...`;
+      }
+
+      // Generic status message
+      if (p.status) {
+        return `${EMOJIS.PROCESSING} ${p.status.charAt(0).toUpperCase() + p.status.slice(1)} ${modelName}...`;
+      }
+
+      return null;
+    } catch {
+      // If formatting fails, return null to use default spinner message
+      return null;
+    }
   }
 
   async getModels(host: string): Promise<ModelInfo[]> {

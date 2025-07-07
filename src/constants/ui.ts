@@ -21,8 +21,6 @@ export const EMOJIS = {
   FLOPPY: '💾',
   FOLDER: '📁',
   INCREMENT: '🔄',
-  CHANGELOG: '📝',
-  TAG: '🏷️',
   SETTINGS: '⚙️',
   CURRENT: '⭐',
   CLOCK: '⏰',
@@ -30,4 +28,7 @@ export const EMOJIS = {
   QUESTION: '❓',
   RETRY: '🔁',
   UP: '⬆️',
+  PULL: '📥',
+  DOWNLOAD: '⬇️',
+  PROCESSING: '⏳',
 } as const;

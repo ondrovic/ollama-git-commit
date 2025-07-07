@@ -16,7 +16,11 @@ export const registerConnectionTestCommand = (testCommand: Command) => {
           verbose: options.verbose,
         });
 
-        const success = await ollamaService.testConnection(options.host, options.verbose);
+        // Create test command instance to use the fixed verbose logging
+        const { TestCommand } = await import('../../../commands/test');
+        const testCommandInstance = new TestCommand(ollamaService, Logger);
+
+        const success = await testCommandInstance.testConnection(options.host, options.verbose);
         if (success) {
           Logger.success('Connection test passed');
         } else {

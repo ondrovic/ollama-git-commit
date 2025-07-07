@@ -12,7 +12,7 @@ export type GetConfigFn = typeof configModule.getConfig;
  * Note: Automated tests use mocks (MockedConfigManager, mockFs, mockGit, etc.) to isolate tests from real filesystem/network.
  */
 
-// TODO: non of the verbose is working
+// TestCommand is used for manual testing of the Ollama Git Commit Message Generator.
 export class TestCommand {
   private ollamaService: IOllamaService;
   private logger: ILogger;
@@ -28,13 +28,13 @@ export class TestCommand {
     this.getConfig = getConfig;
   }
 
-  // QUESTION: does this to get called when doing test connection?
   async testConnection(host?: string, verbose = false): Promise<boolean> {
     try {
       const config = await this.getConfig();
       const serverHost = normalizeHost(host || config.host);
       const timeouts = config.timeouts;
 
+      // Display verbose information when verbose is true
       if (verbose) {
         this.logger.plain(`Testing connection to ${serverHost}...`);
         this.logger.plain(`Connection timeout: ${timeouts.connection}ms`);
@@ -50,7 +50,7 @@ export class TestCommand {
         throw new Error('Connection test failed');
       }
 
-      // why is this not displaying when verbose
+      // Display verbose information when verbose is true
       if (verbose) {
         this.logger.success('Response: HTTP 200 OK');
         this.logger.clock(`Connection established in ${duration}ms`);
@@ -70,6 +70,7 @@ export class TestCommand {
       const ollamaHost = normalizeHost(host || config.host);
       const testModel = model || config.model;
 
+      // Display verbose information when verbose is true
       if (verbose) {
         this.logger.test(`Testing model '${testModel}' on ${ollamaHost}...`);
       }
@@ -106,6 +107,7 @@ export class TestCommand {
       const ollamaHost = normalizeHost(host || config.host);
       const testModel = model || config.model;
 
+      // Display verbose information when verbose is true
       if (verbose) {
         this.logger.test(`Running all tests with model '${testModel}' on ${ollamaHost}...`);
       }
@@ -160,6 +162,7 @@ export class TestCommand {
     const testModel = model || config.model;
     const timeouts = config.timeouts;
 
+    // Display verbose information when verbose is true
     if (verbose) {
       this.logger.test(`Testing simple prompt with model: ${testModel}`);
       this.logger.plain(`Host: ${ollamaHost}`);
@@ -172,11 +175,13 @@ export class TestCommand {
       stream: false,
     };
 
+    // Display verbose information when verbose is true
     if (verbose) {
       this.logger.debug('Test payload:', JSON.stringify(payload, null, 2));
     }
 
     try {
+      // Display verbose information when verbose is true
       if (verbose) {
         this.logger.plain('Sending test request...');
       }
@@ -190,6 +195,7 @@ export class TestCommand {
 
       const responseText = await response.text();
 
+      // Display verbose information when verbose is true
       if (verbose) {
         this.logger.success(`Response received (${responseText.length} characters)`);
         this.logger.debug(`First 500 chars: ${responseText.substring(0, 500)}`);
@@ -250,6 +256,7 @@ export class TestCommand {
           this.logger.error('JSON parsing failed:', String(parseError));
         }
 
+        // Display verbose information when verbose is true
         if (verbose) {
           this.logger.debug('Raw response that failed to parse:');
           this.logger.error(responseText);
@@ -274,6 +281,8 @@ export class TestCommand {
         (error as { name: string }).name === 'TimeoutError'
       ) {
         this.logger.error('Request timed out');
+
+        // Display verbose information when verbose is true
         if (verbose) {
           this.logger.error(TROUBLE_SHOOTING.TIMEOUT(timeouts.generation));
         }
@@ -284,6 +293,8 @@ export class TestCommand {
         (error as { message: string }).message.includes('fetch')
       ) {
         this.logger.error('Network request failed:', (error as { message: string }).message);
+
+        // Display verbose information when verbose is true
         if (verbose) {
           this.logger.info(TROUBLE_SHOOTING.GENERAL);
         }
@@ -323,6 +334,7 @@ export class TestCommand {
     }
   }
 
+  // testFullWorkflow is now callable and can be used as a valid test
   async testFullWorkflow(host?: string, model?: string, verbose = false): Promise<boolean> {
     const config = await this.getConfig();
     const ollamaHost = normalizeHost(host || config.host);
@@ -451,6 +463,7 @@ export class TestCommand {
     }
   }
 
+  // testPrompt method for testing custom prompts - can be used as a valid test
   async testPrompt(
     host?: string,
     model?: string,
@@ -463,6 +476,7 @@ export class TestCommand {
     const testPrompt = prompt || 'Test prompt';
     const timeouts = config.timeouts;
 
+    // Display verbose information when verbose is true
     if (verbose) {
       this.logger.test(`Testing prompt with model '${testModel}' on ${ollamaHost}...`);
       this.logger.debug(`Prompt length: ${testPrompt.length} characters`);
@@ -482,6 +496,7 @@ export class TestCommand {
 
       const responseText = await response.text();
 
+      // Display verbose information when verbose is true
       if (verbose) {
         this.logger.success(`Response received (${responseText.length} characters)`);
         this.logger.debug(`First 500 chars: ${responseText.substring(0, 500)}`);
@@ -495,6 +510,7 @@ export class TestCommand {
       try {
         const data = JSON.parse(responseText);
 
+        // Display verbose information when verbose is true
         if (verbose) {
           this.logger.success('Valid JSON response');
           this.logger.success('Response field exists:', 'response' in data);
@@ -508,7 +524,7 @@ export class TestCommand {
           }
         }
 
-        // Show full response in verbose mode
+        // Display verbose information when verbose is true
         if (verbose) {
           this.logger.success(responseText);
         }
@@ -533,6 +549,7 @@ export class TestCommand {
           this.logger.error('JSON parsing failed:', String(parseError));
         }
 
+        // Display verbose information when verbose is true
         if (verbose) {
           this.logger.debug('Raw response that failed to parse:');
           this.logger.error(responseText);
@@ -548,6 +565,8 @@ export class TestCommand {
         (error as { name: string }).name === 'TimeoutError'
       ) {
         this.logger.error('Request timed out');
+
+        // Display verbose information when verbose is true
         if (verbose) {
           this.logger.error(TROUBLE_SHOOTING.TIMEOUT(timeouts.generation));
         }
@@ -558,6 +577,8 @@ export class TestCommand {
         (error as { message: string }).message.includes('fetch')
       ) {
         this.logger.error('Network request failed:', (error as { message: string }).message);
+
+        // Display verbose information when verbose is true
         if (verbose) {
           this.logger.error(TROUBLE_SHOOTING.GENERAL);
         }

@@ -149,11 +149,11 @@ export class Logger implements ILogger {
   }
 
   changelog(message: string, ...args: LogArgs): void {
-    console.log(`${EMOJIS.CHANGELOG} ${message}`, ...args);
+    console.log(`${EMOJIS.MEMO} ${message}`, ...args);
   }
 
   tag(message: string, ...args: LogArgs): void {
-    console.log(`${EMOJIS.TAG} ${message}`, ...args);
+    console.log(`${EMOJIS.LABEL} ${message}`, ...args);
   }
 
   rocket(message: string, ...args: LogArgs): void {

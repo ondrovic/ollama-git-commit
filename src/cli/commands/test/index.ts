@@ -2,7 +2,9 @@ import { Command } from 'commander';
 import { registerAllTestCommand } from './all';
 import { registerBenchmarkTestCommand } from './benchmark';
 import { registerConnectionTestCommand } from './connection';
+import { registerFullWorkflowTestCommand } from './full-workflow';
 import { registerModelTestCommand } from './model';
+import { registerPromptTestCommand } from './prompt';
 import { registerSimplePromptTestCommand } from './simple-prompt';
 
 export const registerTestCommands = (program: Command) => {
@@ -21,6 +23,8 @@ export const registerTestCommands = (program: Command) => {
   registerConnectionTestCommand(testCommand);
   registerModelTestCommand(testCommand);
   registerSimplePromptTestCommand(testCommand);
+  registerPromptTestCommand(testCommand);
+  registerFullWorkflowTestCommand(testCommand);
   registerAllTestCommand(testCommand);
   registerBenchmarkTestCommand(testCommand);
 };
