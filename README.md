@@ -107,7 +107,7 @@ You can view the status of all workflows in the "Actions" tab of the GitHub repo
 - 🎯 **CLI Command Enhancements**: Improved command structure and user experience
   - Short (`-x`) and long (`--xxx`) flags for all CLI commands and options, following best CLI practices
   - Usage examples in documentation for both short and long forms
-  - **config list-prompt-templates**: New subcommand to list all available built-in prompt templates and view the contents of any template
+  - **config prompts list**: Refactored subcommand to list all available built-in prompt templates and view the contents of any template
   - Intelligent configuration key validation with typo suggestions and helpful error messages
 - 🎨 **Enhanced Commit Message Display**: Improved commit message presentation and user experience
   - Fixed commit message display to show properly regardless of verbose mode settings
@@ -190,10 +190,12 @@ When contributing to the project, use the following workflow:
        ```
      - This will ensure pre-commit checks always run before each commit.
 
-   **Difference between `precommit` and `stage`:**
+   **Available development scripts:**
 
    - `precommit` (script): Run before committing. Lints, tests, and checks types to catch errors that could break the release script.
    - `stage` (script): The main project workflow script for formatting, linting, building type declarations, and staging as part of the release/development workflow.
+   - `check:types` (script): Type-check the main TypeScript files without emitting output.
+   - `check:tests` (script): Type-check the test TypeScript files without emitting output.
 
 4. **Commit your changes:**
 
@@ -427,6 +429,12 @@ ollama-git-commit test connection
 # Test with simple prompt (debug JSON issues)
 ollama-git-commit test simple-prompt
 
+# Test custom prompt generation
+ollama-git-commit test prompt -p "Your custom prompt here"
+
+# Run full workflow test (connection, model, and prompt generation)
+ollama-git-commit test full-workflow
+
 # Run all tests
 ollama-git-commit test all
 
@@ -443,26 +451,21 @@ The `config` command provides advanced configuration management for the tool. Yo
 You can list all available built-in prompt templates:
 
 ```bash
-ollama-git-commit config list-prompt-templates
+ollama-git-commit config prompts list
 ```
 
 Example output:
 
 ```
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-📝 Available Prompt Templates
+Available prompt templates:
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-• default
-• conventional
-• simple
-• detailed
-
-To view a specific template, use:
-  ollama-git-commit config list-prompt-templates --name <template>
-
-Example:
-  ollama-git-commit config list-prompt-templates --name conventional
+Usage: ollama-git-commit config prompts list -n default
+Usage: ollama-git-commit config prompts list -n conventional
+Usage: ollama-git-commit config prompts list -n simple
+Usage: ollama-git-commit config prompts list -n detailed
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Total: 4 templates available
 ```
 
 #### View the Contents of a Prompt Template
@@ -470,10 +473,39 @@ Example:
 To view the full contents of a specific template:
 
 ```bash
-ollama-git-commit config list-prompt-templates --name detailed
+ollama-git-commit config prompts list -n detailed
 ```
 
 This will print the full text of the selected prompt template, so you can see exactly what the AI will use.
+
+#### Verbose Template Information
+
+For detailed information about templates including character count, validation status, and descriptions:
+
+```bash
+ollama-git-commit config prompts list -v
+```
+
+Example verbose output:
+
+```
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Available prompt templates:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  default
+    Usage: ollama-git-commit config prompts list -n default
+    Characters: 1234
+    Status: ✅ Valid
+    Description: Balanced template with good detail and structure
+
+  conventional
+    Usage: ollama-git-commit config prompts list -n conventional
+    Characters: 987
+    Status: ✅ Valid
+    Description: Follows conventional commit format (type: description)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Total: 4 templates available
+```
 
 ```bash
 # Initialize default configuration
@@ -856,6 +888,12 @@ ollama-git-commit test model -m mistral:7b-instruct
 # Test simple prompt generation
 ollama-git-commit test simple-prompt
 
+# Test custom prompt generation
+ollama-git-commit test prompt -p "Your custom prompt here"
+
+# Run full workflow test (connection, model, and prompt generation)
+ollama-git-commit test full-workflow
+
 # Run all tests
 ollama-git-commit test all
 
@@ -1146,7 +1184,7 @@ ollama-git-commit commit --directory . --model llama3 --verbose --quiet
 ### Config Commands
 
 - `ollama-git-commit config set <key> <value> [-t <type>] [-a]`
-- `ollama-git-commit config list-prompt-templates [-n <template>] [-v]`
+- `ollama-git-commit config prompts list [-n <template>] [-v]`
 - `ollama-git-commit config models list [-t <type>]`
 - `ollama-git-commit config models set-primary <name> [-t <type>]`
 
