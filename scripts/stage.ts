@@ -8,7 +8,7 @@ import { Logger } from '../src/utils/logger';
 
 async function main() {
   let isQuiet = process.env.QUIET === 'true';
-  
+
   if (!isQuiet) {
     try {
       const configManager = ConfigManager.getInstance();
@@ -23,10 +23,10 @@ async function main() {
   Logger.setVerbose(!isQuiet);
 
   // Create environment with QUIET propagation
-  const env = { 
-    ...process.env, 
+  const env = {
+    ...process.env,
     ...(isQuiet && { QUIET: 'true' }),
-    GIT_SKIP_HOOKS: '1' // Prevent git hooks during staging
+    GIT_SKIP_HOOKS: '1', // Prevent git hooks during staging
   };
 
   // Check if we're in the ollama-git-commit repository
@@ -47,43 +47,18 @@ async function main() {
     scripts = {};
   }
 
-  // Check for precommit script in package.json
-  let hasPrecommitScript = false;
-  try {
-    const pkg = JSON.parse(readFileSync(join(process.cwd(), 'package.json'), 'utf-8'));
-    hasPrecommitScript = !!(pkg.scripts && pkg.scripts.precommit);
-  } catch {
-    hasPrecommitScript = false;
-  }
-
-  if (hasPrecommitScript) {
-    if (!isQuiet) Logger.magnifier('Running precommit checks...');
-    try {
-      execSync('bun run precommit', { 
-        stdio: isQuiet ? ['pipe', 'pipe', 'pipe'] : 'inherit',
-        env
-      });
-    } catch (error) {
-      if (!isQuiet) Logger.error('Precommit failed:', error instanceof Error ? error.message : String(error));
-      process.exit(1);
-    }
-  }
-
-  if (!isQuiet) {
-    Logger.rocket('Running staging checks...');
-  }
-
   // Helper to run a script if it exists
   function runScriptIfExists(name: string, label: string, loggerMethod: (msg: string) => void) {
     if (scripts[name]) {
       if (!isQuiet) loggerMethod(label);
       try {
-        execSync(`bun run ${name}`, { 
+        execSync(`bun run ${name}`, {
           stdio: isQuiet ? ['pipe', 'pipe', 'pipe'] : 'inherit',
-          env
+          env,
         });
       } catch (error) {
-        if (!isQuiet) Logger.error(`${name} failed:`, error instanceof Error ? error.message : String(error));
+        if (!isQuiet)
+          Logger.error(`${name} failed:`, error instanceof Error ? error.message : String(error));
         process.exit(1);
       }
     } else if (!isQuiet) {
@@ -97,32 +72,32 @@ async function main() {
       if (!isQuiet) {
         Logger.house('Running full staging workflow for ollama-git-commit...');
       }
-      
-      // Run tests if available
-      runScriptIfExists('test', 'Running tests...', Logger.test);
 
-      // Run formatting if available
-      // runScriptIfExists('format', 'Running code formatting...', Logger.floppy);
-
-      // Run linting with auto-fix if available
-      runScriptIfExists('lint:fix', 'Running linting with auto-fix...', Logger.magnifier);
-      // Fallback to regular lint if lint:fix doesn't exist
-      if (!scripts['lint:fix'] && scripts['lint']) {
+      // Run linting with auto-fix if available (prefer lint:fix over lint)
+      if (scripts['lint:fix']) {
+        runScriptIfExists('lint:fix', 'Running linting with auto-fix...', Logger.magnifier);
+      } else if (scripts['lint']) {
         runScriptIfExists('lint', 'Running linting...', Logger.magnifier);
       }
 
-      // Run type building if available
+      // Run tests
+      runScriptIfExists('test', 'Running tests...', Logger.test);
+
+      // Run type building
       runScriptIfExists('build:types', 'Building type declarations...', Logger.hammer);
     } else {
       // Simplified staging for other repositories
       if (!isQuiet) {
         Logger.package('Running simplified staging for external repository...');
       }
-      
+
       // Only run basic scripts that are likely to exist in most projects
+      if (scripts['lint:fix']) {
+        runScriptIfExists('lint:fix', 'Running linting with auto-fix...', Logger.magnifier);
+      } else if (scripts['lint']) {
+        runScriptIfExists('lint', 'Running linting...', Logger.magnifier);
+      }
       runScriptIfExists('test', 'Running tests...', Logger.test);
-      // runScriptIfExists('format', 'Running code formatting...', Logger.floppy);
-      runScriptIfExists('lint', 'Running linting...', Logger.magnifier);
     }
 
     if (!isQuiet) {
@@ -134,11 +109,11 @@ async function main() {
     });
 
     if (!isQuiet) {
-      Logger.success('Staging checks completed!');
+      Logger.success('Staging completed!');
     }
   } catch (error: unknown) {
     if (error instanceof Error) {
-      Logger.error('Staging checks failed:', error.message);
+      Logger.error('Staging failed:', error.message);
     }
     process.exit(1);
   }

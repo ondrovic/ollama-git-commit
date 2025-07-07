@@ -46,8 +46,8 @@ Thank you for your interest in contributing to Ollama Git Commit! This document 
 
 The project provides scripts to ensure code quality and consistency:
 
-- **`precommit` script** (`bun run precommit`): Runs linting with auto-fix, tests, and type build checks
-- **`stage` script** (`bun run stage`): Formats, lints, tests, builds type declarations, and stages files
+- **`precommit` script** (`bun run precommit`): Runs validation checks (lint, test, check:types) for fast feedback without auto-fix or building
+- **`stage` script** (`bun run stage`): Runs lint:fix, tests, builds type declarations, and stages files. Used by auto-commit workflow
 - **`check:types` script** (`bun run check:types`): Type-check main TypeScript files without emitting output
 - **`check:tests` script** (`bun run check:tests`): Type-check test TypeScript files without emitting output
 

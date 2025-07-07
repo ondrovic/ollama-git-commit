@@ -7,11 +7,41 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- **Test Command Configuration**: Improved host configuration handling in test commands
+
+  - **All Test Command**: Fixed host configuration to properly use configured host from config when no host is provided via options
+  - **Full Workflow Test**: Removed redundant logging message to avoid duplication and improve output clarity
+  - **Configuration Consistency**: Ensured test commands respect user configuration settings consistently
+
+- **Script Workflow Optimization**: Eliminated duplication between precommit and stage scripts
+  - **Precommit Script**: Refactored to focus on validation only (lint, test, check:types) without auto-fix or building
+  - **Stage Script**: Consolidated to handle lint:fix, test, build:types, and staging without redundant precommit execution
+  - **Auto-Commit Flow**: Streamlined workflow when autoCommit is true to avoid running the same checks twice
+  - **Performance Improvement**: Reduced execution time by eliminating duplicate script runs
+
+### Technical Details
+
+- **Host Configuration Fix**: Enhanced test command host handling for better user experience
+
+  - **Config Integration**: All test command now properly initializes ConfigManager and retrieves configured host
+  - **Fallback Logic**: Improved fallback logic to use `options.host || config.host` for consistent behavior
+  - **Logging Cleanup**: Removed duplicate "Running full workflow test..." message from full-workflow test command
+  - **User Experience**: Better consistency between test commands and main application configuration handling
+
+- **Script Consolidation**: Improved development workflow efficiency
+  - **Precommit Focus**: Precommit script now runs validation-only checks (lint, test, check:types) for fast feedback
+  - **Stage Consolidation**: Stage script runs lint:fix, test, build:types, and staging without calling precommit
+  - **Workflow Separation**: Clear separation between validation (precommit) and preparation (stage) phases
+  - **Auto-Commit Optimization**: When autoCommit is true, only the stage script runs, eliminating duplicate validation
+
 ## [1.0.20] - 2025-07-07
 
 ### Added
 
 - **New Test Commands**: Added comprehensive testing capabilities
+
   - **`test prompt`**: New command to test custom prompt generation with optional prompt parameter
   - **`test full-workflow`**: New command to run complete workflow test (connection, model, and prompt generation)
   - **Enhanced Testing**: Both commands support model specification, host configuration, and verbose output
@@ -24,6 +54,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 
 - **Config Prompts Command**: Refactored prompt template management for better organization
+
   - **Command Structure**: Changed from `config list-prompt-templates` to `config prompts list` for better subcommand organization
   - **Enhanced Output**: Improved template listing with better formatting and information display
   - **Verbose Mode**: Added detailed template information including character count, validation status, and descriptions
@@ -38,6 +69,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Technical Details
 
 - **Test Command Architecture**: Enhanced test command structure with new subcommands
+
   - **Prompt Testing**: Added `registerPromptTestCommand` for testing custom prompt generation
   - **Full Workflow Testing**: Added `registerFullWorkflowTestCommand` for comprehensive testing
   - **Service Integration**: Both commands use ServiceFactory for consistent service creation
@@ -63,6 +95,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 
 - **Release Script Error**: Fixed "fn is not a function" error in release script
+
   - **Logger.group Usage**: Fixed incorrect usage of `Logger.group()` method in release script that was missing the required function parameter
   - **Async Function Support**: Enhanced `Logger.group()` method to support both synchronous and asynchronous functions
   - **Release Process**: Ensured release script can properly execute with async operations within grouped logging

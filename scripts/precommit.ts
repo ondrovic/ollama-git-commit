@@ -8,7 +8,7 @@ import { Logger } from '../src/utils/logger';
 
 async function main() {
   let isQuiet = process.env.QUIET === 'true';
-  
+
   if (!isQuiet) {
     try {
       const configManager = ConfigManager.getInstance();
@@ -23,9 +23,9 @@ async function main() {
   Logger.setVerbose(!isQuiet);
 
   // Create environment with QUIET propagation
-  const env = { 
-    ...process.env, 
-    ...(isQuiet && { QUIET: 'true' }) 
+  const env = {
+    ...process.env,
+    ...(isQuiet && { QUIET: 'true' }),
   };
 
   // Check if we're in the ollama-git-commit repository
@@ -51,12 +51,13 @@ async function main() {
     if (scripts[name]) {
       if (!isQuiet) loggerMethod(label);
       try {
-        execSync(`bun run ${name}`, { 
+        execSync(`bun run ${name}`, {
           stdio: isQuiet ? ['pipe', 'pipe', 'pipe'] : 'inherit',
-          env
+          env,
         });
       } catch (error) {
-        if (!isQuiet) Logger.error(`${name} failed:`, error instanceof Error ? error.message : String(error));
+        if (!isQuiet)
+          Logger.error(`${name} failed:`, error instanceof Error ? error.message : String(error));
         process.exit(1);
       }
     } else if (!isQuiet) {
@@ -67,27 +68,30 @@ async function main() {
   if (isOllamaGitCommitRepo) {
     // Full precommit workflow for ollama-git-commit repository
     if (!isQuiet) {
-      Logger.house('Running full precommit checks for ollama-git-commit...');
+      Logger.house('Running precommit validation checks for ollama-git-commit...');
     }
-    
-    // runScriptIfExists('format', 'Running code formatting...', Logger.floppy);
-    runScriptIfExists('lint', 'Running linting...', Logger.magnifier);
+
+    // Run linting (validation only, no auto-fix)
+    runScriptIfExists('lint', 'Running linting validation...', Logger.magnifier);
+
+    // Run tests
     runScriptIfExists('test', 'Running tests...', Logger.test);
-    runScriptIfExists('build:types', 'Building type declarations...', Logger.hammer);
+
+    // Run type checking (validation only, no build)
+    runScriptIfExists('check:types', 'Running type checking...', Logger.hammer);
   } else {
     // Simplified precommit for other repositories
     if (!isQuiet) {
-      Logger.package('Running simplified precommit checks for external repository...');
+      Logger.package('Running precommit validation for external repository...');
     }
-    
-    // Only run basic scripts that are likely to exist in most projects
-    runScriptIfExists('lint', 'Running linting...', Logger.magnifier);
+
+    // Only run basic validation scripts that are likely to exist in most projects
+    runScriptIfExists('lint', 'Running linting validation...', Logger.magnifier);
     runScriptIfExists('test', 'Running tests...', Logger.test);
-    // runScriptIfExists('format', 'Running code formatting...', Logger.floppy);
   }
 
   if (!isQuiet) {
-    Logger.success('Precommit checks completed!');
+    Logger.success('Precommit validation completed!');
   }
 }
 
