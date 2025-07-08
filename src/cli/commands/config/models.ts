@@ -13,7 +13,13 @@ interface OllamaModelResponse {
   };
 }
 
-export const registerModelsCommands = (configCommand: Command) => {
+export interface ModelsCommandsDeps {
+  logger: Logger;
+  serviceFactory: import('../../../core/factory').ServiceFactory;
+  getConfig: () => Promise<Readonly<import('../../../types').OllamaCommitConfig>>;
+}
+
+export const registerModelsCommands = (configCommand: Command, deps: ModelsCommandsDeps) => {
   const modelsCommand = configCommand.command('models').description('Manage model configurations');
 
   modelsCommand
@@ -30,7 +36,7 @@ export const registerModelsCommands = (configCommand: Command) => {
     .option('-t, --type <type>', 'Configuration type (user, local)', 'user')
     .action(async (name, provider, model, options) => {
       try {
-        const configManager = ConfigManager.getInstance();
+        const configManager = ConfigManager.getInstance(deps.logger);
         await configManager.initialize();
 
         const roles = options.roles.split(',').map((r: string) => r.trim()) as ModelRole[];
@@ -48,12 +54,12 @@ export const registerModelsCommands = (configCommand: Command) => {
 
         await configManager.saveConfig({ models }, options.type as 'user' | 'local');
 
-        Logger.success(`Model '${name}' added successfully`);
-        Logger.plain(`  Provider: ${provider}`);
-        Logger.plain(`  Model: ${model}`);
-        Logger.plain(`  Roles: ${roles.join(', ')}`);
+        deps.logger.success(`Model '${name}' added successfully`);
+        deps.logger.plain(`  Provider: ${provider}`);
+        deps.logger.plain(`  Model: ${model}`);
+        deps.logger.plain(`  Roles: ${roles.join(', ')}`);
       } catch (error) {
-        Logger.error('Failed to add model:', error);
+        deps.logger.error('Failed to add model:', error);
         process.exit(1);
       }
     });
@@ -65,7 +71,7 @@ export const registerModelsCommands = (configCommand: Command) => {
     .option('-t, --type <type>', 'Configuration type (user, local)', 'user')
     .action(async (name, _options) => {
       try {
-        const configManager = ConfigManager.getInstance();
+        const configManager = ConfigManager.getInstance(deps.logger);
         await configManager.initialize();
 
         const config = await configManager.getConfig();
@@ -73,7 +79,7 @@ export const registerModelsCommands = (configCommand: Command) => {
         const filteredModels = models.filter(m => m.name !== name);
 
         if (filteredModels.length === models.length) {
-          Logger.error(`Model '${name}' not found`);
+          deps.logger.error(`Model '${name}' not found`);
           process.exit(1);
         }
 
@@ -81,9 +87,9 @@ export const registerModelsCommands = (configCommand: Command) => {
           { models: filteredModels },
           _options.type as 'user' | 'local',
         );
-        Logger.success(`Model '${name}' removed successfully`);
+        deps.logger.success(`Model '${name}' removed successfully`);
       } catch (error) {
-        Logger.error('Failed to remove model:', error);
+        deps.logger.error('Failed to remove model:', error);
         process.exit(1);
       }
     });
@@ -94,7 +100,7 @@ export const registerModelsCommands = (configCommand: Command) => {
     .option('-t, --type <type>', 'Configuration type (user, local)', 'user')
     .action(async _options => {
       try {
-        const configManager = ConfigManager.getInstance();
+        const configManager = ConfigManager.getInstance(deps.logger);
         await configManager.initialize();
         const config = await configManager.getConfig();
 
@@ -114,11 +120,11 @@ export const registerModelsCommands = (configCommand: Command) => {
         }
 
         // Banner
-        Logger.plain(
+        deps.logger.plain(
           '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━',
         );
-        Logger.plain('Available models:');
-        Logger.plain(
+        deps.logger.plain('Available models:');
+        deps.logger.plain(
           '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━',
         );
 
@@ -127,16 +133,16 @@ export const registerModelsCommands = (configCommand: Command) => {
           const size = model.size ? formatFileSize(model.size) : 'n/a';
           const family = model.details?.family ? ` [${model.details.family}]` : '';
           const currentIndicator = model.name === config.model ? ' ⭐ (current)' : '';
-          Logger.package(`  ${model.name} (${size})${family}${currentIndicator}`);
+          deps.logger.package(`  ${model.name} (${size})${family}${currentIndicator}`);
         });
 
         // Bottom banner and total
-        Logger.plain(
+        deps.logger.plain(
           '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━',
         );
-        Logger.tableInfo(`Total: ${data.models.length} models available`);
+        deps.logger.tableInfo(`Total: ${data.models.length} models available`);
       } catch (error) {
-        Logger.error('Failed to list models:', error);
+        deps.logger.error('Failed to list models:', error);
         process.exit(1);
       }
     });
@@ -148,7 +154,7 @@ export const registerModelsCommands = (configCommand: Command) => {
     .option('-t, --type <type>', 'Configuration type (user, local)', 'user')
     .action(async (name, options) => {
       try {
-        const configManager = ConfigManager.getInstance();
+        const configManager = ConfigManager.getInstance(deps.logger);
         await configManager.initialize();
 
         const config = await configManager.getConfig();
@@ -156,12 +162,12 @@ export const registerModelsCommands = (configCommand: Command) => {
         const targetModel = models.find(m => m.name === name);
 
         if (!targetModel) {
-          Logger.error(`Model '${name}' not found`);
+          deps.logger.error(`Model '${name}' not found`);
           process.exit(1);
         }
 
         if (!targetModel.roles.includes('chat')) {
-          Logger.error(`Model '${name}' does not have chat role`);
+          deps.logger.error(`Model '${name}' does not have chat role`);
           process.exit(1);
         }
 
@@ -169,9 +175,9 @@ export const registerModelsCommands = (configCommand: Command) => {
           { model: targetModel.model },
           options.type as 'user' | 'local',
         );
-        Logger.success(`Primary model set to '${name}' (${targetModel.model})`);
+        deps.logger.success(`Primary model set to '${name}' (${targetModel.model})`);
       } catch (error) {
-        Logger.error('Failed to set primary model:', error);
+        deps.logger.error('Failed to set primary model:', error);
         process.exit(1);
       }
     });
@@ -183,7 +189,7 @@ export const registerModelsCommands = (configCommand: Command) => {
     .option('-t, --type <type>', 'Configuration type (user, local)', 'user')
     .action(async (name, options) => {
       try {
-        const configManager = ConfigManager.getInstance();
+        const configManager = ConfigManager.getInstance(deps.logger);
         await configManager.initialize();
 
         const config = await configManager.getConfig();
@@ -191,22 +197,22 @@ export const registerModelsCommands = (configCommand: Command) => {
         const targetModel = models.find(m => m.name === name);
 
         if (!targetModel) {
-          Logger.error(`Model '${name}' not found`);
+          deps.logger.error(`Model '${name}' not found`);
           process.exit(1);
         }
 
         if (!targetModel.roles.includes('embed')) {
-          Logger.error(`Model '${name}' does not have embed role`);
+          deps.logger.error(`Model '${name}' does not have embed role`);
           process.exit(1);
         }
 
         await configManager.saveConfig(
-          { embeddingsProvider: name },
+          { embeddingsModel: targetModel.model },
           options.type as 'user' | 'local',
         );
-        Logger.success(`Embeddings provider set to '${name}'`);
+        deps.logger.success(`Embeddings model set to '${name}' (${targetModel.model})`);
       } catch (error) {
-        Logger.error('Failed to set embeddings provider:', error);
+        deps.logger.error('Failed to set embeddings model:', error);
         process.exit(1);
       }
     });

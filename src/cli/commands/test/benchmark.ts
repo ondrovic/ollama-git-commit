@@ -1,20 +1,19 @@
 import { Command } from 'commander';
 import stringWidth from 'string-width';
-import { ConfigManager } from '../../../core/config';
 import { ServiceFactory } from '../../../core/factory';
 import { Logger } from '../../../utils/logger';
 
 export const registerBenchmarkTestCommand = (
   testCommand: Command,
   {
-    configManager = ConfigManager.getInstance(),
+    getConfig,
     serviceFactory = ServiceFactory.getInstance(),
-    logger = Logger,
+    logger = new Logger(),
   }: {
-    configManager?: typeof ConfigManager.prototype;
+    getConfig: () => Promise<Readonly<import('../../../types').OllamaCommitConfig>>;
     serviceFactory?: typeof ServiceFactory.prototype;
-    logger?: typeof Logger;
-  } = {},
+    logger?: import('../../../utils/logger').Logger;
+  },
 ) => {
   testCommand
     .command('benchmark')
@@ -31,8 +30,8 @@ export const registerBenchmarkTestCommand = (
         // Get model from options or config
         let modelToTest = options.model;
         if (!modelToTest) {
-          await configManager.initialize();
-          modelToTest = await configManager.getPrimaryModel();
+          const config = await getConfig();
+          modelToTest = config.model || 'llama3';
           logger.info(`Using model from config: ${modelToTest}`);
         }
 
@@ -64,9 +63,10 @@ export const registerBenchmarkTestCommand = (
         for (let i = 0; i < iterations; i++) {
           try {
             const startTime = Date.now();
+            const config = await getConfig();
             await ollamaService.generateCommitMessage(
               modelToTest,
-              options.host || 'http://localhost:11434',
+              options.host || config.host || 'http://localhost:11434',
               testPrompt,
               options.verbose,
             );

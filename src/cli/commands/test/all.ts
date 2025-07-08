@@ -1,9 +1,13 @@
 import { Command } from 'commander';
-import { ConfigManager } from '../../../core/config';
-import { ServiceFactory } from '../../../core/factory';
-import { Logger } from '../../../utils/logger';
 
-export const registerAllTestCommand = (testCommand: Command) => {
+export const registerAllTestCommand = (
+  testCommand: Command,
+  deps: {
+    getConfig: () => Promise<Readonly<import('../../../types').OllamaCommitConfig>>;
+    serviceFactory: import('../../../core/factory').ServiceFactory;
+    logger: import('../../../utils/logger').Logger;
+  },
+) => {
   testCommand
     .command('all')
     .description('Run all tests')
@@ -12,56 +16,47 @@ export const registerAllTestCommand = (testCommand: Command) => {
     .option('-v, --verbose', 'Show detailed output')
     .action(async options => {
       try {
-        // Get model from options or config
+        // Get model and host from options or config
+        const config = await deps.getConfig();
         let modelToTest = options.model;
         if (!modelToTest) {
-          const configManager = ConfigManager.getInstance();
-          await configManager.initialize();
-          modelToTest = await configManager.getPrimaryModel();
-          Logger.info(`Using model from config: ${modelToTest}`);
+          modelToTest = config.model || 'llama3';
+          deps.logger.info(`Using model from config: ${modelToTest}`);
         }
 
+        const host = options.host || config.host || 'http://localhost:11434';
+
         // Create services using the factory
-        const factory = ServiceFactory.getInstance();
-        const ollamaService = factory.createOllamaService({
+        const ollamaService = deps.serviceFactory.createOllamaService({
           verbose: options.verbose,
         });
 
-        Logger.test('Running all tests...');
+        deps.logger.test('Running all tests...');
 
         // Test connection
-        const connectionSuccess = await ollamaService.testConnection(options.host, options.verbose);
+        const connectionSuccess = await ollamaService.testConnection(host, options.verbose);
         if (!connectionSuccess) {
-          Logger.error('Connection test failed');
+          deps.logger.error('Connection test failed');
           process.exit(1);
         }
-        Logger.success('Connection test passed');
+        deps.logger.success('Connection test passed');
 
         // Test model availability
-        const modelSuccess = await ollamaService.isModelAvailable(options.host, modelToTest);
+        const modelSuccess = await ollamaService.isModelAvailable(host, modelToTest);
         if (!modelSuccess) {
-          Logger.error('Model availability test failed');
+          deps.logger.error('Model availability test failed');
           process.exit(1);
         }
-        Logger.success('Model availability test passed');
+        deps.logger.success('Model availability test passed');
 
         // Test simple prompt
         const testPrompt = 'Write a commit message for: "Add new feature"';
-        const configManager = ConfigManager.getInstance();
-        await configManager.initialize();
-        const config = await configManager.getConfig();
-        const configuredHost = options.host || config.host;
-        await ollamaService.generateCommitMessage(
-          modelToTest,
-          configuredHost,
-          testPrompt,
-          options.verbose,
-        );
-        Logger.success('Simple prompt test passed');
+        await ollamaService.generateCommitMessage(modelToTest, host, testPrompt, options.verbose);
+        deps.logger.success('Simple prompt test passed');
 
-        Logger.celebrate('All tests passed!');
+        deps.logger.celebrate('All tests passed!');
       } catch (error) {
-        Logger.error('All tests failed:', error);
+        deps.logger.error('All tests failed:', error);
         process.exit(1);
       }
     });

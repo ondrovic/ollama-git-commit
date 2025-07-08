@@ -5,7 +5,13 @@ import * as os from 'os';
 import * as path from 'path';
 import { Logger } from '../../../utils/logger';
 
-export const registerCreateCommands = (configCommand: Command) => {
+export interface CreateCommandsDeps {
+  logger: Logger;
+  serviceFactory: import('../../../core/factory').ServiceFactory;
+  getConfig: () => Promise<Readonly<import('../../../types').OllamaCommitConfig>>;
+}
+
+export const registerCreateCommands = (configCommand: Command, deps: CreateCommandsDeps) => {
   const createCommand = configCommand.command('create').description('Create configuration files');
   const defaultConfig = { ...CONFIGURATIONS.DEFAULT };
 
@@ -20,9 +26,9 @@ export const registerCreateCommands = (configCommand: Command) => {
         await fs.mkdir(path.dirname(defaultConfig.configFile), { recursive: true });
         // Write config
         await fs.writeFile(defaultConfig.configFile, JSON.stringify(defaultConfig, null, 2));
-        Logger.success(`User configuration file created at: ${defaultConfig.configFile}`);
+        deps.logger.success(`User configuration file created at: ${defaultConfig.configFile}`);
       } catch (error) {
-        Logger.error('Failed to create user configuration:', error);
+        deps.logger.error('Failed to create user configuration:', error);
         process.exit(1);
       }
     });
@@ -36,9 +42,9 @@ export const registerCreateCommands = (configCommand: Command) => {
         defaultConfig.configFile = configPath;
         // Write config
         await fs.writeFile(defaultConfig.configFile, JSON.stringify(defaultConfig, null, 2));
-        Logger.success(`Local configuration file created at: ${defaultConfig.configFile}`);
+        deps.logger.success(`Local configuration file created at: ${defaultConfig.configFile}`);
       } catch (error) {
-        Logger.error('Failed to create local configuration:', error);
+        deps.logger.error('Failed to create local configuration:', error);
         process.exit(1);
       }
     });

@@ -27,8 +27,16 @@ registerCommitCommand(program, {
   serviceFactory,
   getConfig,
 });
-registerTestCommands(program);
-registerConfigCommands(program);
+registerTestCommands(program, {
+  getConfig,
+  serviceFactory,
+  logger,
+});
+registerConfigCommands(program, {
+  logger,
+  serviceFactory,
+  getConfig,
+});
 
 // Error handling
 process.on('uncaughtException', error => {

@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it } from 'bun:test';
 import { Command } from 'commander';
 import { getConfigKeys, registerKeysCommands } from '../../../../src/cli/commands/config/keys';
+import { ConfigManager } from '../../../../src/core/config';
 import { Logger } from '../../../../src/utils/logger';
 import { MockedConfigManager } from '../../../mocks/MockedConfigManager';
 
@@ -9,6 +10,7 @@ let loggerGroupCalls: any[] = [];
 let loggerPlainCalls: any[] = [];
 let loggerErrorCalls: any[] = [];
 let processExitCalled = false;
+let mockConfigManager: MockedConfigManager;
 
 function mockLogger() {
   Logger.table = (...args: any[]) => {
@@ -38,15 +40,27 @@ beforeEach(() => {
   loggerPlainCalls = [];
   loggerErrorCalls = [];
   processExitCalled = false;
+  mockConfigManager = new MockedConfigManager(Logger);
+
+  // Mock ConfigManager.getInstance to return our mock
+  const originalGetInstance = ConfigManager.getInstance;
+  ConfigManager.getInstance = (logger?: any) => {
+    return mockConfigManager;
+  };
+
   mockLogger();
   mockProcessExit();
 });
 
 describe('registerKeysCommands', () => {
   it('should print simple key list (non-verbose)', async () => {
-    const mockConfigManager = new MockedConfigManager(Logger);
     const program = new Command();
-    registerKeysCommands(program, mockConfigManager);
+    const mockDeps = {
+      logger: Logger,
+      serviceFactory: {} as any,
+      getConfig: async () => ({}) as any,
+    };
+    registerKeysCommands(program, mockDeps);
     await program.parseAsync(['node', 'config', 'keys']);
     expect(loggerTableCalls.length).toBe(1);
     expect(loggerPlainCalls.some(call => call[0].includes('model'))).toBe(true);
@@ -62,9 +76,13 @@ describe('registerKeysCommands', () => {
   });
 
   it('should print detailed key info (verbose)', async () => {
-    const mockConfigManager = new MockedConfigManager(Logger);
     const program = new Command();
-    registerKeysCommands(program, mockConfigManager);
+    const mockDeps = {
+      logger: Logger,
+      serviceFactory: {} as any,
+      getConfig: async () => ({}) as any,
+    };
+    registerKeysCommands(program, mockDeps);
     await program.parseAsync(['node', 'config', 'keys', '--verbose']);
     expect(loggerTableCalls.length).toBe(1);
     expect(loggerGroupCalls.length).toBeGreaterThan(0);
@@ -81,14 +99,17 @@ describe('registerKeysCommands', () => {
 
   it('should handle errors and call process.exit', async () => {
     // Create a mock config manager that throws when getConfigKeys is called
-    const mockConfigManager = new MockedConfigManager(Logger);
-    const originalGetConfigKeys = mockConfigManager.getConfigKeys.bind(mockConfigManager);
     mockConfigManager.getConfigKeys = async () => {
       throw new Error('fail');
     };
 
     const program = new Command();
-    registerKeysCommands(program, mockConfigManager);
+    const mockDeps = {
+      logger: Logger,
+      serviceFactory: {} as any,
+      getConfig: async () => ({}) as any,
+    };
+    registerKeysCommands(program, mockDeps);
     await program.parseAsync(['node', 'config', 'keys']);
     expect(loggerErrorCalls.length).toBeGreaterThan(0);
     expect(processExitCalled).toBe(true);

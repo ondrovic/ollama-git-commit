@@ -21,7 +21,7 @@ export const EMOJIS = {
   FLOPPY: '💾',
   FOLDER: '📁',
   INCREMENT: '🔄',
-  SETTINGS: '⚙️',
+  SETTINGS: '🔧',
   CURRENT: '⭐',
   CLOCK: '⏰',
   CELEBRATE: '🎉',

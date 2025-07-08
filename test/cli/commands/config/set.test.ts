@@ -7,6 +7,7 @@ import {
   parseValue,
   registerSetCommands,
 } from '../../../../src/cli/commands/config/set';
+import { ConfigManager } from '../../../../src/core/config';
 import { Logger } from '../../../../src/utils/logger';
 import { MockedConfigManager } from '../../../mocks/MockedConfigManager';
 
@@ -16,6 +17,7 @@ let loggerInfoCalls: any[] = [];
 let loggerPlainCalls: any[] = [];
 let loggerQuestionCalls: any[] = [];
 let processExitCalled = false;
+let mockConfigManager: MockedConfigManager;
 
 function mockLogger() {
   Logger.success = (...args: any[]) => {
@@ -45,6 +47,13 @@ function resetMocks() {
   loggerPlainCalls = [];
   loggerQuestionCalls = [];
   processExitCalled = false;
+  mockConfigManager = new MockedConfigManager(Logger);
+
+  // Mock ConfigManager.getInstance to return our mock
+  const originalGetInstance = ConfigManager.getInstance;
+  ConfigManager.getInstance = (logger?: any) => {
+    return mockConfigManager;
+  };
 }
 
 describe('registerSetCommands', () => {
@@ -54,9 +63,13 @@ describe('registerSetCommands', () => {
   });
 
   it('should set a simple configuration value', async () => {
-    const mockConfigManager = new MockedConfigManager(Logger);
     const program = new Command();
-    registerSetCommands(program, mockConfigManager);
+    const mockDeps = {
+      logger: Logger,
+      serviceFactory: {} as any,
+      getConfig: async () => ({}) as any,
+    };
+    registerSetCommands(program, mockDeps);
 
     await program.parseAsync(['node', 'config', 'set', 'model', 'llama3']);
 
@@ -68,9 +81,13 @@ describe('registerSetCommands', () => {
   });
 
   it('should set a nested configuration value', async () => {
-    const mockConfigManager = new MockedConfigManager(Logger);
     const program = new Command();
-    registerSetCommands(program, mockConfigManager);
+    const mockDeps = {
+      logger: Logger,
+      serviceFactory: {} as any,
+      getConfig: async () => ({}) as any,
+    };
+    registerSetCommands(program, mockDeps);
 
     await program.parseAsync(['node', 'config', 'set', 'timeouts.connection', '5000']);
 
@@ -80,9 +97,13 @@ describe('registerSetCommands', () => {
   });
 
   it('should handle boolean values correctly', async () => {
-    const mockConfigManager = new MockedConfigManager(Logger);
     const program = new Command();
-    registerSetCommands(program, mockConfigManager);
+    const mockDeps = {
+      logger: Logger,
+      serviceFactory: {} as any,
+      getConfig: async () => ({}) as any,
+    };
+    registerSetCommands(program, mockDeps);
 
     await program.parseAsync(['node', 'config', 'set', 'verbose', 'true']);
 
@@ -92,9 +113,13 @@ describe('registerSetCommands', () => {
   });
 
   it('should handle numeric values correctly', async () => {
-    const mockConfigManager = new MockedConfigManager(Logger);
     const program = new Command();
-    registerSetCommands(program, mockConfigManager);
+    const mockDeps = {
+      logger: Logger,
+      serviceFactory: {} as any,
+      getConfig: async () => ({}) as any,
+    };
+    registerSetCommands(program, mockDeps);
 
     await program.parseAsync(['node', 'config', 'set', 'timeouts.generation', '60000']);
 
@@ -104,9 +129,13 @@ describe('registerSetCommands', () => {
   });
 
   it('should handle array values correctly', async () => {
-    const mockConfigManager = new MockedConfigManager(Logger);
     const program = new Command();
-    registerSetCommands(program, mockConfigManager);
+    const mockDeps = {
+      logger: Logger,
+      serviceFactory: {} as any,
+      getConfig: async () => ({}) as any,
+    };
+    registerSetCommands(program, mockDeps);
 
     await program.parseAsync(['node', 'config', 'set', 'context', 'code,diff,terminal']);
 
@@ -118,9 +147,13 @@ describe('registerSetCommands', () => {
   });
 
   it('should handle local config type', async () => {
-    const mockConfigManager = new MockedConfigManager(Logger);
     const program = new Command();
-    registerSetCommands(program, mockConfigManager);
+    const mockDeps = {
+      logger: Logger,
+      serviceFactory: {} as any,
+      getConfig: async () => ({}) as any,
+    };
+    registerSetCommands(program, mockDeps);
 
     await program.parseAsync(['node', 'config', 'set', 'model', 'llama3', '--type', 'local']);
 
@@ -130,9 +163,13 @@ describe('registerSetCommands', () => {
   });
 
   it('should handle invalid configuration key', async () => {
-    const mockConfigManager = new MockedConfigManager(Logger);
     const program = new Command();
-    registerSetCommands(program, mockConfigManager);
+    const mockDeps = {
+      logger: Logger,
+      serviceFactory: {} as any,
+      getConfig: async () => ({}) as any,
+    };
+    registerSetCommands(program, mockDeps);
 
     await program.parseAsync(['node', 'config', 'set', 'quite', 'value']);
 
@@ -146,9 +183,13 @@ describe('registerSetCommands', () => {
   });
 
   it('should handle invalid configuration key with no suggestions', async () => {
-    const mockConfigManager = new MockedConfigManager(Logger);
     const program = new Command();
-    registerSetCommands(program, mockConfigManager);
+    const mockDeps = {
+      logger: Logger,
+      serviceFactory: {} as any,
+      getConfig: async () => ({}) as any,
+    };
+    registerSetCommands(program, mockDeps);
 
     await program.parseAsync(['node', 'config', 'set', 'invalidkey', 'value']);
 
@@ -162,7 +203,6 @@ describe('registerSetCommands', () => {
   });
 
   it('should handle --all flag to update multiple configs', async () => {
-    const mockConfigManager = new MockedConfigManager(Logger);
     mockConfigManager.getConfigFiles = async () => ({
       user: '/mock/user/config.json',
       local: '/mock/local/config.json',
@@ -173,7 +213,12 @@ describe('registerSetCommands', () => {
     });
 
     const program = new Command();
-    registerSetCommands(program, mockConfigManager);
+    const mockDeps = {
+      logger: Logger,
+      serviceFactory: {} as any,
+      getConfig: async () => ({}) as any,
+    };
+    registerSetCommands(program, mockDeps);
 
     await program.parseAsync(['node', 'config', 'set', 'model', 'llama3', '--all']);
 
@@ -184,7 +229,6 @@ describe('registerSetCommands', () => {
   });
 
   it('should handle --all flag with only one active config', async () => {
-    const mockConfigManager = new MockedConfigManager(Logger);
     mockConfigManager.getConfigFiles = async () => ({
       user: '/mock/user/config.json',
       local: '/mock/local/config.json',
@@ -192,7 +236,12 @@ describe('registerSetCommands', () => {
     });
 
     const program = new Command();
-    registerSetCommands(program, mockConfigManager);
+    const mockDeps = {
+      logger: Logger,
+      serviceFactory: {} as any,
+      getConfig: async () => ({}) as any,
+    };
+    registerSetCommands(program, mockDeps);
 
     await program.parseAsync(['node', 'config', 'set', 'model', 'llama3', '--all']);
 
@@ -202,18 +251,22 @@ describe('registerSetCommands', () => {
   });
 
   it('should handle errors and call process.exit', async () => {
-    const mockConfigManager = new MockedConfigManager(Logger);
-    mockConfigManager.getConfigFiles = async () => {
-      throw new Error('Config error');
+    mockConfigManager.initialize = async () => {
+      throw new Error('Test error');
     };
 
     const program = new Command();
-    registerSetCommands(program, mockConfigManager);
+    const mockDeps = {
+      logger: Logger,
+      serviceFactory: {} as any,
+      getConfig: async () => ({}) as any,
+    };
+    registerSetCommands(program, mockDeps);
 
     await program.parseAsync(['node', 'config', 'set', 'model', 'llama3']);
 
     expect(loggerErrorCalls.length).toBe(1);
-    expect(loggerErrorCalls[0][0]).toBe('Failed to set configuration:');
+    expect(loggerErrorCalls[0][0]).toContain('Failed to set configuration:');
     expect(processExitCalled).toBe(true);
   });
 });
@@ -463,12 +516,12 @@ describe('displayUpdatedKey', () => {
     };
 
     const config = { model: 'llama3' };
-    const sourceInfo = { model: 'user' };
+    const sourceInfo = { model: 'local' };
 
-    displayUpdatedKey('model', config, sourceInfo);
+    displayUpdatedKey('model', config, sourceInfo, Logger);
     const plainCall = loggerPlainCalls.find(call => call[0].includes('model:'));
     if (!plainCall) throw new Error('Expected loggerPlainCalls to contain model output');
-    expect(plainCall[0]).toBe('  model: "llama3" (from user)');
+    expect(plainCall[0]).toBe('  model: "llama3" (from local)');
     Logger.info = originalInfo;
   });
 
@@ -482,7 +535,7 @@ describe('displayUpdatedKey', () => {
     const config = { timeouts: { connection: 5000 } };
     const sourceInfo = { timeouts: { connection: 'user' } };
 
-    displayUpdatedKey('timeouts.connection', config, sourceInfo);
+    displayUpdatedKey('timeouts.connection', config, sourceInfo, Logger);
     const plainCall = loggerPlainCalls.find(call => call[0].includes('timeouts.connection:'));
     if (!plainCall)
       throw new Error('Expected loggerPlainCalls to contain timeouts.connection output');

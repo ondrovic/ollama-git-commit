@@ -7,15 +7,21 @@ import { registerRemoveCommands } from './remove';
 import { registerSetCommands } from './set';
 import { registerShowCommands } from './show';
 
-export const registerConfigCommands = (program: Command) => {
+export interface ConfigCommandsDeps {
+  logger: import('../../../utils/logger').Logger;
+  serviceFactory: import('../../../core/factory').ServiceFactory;
+  getConfig: () => Promise<Readonly<import('../../../types').OllamaCommitConfig>>;
+}
+
+export const registerConfigCommands = (program: Command, deps: ConfigCommandsDeps) => {
   const configCommand = program.command('config').description('Manage configuration');
 
-  // Register all config subcommands
-  registerCreateCommands(configCommand);
-  registerKeysCommands(configCommand);
-  registerRemoveCommands(configCommand);
-  registerSetCommands(configCommand);
-  registerShowCommands(configCommand);
-  registerModelsCommands(configCommand);
-  registerPromptsCommands(configCommand);
+  // Register all config subcommands with dependencies
+  registerCreateCommands(configCommand, deps);
+  registerKeysCommands(configCommand, deps);
+  registerRemoveCommands(configCommand, deps);
+  registerSetCommands(configCommand, deps);
+  registerShowCommands(configCommand, deps);
+  registerModelsCommands(configCommand, deps);
+  registerPromptsCommands(configCommand, deps);
 };

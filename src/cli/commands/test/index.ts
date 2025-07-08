@@ -7,7 +7,14 @@ import { registerModelTestCommand } from './model';
 import { registerPromptTestCommand } from './prompt';
 import { registerSimplePromptTestCommand } from './simple-prompt';
 
-export const registerTestCommands = (program: Command) => {
+export const registerTestCommands = (
+  program: Command,
+  deps: {
+    getConfig: () => Promise<Readonly<import('../../../types').OllamaCommitConfig>>;
+    serviceFactory: import('../../../core/factory').ServiceFactory;
+    logger: import('../../../utils/logger').Logger;
+  },
+) => {
   const testCommand = program
     .command('test')
     .description('Run various tests on Ollama setup')
@@ -20,11 +27,11 @@ export const registerTestCommands = (program: Command) => {
     });
 
   // Register all test subcommands
-  registerConnectionTestCommand(testCommand);
-  registerModelTestCommand(testCommand);
-  registerSimplePromptTestCommand(testCommand);
-  registerPromptTestCommand(testCommand);
-  registerFullWorkflowTestCommand(testCommand);
-  registerAllTestCommand(testCommand);
-  registerBenchmarkTestCommand(testCommand);
+  registerConnectionTestCommand(testCommand, deps);
+  registerModelTestCommand(testCommand, deps);
+  registerSimplePromptTestCommand(testCommand, deps);
+  registerPromptTestCommand(testCommand, deps);
+  registerFullWorkflowTestCommand(testCommand, deps);
+  registerAllTestCommand(testCommand, deps);
+  registerBenchmarkTestCommand(testCommand, deps);
 };

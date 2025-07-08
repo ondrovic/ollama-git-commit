@@ -7,6 +7,38 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- **Active Config Usage**: Ensured all CLI commands properly use the active configuration instead of hardcoded defaults or environment variables
+  - **Commit Command**: Now validates Ollama host from active config instead of environment variables
+  - **Test Commands**: All test commands (benchmark, connection, model, prompt, simple-prompt, full-workflow, all) now use active config for model and host values
+  - **Validation Function**: Removed hardcoded environment variable checks in favor of active config validation
+  - **Dependency Injection**: Updated all test commands to use proper dependency injection with getConfig function
+  - **Config Commands**: All config subcommands (set, keys, models, prompts, create, remove, show) now use dependency injection instead of direct singleton access
+  - **Core Services**: All core services (GitService, OllamaService, PromptService) now properly use active config through dependency injection
+
+### Changed
+
+- **Dependency Injection Architecture**: Complete refactor to ensure consistent use of active configuration
+  - **CLI Commands**: All CLI commands now accept getConfig dependency and use active config instead of environment variables
+  - **Config Commands**: Refactored all config subcommands to use dependency injection for better testability and consistency
+  - **Test Commands**: Updated all test command registrations to accept getConfig dependency and use active config values
+  - **Validation Logic**: Updated validateEnvironment function to rely on active config instead of environment variables
+  - **Service Factory**: Enhanced ServiceFactory to properly inject active config into all service instances
+
+### Technical Details
+
+- **Config Integration**: Enhanced command architecture to consistently use active configuration
+  - **Commit Command**: Added config validation to check for configured host before proceeding with commit operations
+  - **Test Commands**: Refactored all test command registration to accept getConfig dependency and use active config values
+  - **Validation Logic**: Updated validateEnvironment function to rely on active config instead of environment variables
+  - **Test Updates**: Updated benchmark test suite to use new command signature with getConfig dependency
+  - **Error Handling**: Improved error messages to guide users to set configuration when missing
+  - **Config Commands**: All config subcommands now use dependency injection instead of ConfigManager.getInstance() calls
+  - **Service Construction**: All services are now constructed through ServiceFactory with proper dependency injection
+  - **Test Coverage**: Updated all tests to properly mock ConfigManager.getInstance and use dependency injection patterns
+  - **Logger Consistency**: Fixed logger usage inconsistencies across commands to use injected logger instances
+
 ## [1.0.21] - 2025-07-08
 
 ### Fixed

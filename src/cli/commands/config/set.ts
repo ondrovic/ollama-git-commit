@@ -1,10 +1,15 @@
 import { Command } from 'commander';
 import { ConfigManager } from '../../../core/config';
-import { IConfigManager } from '../../../core/interfaces';
 import { Logger } from '../../../utils/logger';
 import { getConfigKeys } from './keys';
 
-export const registerSetCommands = (configCommand: Command, configManager?: IConfigManager) => {
+export interface SetCommandsDeps {
+  logger: Logger;
+  serviceFactory: import('../../../core/factory').ServiceFactory;
+  getConfig: () => Promise<Readonly<import('../../../types').OllamaCommitConfig>>;
+}
+
+export const registerSetCommands = (configCommand: Command, deps: SetCommandsDeps) => {
   configCommand
     .command('set <key> <value>')
     .description('Set a configuration value')
@@ -13,19 +18,19 @@ export const registerSetCommands = (configCommand: Command, configManager?: ICon
     .action(
       async (key: string, value: string, options: { type: 'user' | 'local'; all?: boolean }) => {
         try {
-          const manager = configManager || ConfigManager.getInstance();
+          const manager = ConfigManager.getInstance(deps.logger);
           await manager.initialize();
 
           // Validate the key before proceeding
           const validKeys = getConfigKeys().map(k => k.key);
           if (!validKeys.includes(key)) {
             const suggestions = findSimilarKeys(key, validKeys);
-            Logger.error(`Invalid configuration key: "${key}"`);
+            deps.logger.error(`Invalid configuration key: "${key}"`);
             if (suggestions.length > 0) {
-              Logger.question('Did you mean one of these?');
-              suggestions.forEach(suggestion => Logger.plain(`   ${suggestion}`));
+              deps.logger.question('Did you mean one of these?');
+              suggestions.forEach(suggestion => deps.logger.plain(`   ${suggestion}`));
             }
-            Logger.plain("Run 'ollama-git-commit config keys' to see all available keys.");
+            deps.logger.plain("Run 'ollama-git-commit config keys' to see all available keys.");
             process.exit(1);
           }
 
@@ -41,7 +46,7 @@ export const registerSetCommands = (configCommand: Command, configManager?: ICon
             for (const configFile of activeConfigs) {
               const configToUpdate = createConfigUpdate(key, parsedValue);
               await manager.saveConfig(configToUpdate, configFile.type);
-              Logger.success(
+              deps.logger.success(
                 `Updated ${configFile.type} config: ${key} = ${JSON.stringify(parsedValue)}`,
               );
             }
@@ -49,21 +54,21 @@ export const registerSetCommands = (configCommand: Command, configManager?: ICon
             // Update single config
             const configToUpdate = createConfigUpdate(key, parsedValue);
             await manager.saveConfig(configToUpdate, options.type);
-            Logger.success(
+            deps.logger.success(
               `Updated ${options.type} config: ${key} = ${JSON.stringify(parsedValue)}`,
             );
           }
 
           // Show the updated configuration
-          Logger.plain('');
-          Logger.plain('Updated configuration:');
+          deps.logger.plain('');
+          deps.logger.plain('Updated configuration:');
           const updatedConfig = await manager.getConfig();
           const sourceInfo = await manager.getConfigSources();
 
           // Display the specific key that was updated
-          displayUpdatedKey(key, updatedConfig, sourceInfo as Record<string, unknown>);
+          displayUpdatedKey(key, updatedConfig, sourceInfo as Record<string, unknown>, deps.logger);
         } catch (error) {
-          Logger.error('Failed to set configuration:', error);
+          deps.logger.error('Failed to set configuration:', error);
           process.exit(1);
         }
       },
@@ -133,6 +138,7 @@ export function displayUpdatedKey(
   key: string,
   config: Record<string, unknown>,
   sourceInfo: Record<string, unknown>,
+  logger: Logger,
 ): void {
   const keyParts = key.split('.');
   let currentValue: unknown = config;
@@ -155,9 +161,9 @@ export function displayUpdatedKey(
 
   // Log the updated key and value, including the config source if available
   if (typeof currentSource === 'string') {
-    Logger.plain(`  ${key}: ${JSON.stringify(currentValue)} (from ${currentSource})`);
+    logger.plain(`  ${key}: ${JSON.stringify(currentValue)} (from ${currentSource})`);
   } else {
-    Logger.plain(`  ${key}: ${JSON.stringify(currentValue)}`);
+    logger.plain(`  ${key}: ${JSON.stringify(currentValue)}`);
   }
 }
 
