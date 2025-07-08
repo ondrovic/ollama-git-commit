@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.0.22] - 2025-07-08
+
 ### Fixed
 
 - **Active Config Usage**: Ensured all CLI commands properly use the active configuration instead of hardcoded defaults or environment variables
