@@ -47,9 +47,13 @@ export const registerAllTestCommand = (testCommand: Command) => {
 
         // Test simple prompt
         const testPrompt = 'Write a commit message for: "Add new feature"';
+        const configManager = ConfigManager.getInstance();
+        await configManager.initialize();
+        const config = await configManager.getConfig();
+        const configuredHost = options.host || config.host;
         await ollamaService.generateCommitMessage(
           modelToTest,
-          options.host || 'http://localhost:11434',
+          configuredHost,
           testPrompt,
           options.verbose,
         );

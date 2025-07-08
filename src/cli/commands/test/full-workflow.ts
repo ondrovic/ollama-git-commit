@@ -31,8 +31,6 @@ export const registerFullWorkflowTestCommand = (testCommand: Command) => {
         const { TestCommand } = await import('../../../commands/test');
         const testCommand = new TestCommand(ollamaService, Logger);
 
-        Logger.test('Running full workflow test...');
-
         // Run the full workflow test
         const success = await testCommand.testFullWorkflow(
           options.host,

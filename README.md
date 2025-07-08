@@ -192,8 +192,8 @@ When contributing to the project, use the following workflow:
 
    **Available development scripts:**
 
-   - `precommit` (script): Run before committing. Lints, tests, and checks types to catch errors that could break the release script.
-   - `stage` (script): The main project workflow script for formatting, linting, building type declarations, and staging as part of the release/development workflow.
+   - `precommit` (script): Run before committing. Runs validation checks (lint, test, check:types) for fast feedback without auto-fix or building.
+   - `stage` (script): The main project workflow script for lint:fix, testing, building type declarations, and staging files. Used by auto-commit workflow.
    - `check:types` (script): Type-check the main TypeScript files without emitting output.
    - `check:tests` (script): Type-check the test TypeScript files without emitting output.
 

@@ -130,8 +130,8 @@ export class CommitCommand {
       }
 
       if (hasStageScript) {
-        // Run the full staging script
-        this.logger.hammer('Running staging script (format, lint, test, stage)...');
+        // Run the staging script (lint:fix, test, build:types, stage)
+        this.logger.hammer('Running staging script (lint:fix, test, build:types, stage)...');
         this.execSync('bun run stage', {
           cwd: this.directory,
           stdio: this.quiet ? ['pipe', 'pipe', 'pipe'] : 'inherit',
