@@ -4,7 +4,13 @@ import { ConfigManager } from '../../../core/config';
 import { Logger } from '../../../utils/logger';
 import { getConfigFileInfo } from '../../utils/get-friendly-source';
 
-export const registerRemoveCommands = (configCommand: Command) => {
+export interface RemoveCommandsDeps {
+  logger: Logger;
+  serviceFactory: import('../../../core/factory').ServiceFactory;
+  getConfig: () => Promise<Readonly<import('../../../types').OllamaCommitConfig>>;
+}
+
+export const registerRemoveCommands = (configCommand: Command, deps: RemoveCommandsDeps) => {
   const removeCommand = configCommand.command('remove').description('Remove configuration files');
 
   removeCommand
@@ -12,7 +18,7 @@ export const registerRemoveCommands = (configCommand: Command) => {
     .description('Remove user configuration file')
     .action(async () => {
       try {
-        const configManager = ConfigManager.getInstance();
+        const configManager = ConfigManager.getInstance(deps.logger);
         await configManager.initialize();
         const files = await configManager.getConfigFiles();
         const userConfigPath = files.user;
@@ -20,16 +26,16 @@ export const registerRemoveCommands = (configCommand: Command) => {
         try {
           await fsExtra.unlink(userConfigPath);
           const fileInfo = getConfigFileInfo(userConfigPath);
-          Logger.success(`${fileInfo.label} configuration file removed: ${userConfigPath}`);
+          deps.logger.success(`${fileInfo.label} configuration file removed: ${userConfigPath}`);
         } catch (error: unknown) {
           if (error instanceof Error && 'code' in error && error.code === 'ENOENT') {
-            Logger.info('No user configuration file found.');
+            deps.logger.info('No user configuration file found.');
           } else {
             throw error;
           }
         }
       } catch (error) {
-        Logger.error('Failed to remove user configuration:', error);
+        deps.logger.error('Failed to remove user configuration:', error);
         process.exit(1);
       }
     });
@@ -39,7 +45,7 @@ export const registerRemoveCommands = (configCommand: Command) => {
     .description('Remove local configuration file from current directory')
     .action(async () => {
       try {
-        const configManager = ConfigManager.getInstance();
+        const configManager = ConfigManager.getInstance(deps.logger);
         await configManager.initialize();
         const files = await configManager.getConfigFiles();
         const projectConfigPath = files.local;
@@ -47,16 +53,16 @@ export const registerRemoveCommands = (configCommand: Command) => {
         try {
           await fsExtra.unlink(projectConfigPath);
           const fileInfo = getConfigFileInfo(projectConfigPath);
-          Logger.success(`${fileInfo.label} configuration file removed: ${projectConfigPath}`);
+          deps.logger.success(`${fileInfo.label} configuration file removed: ${projectConfigPath}`);
         } catch (error: unknown) {
           if (error instanceof Error && 'code' in error && error.code === 'ENOENT') {
-            Logger.info('No local configuration file found in current directory.');
+            deps.logger.info('No local configuration file found in current directory.');
           } else {
             throw error;
           }
         }
       } catch (error) {
-        Logger.error('Failed to remove local configuration:', error);
+        deps.logger.error('Failed to remove local configuration:', error);
         process.exit(1);
       }
     });

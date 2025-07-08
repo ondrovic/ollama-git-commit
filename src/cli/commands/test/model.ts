@@ -1,9 +1,13 @@
 import { Command } from 'commander';
-import { ConfigManager } from '../../../core/config';
-import { ServiceFactory } from '../../../core/factory';
-import { Logger } from '../../../utils/logger';
 
-export const registerModelTestCommand = (testCommand: Command) => {
+export const registerModelTestCommand = (
+  testCommand: Command,
+  deps: {
+    getConfig: () => Promise<Readonly<import('../../../types').OllamaCommitConfig>>;
+    serviceFactory: import('../../../core/factory').ServiceFactory;
+    logger: import('../../../utils/logger').Logger;
+  },
+) => {
   testCommand
     .command('model')
     .description('Test specific model on Ollama server')
@@ -12,33 +16,33 @@ export const registerModelTestCommand = (testCommand: Command) => {
     .option('-v, --verbose', 'Show detailed output')
     .action(async options => {
       try {
-        // Get model from options or config
+        // Get model and host from options or config
+        const config = await deps.getConfig();
         let modelToTest = options.model;
         if (!modelToTest) {
-          const configManager = ConfigManager.getInstance();
-          await configManager.initialize();
-          modelToTest = await configManager.getPrimaryModel();
-          Logger.info(`Using model from config: ${modelToTest}`);
+          modelToTest = config.model || 'llama3';
+          deps.logger.info(`Using model from config: ${modelToTest}`);
         }
 
+        const host = options.host || config.host || 'http://localhost:11434';
+
         // Create services using the factory
-        const factory = ServiceFactory.getInstance();
-        const ollamaService = factory.createOllamaService({
+        const ollamaService = deps.serviceFactory.createOllamaService({
           verbose: options.verbose,
         });
 
-        const success = await ollamaService.isModelAvailable(options.host, modelToTest);
+        const success = await ollamaService.isModelAvailable(host, modelToTest);
         if (success) {
-          Logger.success(`Model ${modelToTest} is available`);
+          deps.logger.success(`Model ${modelToTest} is available`);
         } else {
-          Logger.error(`Model '${modelToTest}' is not available`);
+          deps.logger.error(`Model '${modelToTest}' is not available`);
           process.exit(1);
         }
       } catch (error) {
         if (error instanceof Error) {
-          Logger.error(`Error testing model: ${error.message}`);
+          deps.logger.error(`Error testing model: ${error.message}`);
         } else {
-          Logger.error(`Error testing model: ${String(error)}`);
+          deps.logger.error(`Error testing model: ${String(error)}`);
         }
         process.exit(1);
       }

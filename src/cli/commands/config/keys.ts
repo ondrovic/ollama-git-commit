@@ -1,7 +1,6 @@
 import { Command } from 'commander';
 import { CONFIGURATIONS } from '../../../constants/configurations';
 import { ConfigManager } from '../../../core/config';
-import { IConfigManager } from '../../../core/interfaces';
 import { Logger } from '../../../utils/logger';
 
 interface ConfigKeyInfo {
@@ -12,18 +11,24 @@ interface ConfigKeyInfo {
   example?: string;
 }
 
-export const registerKeysCommands = (configCommand: Command, configManager?: IConfigManager) => {
+export interface KeysCommandsDeps {
+  logger: Logger;
+  serviceFactory: import('../../../core/factory').ServiceFactory;
+  getConfig: () => Promise<Readonly<import('../../../types').OllamaCommitConfig>>;
+}
+
+export const registerKeysCommands = (configCommand: Command, deps: KeysCommandsDeps) => {
   configCommand
     .command('keys')
     .description('List all available configuration keys')
     .option('-v, --verbose', 'Show detailed information including types and examples')
     .action(async (options: { verbose?: boolean }) => {
       try {
-        const manager = configManager || ConfigManager.getInstance();
+        const manager = ConfigManager.getInstance(deps.logger);
         await manager.initialize();
         const configKeys = await manager.getConfigKeys();
 
-        Logger.table([
+        deps.logger.table([
           {
             header: 'Available Configuration Keys',
             separator:
@@ -34,12 +39,12 @@ export const registerKeysCommands = (configCommand: Command, configManager?: ICo
         if (options.verbose) {
           // Detailed view with types and examples
           for (const keyInfo of configKeys) {
-            await Logger.group(keyInfo.key, () => {
-              Logger.plain(`Description: ${keyInfo.description}`);
-              Logger.plain(`Type: ${keyInfo.type}`);
-              Logger.plain(`Default: ${JSON.stringify(keyInfo.default)}`);
+            await deps.logger.group(keyInfo.key, () => {
+              deps.logger.plain(`Description: ${keyInfo.description}`);
+              deps.logger.plain(`Type: ${keyInfo.type}`);
+              deps.logger.plain(`Default: ${JSON.stringify(keyInfo.default)}`);
               if (keyInfo.example) {
-                Logger.plain(`Example: ${keyInfo.example}`);
+                deps.logger.plain(`Example: ${keyInfo.example}`);
               }
             });
           }
@@ -53,17 +58,17 @@ export const registerKeysCommands = (configCommand: Command, configManager?: ICo
               default: unknown;
               example?: string;
             }) => {
-              Logger.plain(`${keyInfo.key.padEnd(25)} - ${keyInfo.description}`);
+              deps.logger.plain(`${keyInfo.key.padEnd(25)} - ${keyInfo.description}`);
             },
           );
         }
 
-        Logger.plain('');
-        Logger.plain('Usage: ollama-git-commit config set <key> <value>');
-        Logger.plain('Example: ollama-git-commit config set model llama3');
-        Logger.plain('Example: ollama-git-commit config set timeouts.connection 5000');
+        deps.logger.plain('');
+        deps.logger.plain('Usage: ollama-git-commit config set <key> <value>');
+        deps.logger.plain('Example: ollama-git-commit config set model llama3');
+        deps.logger.plain('Example: ollama-git-commit config set timeouts.connection 5000');
       } catch (error) {
-        Logger.error('Failed to list configuration keys:', error);
+        deps.logger.error('Failed to list configuration keys:', error);
         process.exit(1);
       }
     });

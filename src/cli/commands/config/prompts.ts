@@ -29,7 +29,13 @@ function validateTemplateName(
   process.exit(1);
 }
 
-export const registerPromptsCommands = (configCommand: Command) => {
+export interface PromptsCommandsDeps {
+  logger: import('../../../utils/logger').Logger;
+  serviceFactory: ServiceFactory;
+  getConfig: () => Promise<Readonly<import('../../../types').OllamaCommitConfig>>;
+}
+
+export const registerPromptsCommands = (configCommand: Command, deps: PromptsCommandsDeps) => {
   const promptsCommand = configCommand.command('prompts').description('Manage prompt templates');
 
   promptsCommand
@@ -39,13 +45,12 @@ export const registerPromptsCommands = (configCommand: Command) => {
     .option('-v, --verbose', 'Show detailed output')
     .action(async options => {
       // Create services using the factory
-      const factory = ServiceFactory.getInstance();
-      const logger = factory.createLogger({
+      const logger = deps.serviceFactory.createLogger({
         verbose: options.verbose,
       });
 
       try {
-        const promptService = factory.createPromptService({
+        const promptService = deps.serviceFactory.createPromptService({
           verbose: options.verbose,
         });
 
@@ -66,14 +71,18 @@ export const registerPromptsCommands = (configCommand: Command) => {
             process.exit(1);
           }
 
-          logger.table([
-            {
-              header: `Prompt Template: ${validatedTemplateName}`,
-              separator:
-                '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━',
-            },
-          ]);
+          // Instead of logger.table, use sectionBox for a pretty header
+          logger.plain(
+            '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━',
+          );
+          logger.plain(`Prompt Template: ${validatedTemplateName}`);
+          logger.plain(
+            '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━',
+          );
           logger.plain(templateContent);
+          logger.plain(
+            '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━',
+          );
         } else {
           // List all templates - always show the banner
           logger.plain(

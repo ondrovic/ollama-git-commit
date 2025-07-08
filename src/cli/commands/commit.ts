@@ -34,6 +34,9 @@ export const executeCommitAction = async (
   const { logger, serviceFactory, getConfig: getConfigFn } = deps;
 
   try {
+    // Get active config first
+    const config = await getConfigFn();
+
     // Validate environment before proceeding
     const validation = validateEnvironment(options.directory);
     if (!validation.valid) {
@@ -45,6 +48,14 @@ export const executeCommitAction = async (
       }
       throw new Error('Environment validation failed');
     }
+
+    // Validate that we have a host configured
+    if (!config.host) {
+      logger.error('Ollama host is not configured');
+      logger.error('Please set a host using: ollama-git-commit config set host <host>');
+      throw new Error('Ollama host is not configured');
+    }
+
     if (validation.warnings.length > 0) {
       logger.warn('Environment warnings:');
       validation.warnings.forEach(warning => logger.warn(`  ${warning}`));

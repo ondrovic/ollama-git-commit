@@ -4,22 +4,28 @@ import { ConfigManager } from '../../../core/config';
 import { ConfigSourceInfo, ModelConfig } from '../../../types';
 import { Logger } from '../../../utils/logger';
 
-export const registerShowCommands = (configCommand: Command) => {
+export interface ShowCommandsDeps {
+  logger: Logger;
+  serviceFactory: import('../../../core/factory').ServiceFactory;
+  getConfig: () => Promise<Readonly<import('../../../types').OllamaCommitConfig>>;
+}
+
+export const registerShowCommands = (configCommand: Command, deps: ShowCommandsDeps) => {
   configCommand
     .command('show')
     .description('Show current configuration')
     .action(async () => {
       try {
         // Section header
-        Logger.plain(
+        deps.logger.plain(
           '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━',
         );
-        Logger.settings('Configuration');
-        Logger.plain(
+        deps.logger.settings('Configuration');
+        deps.logger.plain(
           '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━',
         );
 
-        const configManager = ConfigManager.getInstance();
+        const configManager = ConfigManager.getInstance(deps.logger);
         await configManager.initialize();
         const config = await configManager.getConfig();
         const sourceInfo = await configManager.getConfigSources();
@@ -60,11 +66,11 @@ export const registerShowCommands = (configCommand: Command) => {
 
         const configFiles = await configManager.getConfigFiles();
         if (configFiles.active.length > 0) {
-          Logger.plain('Configuration Files:');
+          deps.logger.plain('Configuration Files:');
           configFiles.active.forEach(file => {
-            Logger.plain(`  ${file.type}: ${file.path}`);
+            deps.logger.plain(`  ${file.type}: ${file.path}`);
           });
-          Logger.plain('');
+          deps.logger.plain('');
         }
 
         // Core Settings
@@ -72,7 +78,7 @@ export const registerShowCommands = (configCommand: Command) => {
         if (effectiveModelDetails) {
           modelDisplay = effectiveModelDetails.model;
         }
-        Logger.plain(
+        deps.logger.plain(
           CONFIGURATIONS.MESSAGES.CORE_SETTINGS(
             modelDisplay,
             config.host,
@@ -83,7 +89,7 @@ export const registerShowCommands = (configCommand: Command) => {
         );
 
         // Behavior Settings
-        Logger.plain(
+        deps.logger.plain(
           CONFIGURATIONS.MESSAGES.BEHAVIOR_SETTINGS(
             config.verbose,
             config.interactive,
@@ -98,7 +104,7 @@ export const registerShowCommands = (configCommand: Command) => {
         );
 
         // Timeouts
-        Logger.plain(
+        deps.logger.plain(
           CONFIGURATIONS.MESSAGES.TIMEOUTS(
             config.timeouts.connection,
             config.timeouts.generation,
@@ -109,24 +115,24 @@ export const registerShowCommands = (configCommand: Command) => {
 
         // Models (if available)
         if (config.models && config.models.length > 0) {
-          Logger.plain(
+          deps.logger.plain(
             CONFIGURATIONS.MESSAGES.MODELS(config.models, config.embeddingsProvider || 'none'),
           );
         }
 
         // Context Providers (if available)
         if (config.context && config.context.length > 0) {
-          Logger.plain(CONFIGURATIONS.MESSAGES.CONTEXT(config.context));
+          deps.logger.plain(CONFIGURATIONS.MESSAGES.CONTEXT(config.context));
         }
 
         // Embeddings Model (if available)
         if (config.embeddingsModel) {
-          Logger.plain(
+          deps.logger.plain(
             `Embeddings Model: ${config.embeddingsModel} (from ${sourceInfoObj.embeddingsModel || 'user'})`,
           );
         }
       } catch (error) {
-        Logger.error('Failed to show configuration:', error);
+        deps.logger.error('Failed to show configuration:', error);
         process.exit(1);
       }
     });
@@ -136,13 +142,13 @@ export const registerShowCommands = (configCommand: Command) => {
     .description('Show detailed configuration debug information')
     .action(async () => {
       try {
-        const configManager = ConfigManager.getInstance();
+        const configManager = ConfigManager.getInstance(deps.logger);
         await configManager.initialize();
         const debugInfo = await configManager.getDebugInfo();
-        Logger.info('Debug info retrieved');
-        Logger.info(JSON.stringify(debugInfo, null, 2));
+        deps.logger.info('Debug info retrieved');
+        deps.logger.info(JSON.stringify(debugInfo, null, 2));
       } catch (error) {
-        Logger.error('Failed to get debug information:', error);
+        deps.logger.error('Failed to get debug information:', error);
         process.exit(1);
       }
     });

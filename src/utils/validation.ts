@@ -171,10 +171,9 @@ export function validateEnvironment(directory: string = process.cwd()): {
     warnings.push('HTTP client not available');
   }
 
-  // Check for OLLAMA_HOST
-  if (!process.env[ENVIRONMENTAL_VARIABLES.OLLAMA_HOST]) {
-    errors.push('Ollama host is not configured');
-  }
+  // Note: Ollama host validation is now handled by the active config
+  // This function no longer checks for OLLAMA_HOST environment variable
+  // as the active config should provide the host value
 
   return {
     valid: errors.length === 0,

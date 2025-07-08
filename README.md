@@ -99,6 +99,9 @@ You can view the status of all workflows in the "Actions" tab of the GitHub repo
   - Proper dependency injection ensures testability and maintainability
   - All commands use injected services instead of inline instantiation
   - Improved error handling and user feedback across all service layers
+  - **Active Config Usage**: All commands now use active configuration instead of environment variables
+  - **Consistent DI Pattern**: All CLI commands, config commands, and test commands use dependency injection
+  - **Service Construction**: All services are constructed through ServiceFactory with proper dependency injection
 - 📊 **Enhanced Logging System**: Comprehensive logging refactoring with consistent emoji handling
   - Extended Logger class with 15+ specialized methods for different use cases
   - Centralized emoji management - no hardcoded emojis in log messages
@@ -584,7 +587,7 @@ The tool supports multiple configuration sources in the following order of prece
 
 ### Environment Variables
 
-You can configure the tool using environment variables:
+You can configure the tool using environment variables. **Note**: The tool now prioritizes active configuration over environment variables for better consistency and user experience.
 
 ```bash
 # Set Ollama host
@@ -608,6 +611,13 @@ export OLLAMA_COMMIT_EMBEDDINGS_PROVIDER=embeddingsProvider
 # Set context providers (JSON string)
 export OLLAMA_COMMIT_CONTEXT='[{"provider":"code","enabled":true},{"provider":"docs","enabled":true},{"provider":"diff","enabled":true},{"provider":"terminal","enabled":true},{"provider":"problems","enabled":true},{"provider":"folder","enabled":true},{"provider":"codebase","enabled":true}]'
 ```
+
+**Configuration Priority**: The tool uses the following priority order for configuration:
+
+1. Command-line arguments (highest priority)
+2. Active configuration (user-global or project-local config files)
+3. Environment variables
+4. Default values (lowest priority)
 
 ### Project-Local Configuration
 
@@ -1130,6 +1140,14 @@ ollama-git-commit test model -m your-model-name
 ```
 
 ## Technical Details
+
+- **Dependency Injection Architecture**: The tool now uses comprehensive dependency injection throughout all commands and services
+
+  - **CLI Commands**: All CLI commands accept `getConfig` dependency and use active configuration instead of environment variables
+  - **Config Commands**: All config subcommands use dependency injection instead of direct singleton access for better testability
+  - **Test Commands**: All test commands use dependency injection with proper active config integration
+  - **Service Factory**: ServiceFactory provides centralized creation of all services with consistent configuration
+  - **Active Config Priority**: The tool prioritizes active configuration over environment variables for better consistency
 
 - **Dependency Injection Pattern**: The `ModelsCommand` and related commands now use a constructor signature of `(ollamaService?: IOllamaService, logger?: ILogger)`. This allows you to inject a pre-configured or mock service for testing, or let the command create its own default instance for convenience.
 - **OllamaService Instantiation**: All usages of `OllamaService` now explicitly pass logger and configuration parameters. Allowing an undefined service is a common and viable pattern for CLI tools and libraries, as it enables both flexibility and testability. For larger projects, consider centralizing service instantiation for consistency.

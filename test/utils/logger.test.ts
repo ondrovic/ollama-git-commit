@@ -305,7 +305,7 @@ describe('Logger Instance Methods', () => {
 
     test('should log settings messages', () => {
       logger.settings('Test settings');
-      expect(mockConsole.log).toHaveBeenCalledWith('⚙️ Test settings');
+      expect(mockConsole.log).toHaveBeenCalledWith('🔧 Test settings');
     });
 
     test('should log current messages', () => {
@@ -543,7 +543,7 @@ describe('Logger Static Methods', () => {
 
     test('should log settings via static method', () => {
       Logger.settings('Test settings');
-      expect(mockConsole.log).toHaveBeenCalledWith('⚙️ Test settings');
+      expect(mockConsole.log).toHaveBeenCalledWith('🔧 Test settings');
     });
 
     test('should log current via static method', () => {

@@ -1,9 +1,13 @@
 import { Command } from 'commander';
-import { ConfigManager } from '../../../core/config';
-import { ServiceFactory } from '../../../core/factory';
-import { Logger } from '../../../utils/logger';
 
-export const registerPromptTestCommand = (testCommand: Command) => {
+export const registerPromptTestCommand = (
+  testCommand: Command,
+  deps: {
+    getConfig: () => Promise<Readonly<import('../../../types').OllamaCommitConfig>>;
+    serviceFactory: import('../../../core/factory').ServiceFactory;
+    logger: import('../../../utils/logger').Logger;
+  },
+) => {
   testCommand
     .command('prompt')
     .description('Test custom prompt generation')
@@ -13,43 +17,43 @@ export const registerPromptTestCommand = (testCommand: Command) => {
     .option('-v, --verbose', 'Show detailed output')
     .action(async options => {
       try {
-        // Get model from options or config
+        // Get model and host from options or config
+        const config = await deps.getConfig();
         let modelToTest = options.model;
         if (!modelToTest) {
-          const configManager = ConfigManager.getInstance();
-          await configManager.initialize();
-          modelToTest = await configManager.getPrimaryModel();
-          Logger.info(`Using model from config: ${modelToTest}`);
+          modelToTest = config.model || 'llama3';
+          deps.logger.info(`Using model from config: ${modelToTest}`);
         }
 
+        const host = options.host || config.host || 'http://localhost:11434';
+
         // Create services using the factory
-        const factory = ServiceFactory.getInstance();
-        const ollamaService = factory.createOllamaService({
+        const ollamaService = deps.serviceFactory.createOllamaService({
           verbose: options.verbose,
         });
 
         // Create test command instance
         const { TestCommand } = await import('../../../commands/test');
-        const testCommand = new TestCommand(ollamaService, Logger);
+        const testCommand = new TestCommand(ollamaService, deps.logger);
 
-        Logger.test('Testing custom prompt...');
+        deps.logger.test('Testing custom prompt...');
 
         // Run the prompt test
         const success = await testCommand.testPrompt(
-          options.host,
+          host,
           modelToTest,
           options.prompt,
           options.verbose,
         );
 
         if (!success) {
-          Logger.error('Prompt test failed');
+          deps.logger.error('Prompt test failed');
           process.exit(1);
         }
 
-        Logger.success('Prompt test completed successfully');
+        deps.logger.success('Prompt test completed successfully');
       } catch (error) {
-        Logger.error('Prompt test failed:', error);
+        deps.logger.error('Prompt test failed:', error);
         process.exit(1);
       }
     });
